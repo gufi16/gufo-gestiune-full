@@ -2771,6 +2771,14 @@ async function isMarketplaceOrderVisibleToTerminal(order: MarketplaceOrderLike |
       return true;
     }
 
+    // Gufo Delivery must not become invisible after the restaurant re-pairs its POS.
+    // Keep the configured terminal as the first choice, then allow the active POS
+    // from the same restaurant location to receive the pending order.
+    if (String(order?.platform || "").trim().toUpperCase() === "GUFO_DELIVERY") {
+      const terminal = await resolvePosMarketplaceTerminalLocation(auth);
+      return Boolean(terminal?.locationId && terminal.locationId === order?.locationId);
+    }
+
     return false;
   }
 
@@ -2789,7 +2797,12 @@ async function getMarketplaceVisibilityDebug(order: MarketplaceOrderLike | null 
 
   const matchesTerminalId = Boolean(authTerminalId && targetTerminalId && authTerminalId === targetTerminalId);
   const matchesDeviceId = Boolean(authDeviceId && targetTerminalDeviceId && authDeviceId === targetTerminalDeviceId);
-  const visible = !targetTerminal || matchesTerminalId || matchesDeviceId;
+  const isGufoDelivery = String(order?.platform || "").trim().toUpperCase() === "GUFO_DELIVERY";
+  const currentTerminal = isGufoDelivery ? await resolvePosMarketplaceTerminalLocation(auth) : null;
+  const matchesGufoDeliveryLocation = Boolean(
+    isGufoDelivery && currentTerminal?.locationId && currentTerminal.locationId === order?.locationId
+  );
+  const visible = !targetTerminal || matchesTerminalId || matchesDeviceId || matchesGufoDeliveryLocation;
 
   return {
     visible,
@@ -2799,13 +2812,16 @@ async function getMarketplaceVisibilityDebug(order: MarketplaceOrderLike | null 
     targetTerminalDeviceId,
     matchesTerminalId,
     matchesDeviceId,
+    matchesGufoDeliveryLocation,
     reason: !targetTerminal
       ? "no-target-terminal"
       : matchesTerminalId
         ? "matched-terminal-id"
         : matchesDeviceId
           ? "matched-device-id"
-          : "target-mismatch",
+          : matchesGufoDeliveryLocation
+            ? "matched-gufo-delivery-location"
+            : "target-mismatch",
   };
 }
 
