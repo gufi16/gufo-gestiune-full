@@ -188,16 +188,16 @@ const PublicGufoDeliveryCheckoutSchema = z.object({
   customer: z.object({
     name: z.string().trim().min(1),
     phone: z.string().trim().min(1),
-    note: z.string().trim().optional(),
+    note: z.string().trim().nullish().transform((value) => value || undefined),
   }),
   deliveryAddress: z.object({
     label: z.string().trim().min(1),
-    city: z.string().trim().optional(),
-    county: z.string().trim().optional(),
-    postalCode: z.string().trim().optional(),
-    lat: z.coerce.number().optional(),
-    lng: z.coerce.number().optional(),
-    instructions: z.string().trim().optional(),
+    city: z.string().trim().nullish().transform((value) => value || undefined),
+    county: z.string().trim().nullish().transform((value) => value || undefined),
+    postalCode: z.string().trim().nullish().transform((value) => value || undefined),
+    lat: z.coerce.number().nullish().transform((value) => value ?? undefined),
+    lng: z.coerce.number().nullish().transform((value) => value ?? undefined),
+    instructions: z.string().trim().nullish().transform((value) => value || undefined),
   }),
   payment: z.object({
     type: z.enum(["CASH", "CARD", "GOOGLE_PAY", "APPLE_PAY", "PAID"]).default("CARD"),
@@ -206,7 +206,7 @@ const PublicGufoDeliveryCheckoutSchema = z.object({
     z.object({
       productId: z.string().min(1),
       qty: z.coerce.number().positive(),
-      note: z.string().trim().optional(),
+      note: z.string().trim().nullish().transform((value) => value || undefined),
       modifiers: z.array(z.string().trim().min(1)).optional(),
       options: z.array(z.object({
         groupId: z.string().trim().min(1),
