@@ -938,7 +938,6 @@ async function createVivaPaymentOrder(input: {
   merchantTrns: string
   customerTrns: string
   methodCode: string
-  cardTokens?: string[]
   isCardVerification?: boolean
 }) {
   const { config, accessToken } = await getVivaAccessToken(input.vivaConfig)
@@ -965,7 +964,6 @@ async function createVivaPaymentOrder(input: {
           allowRecurring: false,
           isTaxFree: false,
           maxInstallments: 0,
-          cardTokens: input.cardTokens?.filter(Boolean).slice(0, 10),
         }),
   }
 
@@ -2739,13 +2737,6 @@ router.post("/api/v1/public/delivery/payments/viva/prepare", requireDeliveryCust
       },
     })
 
-    const savedCards = customerId
-      ? await db.deliveryCustomerPaymentMethod.findMany({
-          where: { customerId, integrationId: integration.id, provider: "VIVA", isActive: true },
-          orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
-          select: { token: true },
-        })
-      : []
     const vivaOrder = await createVivaPaymentOrder({
       vivaConfig,
       amount: importPayload.total,
@@ -2755,7 +2746,6 @@ router.post("/api/v1/public/delivery/payments/viva/prepare", requireDeliveryCust
       merchantTrns: `Gufo Delivery ${importPayload.externalOrderNumber}`,
       customerTrns: `Comanda Gufo Delivery ${importPayload.externalOrderNumber}`,
       methodCode: parsed.data.payment.type,
-      cardTokens: savedCards.map((card) => card.token),
     })
 
     const updatedAttempt = await db.deliveryPaymentAttempt.update({
