@@ -806,6 +806,30 @@ function buildPublicBaseUrl(req: Request) {
   return `${protocol}://${host}`.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
 }
 
+function formatMarketplaceDeliveryAddress(rawPayloadJson: unknown) {
+  const payload = parseLooseJsonObject(rawPayloadJson);
+  const candidates = [
+    asObject(asObject(payload.delivery).address),
+    asObject(asObject(payload.customer).address),
+    asObject(payload.address),
+    asObject(payload.delivery_address),
+    asObject(payload.deliveryAddress),
+  ];
+
+  for (const address of candidates) {
+    const street = pickFirstNonBlank(address.addressLine, address.street, address.address);
+    const city = pickFirstNonBlank(address.city, address.locality);
+    const county = pickFirstNonBlank(address.county, address.region);
+    const postalCode = pickFirstNonBlank(address.postalCode, address.postal_code);
+    const label = pickFirstNonBlank(address.label);
+    const details = pickFirstNonBlank(address.details, address.instructions, address.note);
+    const formatted = [label, street, city, county, postalCode, details].filter(Boolean).join(", ");
+    if (formatted) return formatted;
+  }
+
+  return pickFirstNonBlank(payload.deliveryAddress, payload.delivery_address);
+}
+
 function buildPublicAssetBaseUrl(req: Request) {
   const configured = normalizeText(process.env.PUBLIC_ASSET_BASE_URL);
   if (configured) {
@@ -3381,14 +3405,7 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/load-cart", async (req: Po
           parseMarketplaceSettings(order.integration?.settingsJson).partnerName,
           order.location?.name
         ) || null,
-        deliveryAddress: pickFirstNonBlank(
-          asObject(asObject(parseLooseJsonObject(order.rawPayloadJson).delivery).address).label,
-          asObject(asObject(parseLooseJsonObject(order.rawPayloadJson).customer).address).label,
-          asObject(parseLooseJsonObject(order.rawPayloadJson).address).label,
-          asObject(parseLooseJsonObject(order.rawPayloadJson).delivery_address).label,
-          asObject(parseLooseJsonObject(order.rawPayloadJson).deliveryAddress).label,
-          parseLooseJsonObject(order.rawPayloadJson).deliveryAddress
-        ) || null,
+        deliveryAddress: formatMarketplaceDeliveryAddress(order.rawPayloadJson) || null,
         orderType: pickFirstNonBlank(
           parseLooseJsonObject(order.rawPayloadJson)?.order_type,
           parseLooseJsonObject(order.rawPayloadJson)?.orderType,
