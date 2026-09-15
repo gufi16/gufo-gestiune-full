@@ -11,6 +11,7 @@ const DELIVERY_ACCESS_TOKEN_TTL = "45d"
 const authRateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
 const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 const AUTH_RATE_LIMIT_LIMIT = 12
+const GOOGLE_DELIVERY_CLIENT_ID = process.env.GUFO_DELIVERY_GOOGLE_CLIENT_ID || "557980916478-6gmh2cp56f8j4gj75u8uh61n9usqhq6a.apps.googleusercontent.com"
 
 export type DeliveryCustomerAuthRequest = Request & {
   deliveryCustomer?: {
@@ -38,6 +39,10 @@ const LoginSchema = z.object({
   password: z.string().min(6),
 })
 
+const GoogleLoginSchema = z.object({
+  idToken: z.string().trim().min(20),
+})
+
 const UpdateProfileSchema = z.object({
   fullName: z.string().trim().min(2),
   phone: z.string().trim().min(6),
@@ -63,6 +68,32 @@ function normalizeEmail(value: unknown) {
 function normalizePhone(value: unknown) {
   const text = String(value || "").trim().replace(/\s+/g, "")
   return text || null
+}
+
+type GoogleTokenIdentity = {
+  subject: string
+  email: string
+  fullName: string
+}
+
+async function verifyGoogleIdToken(idToken: string): Promise<GoogleTokenIdentity> {
+  // Google verifies the token signature; we still enforce audience, issuer and email verification.
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`)
+  if (!response.ok) throw new Error("Autentificarea Google nu a putut fi verificată.")
+  const payload = await response.json() as Record<string, unknown>
+  const audience = String(payload.aud || "").trim()
+  const issuer = String(payload.iss || "").trim()
+  const subject = String(payload.sub || "").trim()
+  const email = normalizeEmail(payload.email)
+  const emailVerified = String(payload.email_verified || "").toLowerCase() === "true"
+  if (audience !== GOOGLE_DELIVERY_CLIENT_ID || !["accounts.google.com", "https://accounts.google.com"].includes(issuer) || !subject || !email || !emailVerified) {
+    throw new Error("Contul Google nu este valid pentru Gufo Delivery.")
+  }
+  return {
+    subject,
+    email,
+    fullName: String(payload.name || payload.given_name || email.split("@")[0]).trim() || "Client Gufo",
+  }
 }
 
 function getRateLimitKey(req: Request, scope: string, identifier?: string | null) {
@@ -435,6 +466,47 @@ router.post("/api/v1/public/delivery/auth/login", async (req, res) => {
   })
 })
 
+router.post("/api/v1/public/delivery/auth/google", async (req, res) => {
+  const parsed = GoogleLoginSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Tokenul Google lipsește." })
+  if (!checkSimpleRateLimit(req, res, "delivery-google-login")) return
+
+  try {
+    const identity = await verifyGoogleIdToken(parsed.data.idToken)
+    const existingGoogleAccount = await prisma.deliveryCustomerAccount.findFirst({
+      where: { authProvider: "GOOGLE", providerUserId: identity.subject },
+      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+    })
+    const existingEmailAccount = existingGoogleAccount
+      ? null
+      : await prisma.deliveryCustomerAccount.findUnique({
+          where: { email: identity.email },
+          include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+        })
+    const customer = existingGoogleAccount || existingEmailAccount || await prisma.deliveryCustomerAccount.create({
+      data: {
+        fullName: identity.fullName,
+        email: identity.email,
+        authProvider: "GOOGLE",
+        providerUserId: identity.subject,
+        lastLoginAt: new Date(),
+      },
+      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+    })
+    if (!customer.isActive) return res.status(401).json({ ok: false, error: "Contul este dezactivat." })
+    await prisma.deliveryCustomerAccount.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } })
+    const { session, token } = await createDeliveryCustomerSession(customer.id, customer.email)
+    return res.json({
+      ok: true,
+      token,
+      session: { id: session.id, expiresAt: session.expiresAt.toISOString() },
+      customer: mapDeliveryCustomerResponse(customer),
+    })
+  } catch (error: unknown) {
+    return res.status(401).json({ ok: false, error: error instanceof Error ? error.message : "Autentificarea Google nu a reușit." })
+  }
+})
+
 router.post("/api/v1/public/delivery/auth/logout", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
   await revokeDeliveryCustomerSession(req.deliveryCustomer?.sessionId)
   return res.json({ ok: true })
@@ -646,13 +718,6 @@ router.delete("/api/v1/public/delivery/account/payment-methods/:paymentMethodId"
   const replacement = await prisma.deliveryCustomerPaymentMethod.findFirst({ where: { customerId, isActive: true }, orderBy: { createdAt: "asc" } })
   if (method.isDefault && replacement) await prisma.deliveryCustomerPaymentMethod.update({ where: { id: replacement.id }, data: { isDefault: true } })
   return res.json({ ok: true })
-})
-
-router.post("/api/v1/public/delivery/auth/social", async (_req, res) => {
-  return res.status(501).json({
-    ok: false,
-    error: "Autentificarea Google/Facebook necesita configurarea cheilor OAuth pentru aplicatia Gufo Delivery.",
-  })
 })
 
 export default router
