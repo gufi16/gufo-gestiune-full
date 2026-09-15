@@ -1855,7 +1855,7 @@ function getDefaultVat(list = vatRates) {
                       style={{
                         display: activeProductTab === "catalog" ? "grid" : "none",
                         gridColumn: "1 / -1",
-                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                         alignItems: "start",
                         gap: 14,
                       }}
@@ -1981,37 +1981,27 @@ function getDefaultVat(list = vatRates) {
                     </Field>
 
                     <Field label="Încadrare produs">
-                      <div style={checkBlock}>
-                        <label style={checkLabel}>
-                          <input
-                            type="radio"
-                            name="product-category-placement"
-                            checked={categoryPlacementMode === "category"}
-                            onChange={() => {
-                              if (!selectedMainCategoryId) return
-                              setForm((prev) => ({ ...prev, categoryId: selectedMainCategoryId }))
-                            }}
-                          />
-                          <span>Direct in categorie</span>
-                        </label>
-                        <label style={checkLabel}>
-                          <input
-                            type="radio"
-                            name="product-category-placement"
-                            checked={categoryPlacementMode === "subcategory"}
-                            disabled={!selectedMainCategoryId || !availableSubcategories.length}
-                            onChange={() => {
-                              if (!selectedMainCategoryId || !availableSubcategories.length) return
-                              setForm((prev) => ({ ...prev, categoryId: availableSubcategories[0].id }))
-                            }}
-                          />
-                          <span>In subcategorie</span>
-                        </label>
-                        <div style={checkHint}>
-                          {availableSubcategories.length
-                            ? "Poti lasa produsul direct in categoria principala sau il poti muta intr-o subcategorie."
-                            : "Categoria aleasă nu are încă subcategorii."}
-                        </div>
+                      <select
+                        value={categoryPlacementMode}
+                        disabled={!selectedMainCategoryId}
+                        onChange={(e) => {
+                          if (e.target.value === "category") {
+                            setForm((prev) => ({ ...prev, categoryId: selectedMainCategoryId }))
+                            return
+                          }
+                          if (availableSubcategories.length) {
+                            setForm((prev) => ({ ...prev, categoryId: availableSubcategories[0].id }))
+                          }
+                        }}
+                        style={input}
+                      >
+                        <option value="category">Direct în categorie</option>
+                        <option value="subcategory" disabled={!availableSubcategories.length}>În subcategorie</option>
+                      </select>
+                      <div style={fieldHint}>
+                        {availableSubcategories.length
+                          ? "Alege locul produsului în categoria principală sau într-o subcategorie."
+                          : "Categoria aleasă nu are încă subcategorii."}
                       </div>
                     </Field>
 
@@ -3505,12 +3495,12 @@ const modalHeader: CSSProperties = {
   justifyContent: "space-between",
   alignItems: "flex-start",
   gap: 10,
-  marginBottom: 16,
+  marginBottom: 12,
   position: "sticky",
   top: 0,
   background: "#ffffff",
   zIndex: 2,
-  padding: "8px 12px 14px",
+  padding: "4px 2px 12px",
   borderBottom: "1px solid #dce8f7",
 }
 
@@ -3525,20 +3515,20 @@ const productEditorBody: CSSProperties = {
   display: "flex",
   flex: 1,
   minHeight: 0,
-  gap: 18,
+  gap: 12,
   overflow: "hidden",
 }
 
 const productTabRail: CSSProperties = {
-  width: 178,
+  width: 156,
   flexShrink: 0,
   display: "flex",
   flexDirection: "column",
-  gap: 7,
-  padding: 10,
-  border: "1px solid #dce8f7",
-  borderRadius: 14,
-  background: "#f8fbff",
+  gap: 5,
+  padding: 6,
+  border: "1px solid #d7e5f4",
+  borderRadius: 12,
+  background: "#f7faff",
 }
 
 const productTabRailLabel: CSSProperties = {
@@ -3554,12 +3544,12 @@ const productTabButton: CSSProperties = {
   width: "100%",
   display: "flex",
   alignItems: "center",
-  gap: 9,
+  gap: 8,
   border: "1px solid transparent",
-  borderRadius: 9,
-  background: "#ffffff",
+  borderRadius: 8,
+  background: "transparent",
   color: "#334155",
-  padding: "10px 9px",
+  padding: "9px 8px",
   fontSize: 12,
   fontWeight: 700,
   textAlign: "left",
@@ -3605,31 +3595,31 @@ const productEditorContent: CSSProperties = {
   minWidth: 0,
   minHeight: 0,
   overflowY: "auto",
-  padding: 18,
-  border: "1px solid #dce8f7",
-  borderRadius: 16,
-  background: "#fbfdff",
+  padding: 12,
+  border: "1px solid #d7e5f4",
+  borderRadius: 12,
+  background: "#f7faff",
 }
 
 const sectionCard: CSSProperties = {
-  border: "1px solid #dce8f7",
-  borderRadius: 14,
-  padding: 18,
+  border: "1px solid #d7e5f4",
+  borderRadius: 10,
+  padding: 14,
   background: "#fff"
 }
 
 const sectionHeading: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 9,
-  marginBottom: 18,
-  paddingBottom: 13,
+  gap: 8,
+  marginBottom: 14,
+  paddingBottom: 10,
   borderBottom: "1px solid #e8eff8",
 }
 
 const sectionHeadingMark: CSSProperties = {
-  width: 28,
-  height: 28,
+  width: 26,
+  height: 26,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -3641,7 +3631,7 @@ const sectionHeadingMark: CSSProperties = {
 }
 
 const sectionTitle: CSSProperties = {
-  fontSize: 16,
+  fontSize: 15,
   fontWeight: 800,
   color: "#17324D",
   letterSpacing: "-0.01em",
@@ -3649,8 +3639,8 @@ const sectionTitle: CSSProperties = {
 
 const gridCompact: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: 10
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: 12
 }
 
 const recipeTopGrid: CSSProperties = {
@@ -3668,7 +3658,7 @@ const sideStack: CSSProperties = {
 const fieldWrap: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: 7,
+  gap: 6,
   minWidth: 0,
 }
 
@@ -3814,10 +3804,11 @@ const fieldHint: CSSProperties = {
 
 const input: CSSProperties = {
   width: "100%",
+  height: 40,
   minHeight: 40,
-  padding: "8px 10px",
-  borderRadius: 9,
-  border: "1px solid #cadcf3",
+  padding: "8px 11px",
+  borderRadius: 8,
+  border: "1px solid #c9d9ea",
   background: "#ffffff",
   outline: "none",
   fontSize: 13,
@@ -3827,8 +3818,8 @@ const input: CSSProperties = {
 const textarea: CSSProperties = {
   width: "100%",
   padding: "9px 10px",
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  border: "1px solid #c9d9ea",
   background: "#ffffff",
   outline: "none",
   fontSize: 13,
@@ -4103,11 +4094,11 @@ const checkBlock: CSSProperties = {
   flexDirection: "column",
   justifyContent: "center",
   gap: 4,
-  minHeight: 56,
-  padding: 10,
-  borderRadius: 10,
-  border: "1px solid #e5e7eb",
-  background: "#fafafa"
+  minHeight: 40,
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: "1px solid #d7e5f4",
+  background: "#f9fbfe"
 }
 
 const checkBlockLarge: CSSProperties = {
@@ -4115,11 +4106,11 @@ const checkBlockLarge: CSSProperties = {
   flexDirection: "column",
   justifyContent: "center",
   gap: 4,
-  minHeight: 56,
-  padding: 10,
-  borderRadius: 10,
-  border: "1px solid #e5e7eb",
-  background: "#fafafa",
+  minHeight: 40,
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: "1px solid #d7e5f4",
+  background: "#f9fbfe",
   marginTop: 12
 }
 
@@ -4167,12 +4158,12 @@ const hintBoxInline: CSSProperties = {
 }
 
 const productPhotoQuickEdit: CSSProperties = {
-  minHeight: 104,
+  minHeight: 88,
   display: "flex",
   alignItems: "center",
   gap: 14,
-  padding: 12,
-  borderRadius: 14,
+  padding: 10,
+  borderRadius: 10,
   border: "1px solid #cfe1f7",
   background: "linear-gradient(135deg, #ffffff 0%, #edf6ff 100%)",
   cursor: "pointer",
@@ -4180,8 +4171,8 @@ const productPhotoQuickEdit: CSSProperties = {
 }
 
 const productPhotoQuickEditImage: CSSProperties = {
-  width: 78,
-  height: 78,
+  width: 66,
+  height: 66,
   flexShrink: 0,
   objectFit: "cover",
   borderRadius: 11,
@@ -4190,8 +4181,8 @@ const productPhotoQuickEditImage: CSSProperties = {
 }
 
 const productPhotoQuickEditPlaceholder: CSSProperties = {
-  width: 78,
-  height: 78,
+  width: 66,
+  height: 66,
   flexShrink: 0,
   display: "grid",
   placeItems: "center",
@@ -4279,17 +4270,17 @@ const modalOverlay: CSSProperties = {
 
 const modalCard: CSSProperties = {
   width: "100%",
-  maxWidth: 1200,
-  height: "calc(100dvh - 32px)",
-  maxHeight: 920,
+  maxWidth: 1060,
+  height: "min(760px, calc(100dvh - 48px))",
+  maxHeight: "calc(100dvh - 48px)",
   display: "flex",
   flexDirection: "column",
   boxSizing: "border-box",
   background: "#f3f8ff",
   border: "1px solid rgba(255,255,255,0.72)",
-  borderRadius: 18,
-  padding: 16,
-  boxShadow: "0 30px 70px rgba(6, 26, 52, 0.3)",
+  borderRadius: 14,
+  padding: 14,
+  boxShadow: "0 24px 60px rgba(6, 26, 52, 0.28)",
   margin: 0,
   overflow: "hidden"
 }
