@@ -147,7 +147,7 @@ type RecipeForm = {
   items: RecipeLine[]
 }
 
-type ProductModalTab = "general" | "catalog" | "pos" | "comercial" | "control" | "delivery" | "media"
+type ProductModalTab = "general" | "catalog" | "comercial" | "control" | "delivery"
 
 type NcSuggestion = {
   code: string
@@ -494,11 +494,9 @@ export function ProductsCatalogPage({
   const productModalTabs = [
     { id: "general" as const, title: "Informații" },
     { id: "catalog" as const, title: "Catalog și producție" },
-    { id: "pos" as const, title: "POS și extra" },
     { id: "comercial" as const, title: "Unitati si achizitie" },
     { id: "control" as const, title: "Control si loturi" },
     { id: "delivery" as const, title: "Gufo Delivery" },
-    { id: "media" as const, title: "Poza produs" },
   ]
   const imagePreviewSrc = livePreviewUrl || form.imageUrl.trim()
 
@@ -1763,9 +1761,39 @@ function getDefaultVat(list = vatRates) {
 
               <div key={activeProductTab} style={productEditorContent}>
                 <div style={productTabPanel}>
-              {activeProductTab === "general" || activeProductTab === "catalog" || activeProductTab === "pos" ? (
+              {activeProductTab === "general" || activeProductTab === "catalog" ? (
                 <>
-                <SectionCard title={activeProductTab === "pos" ? "Gufo POS și produse extra" : activeProductTab === "catalog" ? "Catalog și producție" : "Informații de bază"}>
+                {activeProductTab === "general" ? (
+                  <label style={productPhotoQuickEdit}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) uploadImage(file)
+                      }}
+                    />
+                    {imagePreviewSrc && !previewImageFailed ? (
+                      <img
+                        key={imagePreviewSrc}
+                        src={imagePreviewSrc}
+                        alt="Poza produs"
+                        style={productPhotoQuickEditImage}
+                        onLoad={() => setPreviewImageFailed(false)}
+                        onError={() => setPreviewImageFailed(true)}
+                      />
+                    ) : (
+                      <div style={productPhotoQuickEditPlaceholder}>Foto</div>
+                    )}
+                    <div style={productPhotoQuickEditText}>
+                      <strong>{imagePreviewSrc && !previewImageFailed ? "Schimbă poza produsului" : "Adaugă poza produsului"}</strong>
+                      <span>{uploading ? "Se încarcă..." : "Apasă pentru a selecta o imagine"}</span>
+                    </div>
+                    <span style={productPhotoQuickEditAction}>{uploading ? "..." : "Editează"}</span>
+                  </label>
+                ) : null}
+                <SectionCard title={activeProductTab === "catalog" ? "Catalog și producție" : "Informații de bază"}>
                   <div style={gridCompact}>
                     <div style={{ display: activeProductTab === "general" ? "contents" : "none" }}>
                     <Field label="SKU">
@@ -1823,7 +1851,15 @@ function getDefaultVat(list = vatRates) {
                     </Field>
 
                     </div>
-                    <div style={{ display: activeProductTab === "catalog" ? "contents" : "none" }}>
+                    <div
+                      style={{
+                        display: activeProductTab === "catalog" ? "grid" : "none",
+                        gridColumn: "1 / -1",
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        alignItems: "start",
+                        gap: 14,
+                      }}
+                    >
 
                     <Field label="Clasificare">
                       <select
@@ -1859,12 +1895,13 @@ function getDefaultVat(list = vatRates) {
                     <Field label="Mod retetar">
                       <div
                         style={{
-                          border: recipeEligibleClasses.includes(form.class) ? "1px solid #fbbf24" : "1px solid #dbeafe",
-                          background: recipeEligibleClasses.includes(form.class) ? "#fffbeb" : "#f8fafc",
-                          borderRadius: 14,
-                          padding: "14px 16px",
+                          border: recipeEligibleClasses.includes(form.class) ? "1px solid #bfdbfe" : "1px solid #dbeafe",
+                          background: recipeEligibleClasses.includes(form.class) ? "#eff6ff" : "#f8fafc",
+                          borderRadius: 10,
+                          minHeight: 42,
+                          padding: "10px 12px",
                           display: "grid",
-                          gap: 8,
+                          gap: 6,
                         }}
                       >
                         <label
@@ -1943,7 +1980,7 @@ function getDefaultVat(list = vatRates) {
                       </select>
                     </Field>
 
-                    <Field label="Incadrare produs">
+                    <Field label="Încadrare produs">
                       <div style={checkBlock}>
                         <label style={checkLabel}>
                           <input
@@ -1973,7 +2010,7 @@ function getDefaultVat(list = vatRates) {
                         <div style={checkHint}>
                           {availableSubcategories.length
                             ? "Poti lasa produsul direct in categoria principala sau il poti muta intr-o subcategorie."
-                            : "Categoria aleasa nu are inca subcategorii."}
+                            : "Categoria aleasă nu are încă subcategorii."}
                         </div>
                       </div>
                     </Field>
@@ -2011,7 +2048,18 @@ function getDefaultVat(list = vatRates) {
                     </Field>
 
                     </div>
-                    <div style={{ display: activeProductTab === "pos" ? "contents" : "none" }}>
+                    <div
+                      style={{
+                        display: activeProductTab === "general" ? "grid" : "none",
+                        gridColumn: "1 / -1",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                        gap: 10,
+                        paddingTop: 14,
+                        marginTop: 4,
+                        borderTop: "1px solid #dce8f7",
+                      }}
+                    >
+                    <div style={inlineSectionHeading}>Gufo POS și produse extra</div>
 
                     <Field label="Pozitie Gufo POS">
                       <input
@@ -3013,57 +3061,6 @@ function getDefaultVat(list = vatRates) {
                 </div>
               ) : null}
 
-              {activeProductTab === "media" ? (
-                <>
-                <SectionCard title="Poza produs">
-                  <div style={uploadRowCompact}>
-                    <label style={uploadLabel}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) uploadImage(file)
-                        }}
-                      />
-                      <span style={btnSecondary}>
-                        {uploading ? "Se incarca..." : "Incarca poza"}
-                      </span>
-                    </label>
-                  </div>
-
-                  {imagePreviewSrc && !previewImageFailed ? (
-                    <div style={imagePreviewCard}>
-                      <img
-                        key={imagePreviewSrc}
-                        src={imagePreviewSrc}
-                        alt="Poza produs"
-                        style={imagePreviewThumb}
-                        onLoad={() => setPreviewImageFailed(false)}
-                        onError={() => setPreviewImageFailed(true)}
-                      />
-                      <div style={imagePreviewMeta}>
-                        <div style={imagePreviewTitle}>Poza produs</div>
-                        <div style={imagePreviewText}>Imaginea salvata se vede si in lista de produse.</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={hintBox}>
-                      {imagePreviewSrc
-                        ? "Poza produsului nu a putut fi incarcata in preview."
-                        : "Produsul nu are inca poza. Se lucreaza doar cu upload, fara camp de image URL."}
-                    </div>
-                  )}
-                </SectionCard>
-
-                {recipeEligibleClasses.includes(form.class) && form.requiresRecipe && (
-                  <div style={warningBox}>
-                    Pentru acest produs ai activat retetar obligatoriu, deci se salveaza intai ca inactiv pana completezi retetarul.
-                  </div>
-                )}
-                </>
-              ) : null}
                 </div>
               </div>
             </div>
@@ -4167,6 +4164,69 @@ const hintBoxInline: CSSProperties = {
   minHeight: 40,
   display: "flex",
   alignItems: "center"
+}
+
+const productPhotoQuickEdit: CSSProperties = {
+  minHeight: 104,
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  padding: 12,
+  borderRadius: 14,
+  border: "1px solid #cfe1f7",
+  background: "linear-gradient(135deg, #ffffff 0%, #edf6ff 100%)",
+  cursor: "pointer",
+  boxShadow: "0 8px 20px rgba(19, 50, 77, 0.06)",
+}
+
+const productPhotoQuickEditImage: CSSProperties = {
+  width: 78,
+  height: 78,
+  flexShrink: 0,
+  objectFit: "cover",
+  borderRadius: 11,
+  border: "1px solid #b9d4ef",
+  background: "#ffffff",
+}
+
+const productPhotoQuickEditPlaceholder: CSSProperties = {
+  width: 78,
+  height: 78,
+  flexShrink: 0,
+  display: "grid",
+  placeItems: "center",
+  borderRadius: 11,
+  border: "1px dashed #8bb9e6",
+  background: "#e8f3ff",
+  color: "#1d70b8",
+  fontSize: 13,
+  fontWeight: 800,
+}
+
+const productPhotoQuickEditText: CSSProperties = {
+  minWidth: 0,
+  display: "grid",
+  gap: 5,
+  color: "#17324d",
+  fontSize: 14,
+}
+
+const productPhotoQuickEditAction: CSSProperties = {
+  marginLeft: "auto",
+  padding: "8px 11px",
+  borderRadius: 8,
+  background: "#0d6ecd",
+  color: "#ffffff",
+  fontSize: 12,
+  fontWeight: 800,
+}
+
+const inlineSectionHeading: CSSProperties = {
+  gridColumn: "1 / -1",
+  color: "#17324d",
+  fontSize: 14,
+  fontWeight: 800,
+  letterSpacing: "-0.01em",
 }
 
 const imagePreviewCard: CSSProperties = {
