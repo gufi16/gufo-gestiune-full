@@ -2125,7 +2125,17 @@ function getDefaultVat(list = vatRates) {
                     </Field>
 
                     {!form.isMenu ? (
-                      <Field label="Produse cross-sell">
+                      <details style={compactDisclosure}>
+                        <summary style={compactDisclosureSummary}>
+                          <span>Produse cross-sell</span>
+                          <span style={compactDisclosureValue}>
+                            {selectedCrossSellOptions.length
+                              ? `${selectedCrossSellOptions.length} selectate`
+                              : "Niciun produs"}
+                          </span>
+                        </summary>
+                        <div style={compactDisclosureBody}>
+                      <Field label="Configurează produsele extra">
                         <div
                           style={{
                             border: "1px solid #dbe5f0",
@@ -2508,6 +2518,8 @@ function getDefaultVat(list = vatRates) {
                           Dupa ce operatorul alege produsul in Gufo POS, apare popup-ul cu aceste produse extra. Daca nu selecteaza nimic, bonul ramane cu produsul simplu.
                         </div>
                       </Field>
+                        </div>
+                      </details>
                     ) : null}
 
                     {form.isMenu ? (
@@ -2578,11 +2590,19 @@ function getDefaultVat(list = vatRates) {
                       Stabilesti rolul produsului in comanda clientului. Pentru o shaorma bifezi grupele oferite; pentru ketchup bifezi grupa in care poate fi ales.
                     </div>
 
-                    <Field label="1. Clientul poate alege aceste grupe la acest produs">
-                      <div style={fieldHint}>
-                        Exemplu: la „Shaorma mica” bifezi „Alege sosul”, „Alege salata” si „Extra”.
-                      </div>
-                      <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                    <details style={compactDisclosure}>
+                      <summary style={compactDisclosureSummary}>
+                        <span>Grupe afisate la acest produs</span>
+                        <span style={compactDisclosureValue}>
+                          {form.deliveryDisplayGroupIds.length ? `${form.deliveryDisplayGroupIds.length} selectate` : "Niciuna"}
+                        </span>
+                      </summary>
+                      <div style={compactDisclosureBody}>
+                        <Field label="Clientul poate alege aceste grupe">
+                          <div style={fieldHint}>
+                            Exemplu: la „Shaorma mica” bifezi „Alege sosul”, „Alege salata” si „Extra”.
+                          </div>
+                          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
                         {deliveryOptionGroups.map((group) => {
                           const checked = form.deliveryDisplayGroupIds.includes(group.id)
                           const position = form.deliveryDisplayGroupIds.indexOf(group.id) + 1
@@ -2619,14 +2639,24 @@ function getDefaultVat(list = vatRates) {
                             </label>
                           )
                         })}
+                          </div>
+                        </Field>
                       </div>
-                    </Field>
+                    </details>
 
-                    <Field label="2. Acest produs este o alegere in grupele">
-                      <div style={fieldHint}>
-                        Exemplu: la ketchup bifezi „Alege sosul”; la salata verde bifezi „Alege salata”.
-                      </div>
-                      <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                    <details style={compactDisclosure}>
+                      <summary style={compactDisclosureSummary}>
+                        <span>Grupe in care produsul este alegere</span>
+                        <span style={compactDisclosureValue}>
+                          {form.deliveryOptionGroupIds.length ? `${form.deliveryOptionGroupIds.length} selectate` : "Niciuna"}
+                        </span>
+                      </summary>
+                      <div style={compactDisclosureBody}>
+                        <Field label="Acest produs este o alegere in grupele">
+                          <div style={fieldHint}>
+                            Exemplu: la ketchup bifezi „Alege sosul”; la salata verde bifezi „Alege salata”.
+                          </div>
+                          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
                         {deliveryOptionGroupsLoading ? (
                           <div style={hintBoxInline}>Se incarca grupele Gufo Delivery...</div>
                         ) : null}
@@ -2656,8 +2686,10 @@ function getDefaultVat(list = vatRates) {
                             </label>
                           )
                         })}
+                          </div>
+                        </Field>
                       </div>
-                    </Field>
+                    </details>
 
                     {deliveryOptionGroupsError ? (
                       <div
@@ -3623,7 +3655,7 @@ const productEditorContent: CSSProperties = {
   flex: 1,
   minWidth: 0,
   minHeight: 0,
-  overflow: "hidden",
+  overflowY: "auto",
   padding: "0 2px 2px",
   background: "transparent",
 }
@@ -3797,6 +3829,35 @@ const posDevicesDetails: CSSProperties = {
   border: "1px solid #d7e7fb",
   borderRadius: 11,
   background: "#fbfdff",
+}
+
+const compactDisclosure: CSSProperties = {
+  gridColumn: "1 / -1",
+  border: "1px solid #d7e5f4",
+  borderRadius: 8,
+  background: "#fbfdff",
+}
+
+const compactDisclosureSummary: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "11px 12px",
+  color: "#17324d",
+  fontSize: 13,
+  fontWeight: 800,
+  cursor: "pointer",
+}
+
+const compactDisclosureValue: CSSProperties = {
+  color: "#5c7692",
+  fontSize: 11,
+  fontWeight: 700,
+}
+
+const compactDisclosureBody: CSSProperties = {
+  padding: "0 12px 12px",
 }
 
 const posDevicesSummary: CSSProperties = {
