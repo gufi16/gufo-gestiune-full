@@ -1795,7 +1795,8 @@ function getDefaultVat(list = vatRates) {
                 ) : null}
                 <SectionCard title={activeProductTab === "catalog" ? "Catalog și producție" : "Informații de bază"}>
                   <div style={gridCompact}>
-                    <div style={{ display: activeProductTab === "general" ? "contents" : "none" }}>
+                    <div style={{ ...editorFormGroup, display: activeProductTab === "general" ? "grid" : "none" }}>
+                    <div style={editorFormGroupTitle}>Identificare produs</div>
                     <Field label="SKU">
                       <input
                         value={form.sku}
@@ -1854,12 +1855,10 @@ function getDefaultVat(list = vatRates) {
                     <div
                       style={{
                         display: activeProductTab === "catalog" ? "grid" : "none",
-                        gridColumn: "1 / -1",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                        alignItems: "start",
-                        gap: 14,
+                        ...editorCatalogGrid,
                       }}
                     >
+                    <div style={editorFormGroupTitle}>Definire produs</div>
 
                     <Field label="Clasificare">
                       <select
@@ -1962,6 +1961,8 @@ function getDefaultVat(list = vatRates) {
                       </select>
                     </Field>
 
+                    <div style={editorFormGroupTitle}>Încadrare în catalog</div>
+
                     <Field label="Categorie principala">
                       <select
                         value={selectedMainCategoryId}
@@ -2040,13 +2041,8 @@ function getDefaultVat(list = vatRates) {
                     </div>
                     <div
                       style={{
+                        ...editorFormGroup,
                         display: activeProductTab === "general" ? "grid" : "none",
-                        gridColumn: "1 / -1",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                        gap: 10,
-                        paddingTop: 14,
-                        marginTop: 4,
-                        borderTop: "1px solid #dce8f7",
                       }}
                     >
                     <div style={inlineSectionHeading}>Gufo POS și produse extra</div>
@@ -3641,6 +3637,32 @@ const gridCompact: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
   gap: 12
+}
+
+const editorFormGroup: CSSProperties = {
+  gridColumn: "1 / -1",
+  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+  gap: 12,
+  padding: "2px 0 16px",
+  borderBottom: "1px solid #e4edf6",
+}
+
+const editorCatalogGrid: CSSProperties = {
+  gridColumn: "1 / -1",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+  alignItems: "start",
+  gap: 12,
+}
+
+const editorFormGroupTitle: CSSProperties = {
+  gridColumn: "1 / -1",
+  paddingBottom: 8,
+  color: "#3f5d7b",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: "0.07em",
+  textTransform: "uppercase",
+  borderBottom: "1px solid #e4edf6",
 }
 
 const recipeTopGrid: CSSProperties = {
