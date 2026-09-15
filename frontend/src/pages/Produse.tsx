@@ -393,6 +393,7 @@ export function ProductsCatalogPage({
   const [previewImageFailed, setPreviewImageFailed] = useState(false)
   const [livePreviewUrl, setLivePreviewUrl] = useState("")
   const [activeProductTab, setActiveProductTab] = useState<ProductModalTab>("general")
+  const [activeInformationSection, setActiveInformationSection] = useState<"identity" | "pos">("identity")
   const [ncSuggesting, setNcSuggesting] = useState(false)
   const [ncSuggestion, setNcSuggestion] = useState<NcSuggestion | null>(null)
   const [ncCodeManual, setNcCodeManual] = useState(false)
@@ -746,6 +747,7 @@ function getDefaultVat(list = vatRates) {
     setCrossSellDropdownOpen(false)
     setPreviewImageFailed(false)
     setActiveProductTab("general")
+    setActiveInformationSection("identity")
     setLivePreviewUrl("")
     setShowModal(true)
   }
@@ -798,6 +800,7 @@ function getDefaultVat(list = vatRates) {
     setCrossSellDropdownOpen(false)
     setPreviewImageFailed(false)
     setActiveProductTab("general")
+    setActiveInformationSection("identity")
     setLivePreviewUrl("")
     setShowModal(true)
   }
@@ -1741,8 +1744,7 @@ function getDefaultVat(list = vatRates) {
               </div>
             </div>
 
-            <div style={productEditorBody}>
-              <aside style={productTabRail}>
+            <nav style={productTabBar}>
                 {productModalTabs.map((tab, index) => {
                   const active = activeProductTab === tab.id
                   return (
@@ -1757,13 +1759,14 @@ function getDefaultVat(list = vatRates) {
                     </button>
                   )
                 })}
-              </aside>
-
+            </nav>
+            <div style={productEditorBody}>
               <div key={activeProductTab} style={productEditorContent}>
                 <div style={productTabPanel}>
               {activeProductTab === "general" || activeProductTab === "catalog" ? (
                 <>
                 {activeProductTab === "general" ? (
+                  <>
                   <label style={productPhotoQuickEdit}>
                     <input
                       type="file"
@@ -1792,10 +1795,27 @@ function getDefaultVat(list = vatRates) {
                     </div>
                     <span style={productPhotoQuickEditAction}>{uploading ? "..." : "Editează"}</span>
                   </label>
+                  <div style={informationSectionTabs}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveInformationSection("identity")}
+                      style={{ ...informationSectionTab, ...(activeInformationSection === "identity" ? informationSectionTabActive : null) }}
+                    >
+                      Date produs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveInformationSection("pos")}
+                      style={{ ...informationSectionTab, ...(activeInformationSection === "pos" ? informationSectionTabActive : null) }}
+                    >
+                      Gufo POS și extra
+                    </button>
+                  </div>
+                  </>
                 ) : null}
                 <SectionCard title={activeProductTab === "catalog" ? "Catalog și producție" : "Informații de bază"}>
                   <div style={gridCompact}>
-                    <div style={{ ...editorFormGroup, display: activeProductTab === "general" ? "grid" : "none" }}>
+                    <div style={{ ...editorFormGroup, display: activeProductTab === "general" && activeInformationSection === "identity" ? "grid" : "none" }}>
                     <div style={editorFormGroupTitle}>Identificare produs</div>
                     <Field label="SKU">
                       <input
@@ -2042,7 +2062,7 @@ function getDefaultVat(list = vatRates) {
                     <div
                       style={{
                         ...editorFormGroup,
-                        display: activeProductTab === "general" ? "grid" : "none",
+                        display: activeProductTab === "general" && activeInformationSection === "pos" ? "grid" : "none",
                       }}
                     >
                     <div style={inlineSectionHeading}>Gufo POS și produse extra</div>
@@ -3511,8 +3531,19 @@ const productEditorBody: CSSProperties = {
   display: "flex",
   flex: 1,
   minHeight: 0,
-  gap: 12,
   overflow: "hidden",
+}
+
+const productTabBar: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  padding: 6,
+  marginBottom: 12,
+  overflowX: "auto",
+  border: "1px solid #d7e5f4",
+  borderRadius: 10,
+  background: "#f8fbff",
 }
 
 const productTabRail: CSSProperties = {
@@ -3537,7 +3568,8 @@ const productTabRailLabel: CSSProperties = {
 }
 
 const productTabButton: CSSProperties = {
-  width: "100%",
+  width: "auto",
+  flex: "1 0 auto",
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -3549,6 +3581,7 @@ const productTabButton: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   textAlign: "left",
+  whiteSpace: "nowrap",
   cursor: "pointer",
 }
 
@@ -3591,10 +3624,8 @@ const productEditorContent: CSSProperties = {
   minWidth: 0,
   minHeight: 0,
   overflowY: "auto",
-  padding: 12,
-  border: "1px solid #d7e5f4",
-  borderRadius: 12,
-  background: "#f7faff",
+  padding: "0 2px 2px",
+  background: "transparent",
 }
 
 const sectionCard: CSSProperties = {
@@ -4234,6 +4265,34 @@ const productPhotoQuickEditAction: CSSProperties = {
   fontWeight: 800,
 }
 
+const informationSectionTabs: CSSProperties = {
+  display: "flex",
+  gap: 6,
+  padding: 4,
+  borderRadius: 9,
+  border: "1px solid #d7e5f4",
+  background: "#f8fbff",
+}
+
+const informationSectionTab: CSSProperties = {
+  flex: 1,
+  minHeight: 34,
+  border: "1px solid transparent",
+  borderRadius: 7,
+  background: "transparent",
+  color: "#52708f",
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: "pointer",
+}
+
+const informationSectionTabActive: CSSProperties = {
+  borderColor: "#bdd7f1",
+  background: "#ffffff",
+  color: "#17324d",
+  boxShadow: "0 2px 6px rgba(23, 50, 77, 0.08)",
+}
+
 const inlineSectionHeading: CSSProperties = {
   gridColumn: "1 / -1",
   color: "#17324d",
@@ -4292,8 +4351,8 @@ const modalOverlay: CSSProperties = {
 
 const modalCard: CSSProperties = {
   width: "100%",
-  maxWidth: 1060,
-  height: "min(760px, calc(100dvh - 48px))",
+  maxWidth: 980,
+  height: "min(700px, calc(100dvh - 48px))",
   maxHeight: "calc(100dvh - 48px)",
   display: "flex",
   flexDirection: "column",
