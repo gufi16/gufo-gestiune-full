@@ -3623,7 +3623,7 @@ const productEditorContent: CSSProperties = {
   flex: 1,
   minWidth: 0,
   minHeight: 0,
-  overflowY: "auto",
+  overflow: "hidden",
   padding: "0 2px 2px",
   background: "transparent",
 }
