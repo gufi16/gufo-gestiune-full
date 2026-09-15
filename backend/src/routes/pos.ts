@@ -694,7 +694,8 @@ function toNumber(value: unknown) {
 }
 
 function normalizeText(value: unknown) {
-  return String(value ?? "").trim();
+  const text = String(value ?? "").trim();
+  return /^(null|undefined)$/i.test(text) ? "" : text;
 }
 
 function normalizeOptionalText(value: unknown) {
