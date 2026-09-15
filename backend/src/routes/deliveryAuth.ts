@@ -7,6 +7,7 @@ import { hashSecret, signAccessToken, verifyAccessToken, verifySecret } from "..
 
 const router = Router()
 const DELIVERY_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 45
+const DELIVERY_ACCESS_TOKEN_TTL = "45d"
 const authRateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
 const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 const AUTH_RATE_LIMIT_LIMIT = 12
@@ -110,15 +111,18 @@ async function createDeliveryCustomerSession(customerId: string, email?: string 
     },
   })
 
-  const token = signAccessToken({
-    tenantId: null,
-    userId: customerId,
-    role: "DELIVERY_CUSTOMER",
-    email: email || undefined,
-    // Keep Delivery sessions separate from ERP web sessions. The generic ERP
-    // middleware reserves `sessionId` for WebSession records.
-    deliverySessionId: session.id,
-  })
+  const token = signAccessToken(
+    {
+      tenantId: null,
+      userId: customerId,
+      role: "DELIVERY_CUSTOMER",
+      email: email || undefined,
+      // Keep Delivery sessions separate from ERP web sessions. The generic ERP
+      // middleware reserves `sessionId` for WebSession records.
+      deliverySessionId: session.id,
+    },
+    { expiresIn: DELIVERY_ACCESS_TOKEN_TTL }
+  )
 
   return {
     session,
