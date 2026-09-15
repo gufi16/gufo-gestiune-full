@@ -192,6 +192,7 @@ const PublicGufoDeliveryCheckoutSchema = z.object({
   }),
   deliveryAddress: z.object({
     label: z.string().trim().min(1),
+    addressLine: z.string().trim().nullish().transform((value) => value || undefined),
     city: z.string().trim().nullish().transform((value) => value || undefined),
     county: z.string().trim().nullish().transform((value) => value || undefined),
     postalCode: z.string().trim().nullish().transform((value) => value || undefined),
