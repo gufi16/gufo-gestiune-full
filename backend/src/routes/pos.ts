@@ -2962,10 +2962,11 @@ router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Re
     });
   }
 
+  const historyOnly = String(req.query.scope || "").trim().toLowerCase() === "history";
   const items = await prisma.externalOrder.findMany({
     where: {
       tenantId: auth.tenantId,
-      status: { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
+      status: historyOnly ? "FISCALIZED" : { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
     },
     include: {
       location: {
@@ -2986,7 +2987,8 @@ router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Re
       },
       items: true,
     },
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: [{ fiscalizedAt: "desc" }, { createdAt: "desc" }],
+    take: historyOnly ? 100 : undefined,
   });
 
   const terminal = await resolvePosMarketplaceTerminalLocation(auth);
