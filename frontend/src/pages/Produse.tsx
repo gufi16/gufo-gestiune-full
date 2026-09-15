@@ -19,6 +19,8 @@ type Product = {
   netWeightKg?: number
   grossWeightKg?: number
   price: number
+  deliveryDescription?: string | null
+  deliveryPromoPrice?: number | null
   costPrice?: number
   purchaseFactor?: number
   requiresRecipe?: boolean
@@ -107,6 +109,8 @@ type FormState = {
   netWeightKg: string
   grossWeightKg: string
   price: string
+  deliveryDescription: string
+  deliveryPromoPrice: string
   costPrice: string
   isActive: boolean
   isMenu: boolean
@@ -225,6 +229,8 @@ const emptyForm: FormState = {
   netWeightKg: "0",
   grossWeightKg: "0",
   price: "0",
+  deliveryDescription: "",
+  deliveryPromoPrice: "",
   costPrice: "0",
   isActive: true,
   isMenu: false,
@@ -771,6 +777,8 @@ function getDefaultVat(list = vatRates) {
       netWeightKg: normalizePositiveString(item.netWeightKg || 0, "0"),
       grossWeightKg: normalizePositiveString(item.grossWeightKg || 0, "0"),
       price: normalizePositiveString(item.price || 0, "0"),
+      deliveryDescription: item.deliveryDescription || "",
+      deliveryPromoPrice: item.deliveryPromoPrice ? normalizePositiveString(item.deliveryPromoPrice, "") : "",
       costPrice: normalizePositiveString(item.costPrice || 0, "0"),
       isActive: item.isActive !== false,
       isMenu: item.isMenu === true,
@@ -945,6 +953,8 @@ function getDefaultVat(list = vatRates) {
           netWeightKg: form.isFiscalRiskProduct ? normalizedNetWeightKg : 0,
           grossWeightKg: form.isFiscalRiskProduct ? normalizedGrossWeightKg : 0,
           price: normalizedPrice,
+          deliveryDescription: form.deliveryDescription.trim() || null,
+          deliveryPromoPrice: form.deliveryPromoPrice.trim() ? toNumberSafe(form.deliveryPromoPrice) : null,
           costPrice: normalizedCost,
           isActive: form.isActive,
           isMenu: form.isMenu,
@@ -2586,6 +2596,26 @@ function getDefaultVat(list = vatRates) {
               {activeProductTab === "delivery" ? (
                 <SectionCard title="Gufo Delivery">
                   <div style={sideStack}>
+                    <div style={{ display: "grid", gap: 12 }}>
+                      <Field label="Descriere pentru client">
+                        <textarea
+                          value={form.deliveryDescription}
+                          onChange={(event) => setForm((prev) => ({ ...prev, deliveryDescription: event.target.value }))}
+                          placeholder="Ex: carne de pui, cartofi, salata si sos la alegere"
+                          style={{ ...input, minHeight: 76, resize: "vertical" }}
+                        />
+                      </Field>
+                      <Field label="Pret promotional Delivery (optional)">
+                        <input
+                          inputMode="decimal"
+                          value={form.deliveryPromoPrice}
+                          onChange={(event) => setForm((prev) => ({ ...prev, deliveryPromoPrice: event.target.value }))}
+                          placeholder={`Pret normal: ${formatMoneyRo(toNumberSafe(form.price))}`}
+                          style={input}
+                        />
+                        <div style={fieldHint}>Daca introduci un pret mai mic decat pretul normal, clientul vede reducerea cu pretul vechi taiat.</div>
+                      </Field>
+                    </div>
                     <div style={{ ...hintBoxInline, marginBottom: 2 }}>
                       Stabilesti rolul produsului in comanda clientului. Pentru o shaorma bifezi grupele oferite; pentru ketchup bifezi grupa in care poate fi ales.
                     </div>

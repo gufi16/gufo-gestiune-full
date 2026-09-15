@@ -617,6 +617,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
                       name: true,
                       imageUrl: true,
                       price: true,
+                      deliveryDescription: true,
+                      deliveryPromoPrice: true,
                       isSgr: true,
                       sgrValue: true,
                     },
@@ -636,6 +638,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
               name: true,
               imageUrl: true,
               price: true,
+              deliveryDescription: true,
+              deliveryPromoPrice: true,
               isActive: true,
               isSgr: true,
               sgrValue: true,
@@ -725,7 +729,9 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
         sku: String(product.sku || "").trim(),
         name: String(product.name || "").trim(),
         imageUrl: resolvePublicImageUrl(req, product.imageUrl),
-        price: Number(product.price || 0),
+        price: Number(product.deliveryPromoPrice || product.price || 0),
+        originalPrice: product.deliveryPromoPrice ? Number(product.price || 0) : null,
+        description: product.deliveryDescription || null,
         currency: "RON",
         isAvailable: true,
         categoryId: product.categoryId || null,
@@ -771,7 +777,9 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
             id: link.targetProduct.id,
             name: link.targetProduct.name,
             imageUrl: resolvePublicImageUrl(req, link.targetProduct.imageUrl),
-            price: Number(link.targetProduct.price || 0),
+            price: Number(link.targetProduct.deliveryPromoPrice || link.targetProduct.price || 0),
+            originalPrice: link.targetProduct.deliveryPromoPrice ? Number(link.targetProduct.price || 0) : null,
+            description: link.targetProduct.deliveryDescription || null,
             isSgr: link.targetProduct.isSgr,
             sgrValue: Number(link.targetProduct.sgrValue || 0),
           })),
@@ -809,6 +817,10 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
       mode: deliveryCatalogMode,
       showCategories: deliveryShowCategories,
       paymentConfig,
+      deliveryPricing: {
+        fee: Math.max(0, Number(settings.deliveryFee || 0)),
+        freeAbove: Math.max(0, Number(settings.freeDeliveryMinOrder || 0)),
+      },
       categories: deliveryCategories.map((category) => ({
         id: category.id,
         name: category.name,
@@ -1155,7 +1167,10 @@ async function buildGufoDeliveryCheckoutImportPayload(
   const subtotal = toMoneyValue(
     normalizedItems.reduce((sum, item) => sum + (toMoneyValue(item.product.price) + item.optionAdjustment) * item.qty, 0)
   )
-  const total = subtotal
+  const configuredDeliveryFee = Math.max(0, Number(deliverySettings.deliveryFee || 0))
+  const freeDeliveryMinOrder = Math.max(0, Number(deliverySettings.freeDeliveryMinOrder || 0))
+  const deliveryFee = freeDeliveryMinOrder > 0 && subtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee
+  const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
   const externalOrderId = createGufoDeliveryOrderId()
   const externalOrderNumber = buildGufoDeliveryDisplayNumber()
@@ -1197,6 +1212,8 @@ async function buildGufoDeliveryCheckoutImportPayload(
         restaurant: menuPayload.restaurant,
         delivery: {
           address: input.deliveryAddress,
+          fee: deliveryFee,
+          freeAbove: freeDeliveryMinOrder || null,
         },
         customer: {
           name: input.customer.name,
@@ -2614,6 +2631,10 @@ router.get("/api/v1/public/delivery/restaurants/:restaurantId/checkout-config", 
         name: integration.location?.name || "Restaurant",
       },
       paymentConfig: buildGufoDeliveryPaymentConfig(settings),
+      deliveryPricing: {
+        fee: Math.max(0, Number(settings.deliveryFee || 0)),
+        freeAbove: Math.max(0, Number(settings.freeDeliveryMinOrder || 0)),
+      },
     })
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca configurarea de checkout.") })

@@ -46,6 +46,8 @@ type ProductUomLike = {
 type ProductLike = {
   includeInNomenclatorExport?: boolean | null
   price?: unknown
+  deliveryDescription?: unknown
+  deliveryPromoPrice?: unknown
   costPrice?: unknown
   purchaseFactor?: unknown
   netWeightKg?: unknown
@@ -198,6 +200,8 @@ export function serializeProduct(item: ProductLike | null | undefined) {
   return {
     ...item,
     price: toNumber(item.price),
+    deliveryDescription: String(item.deliveryDescription || "").trim() || null,
+    deliveryPromoPrice: toNumber(item.deliveryPromoPrice || 0) || null,
     costPrice: toNumber(item.costPrice),
     purchaseFactor: toNumber(item.purchaseFactor || 1),
     netWeightKg: toNumber(item.netWeightKg || 0),

@@ -545,6 +545,8 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   const purchaseUomId = purchaseUomIdRaw || null
   const purchaseFactor = toNumber(req.body?.purchaseFactor || 1)
   const price = toNumber(req.body?.price || 0)
+  const deliveryDescription = toNullableText(req.body?.deliveryDescription)
+  const requestedDeliveryPromoPrice = toNumber(req.body?.deliveryPromoPrice || 0)
   const costPrice = toNumber(req.body?.costPrice || 0)
   const netWeightKg = Math.max(0, toNumber(req.body?.netWeightKg || 0))
   const grossWeightKg = Math.max(0, toNumber(req.body?.grossWeightKg || 0))
@@ -612,6 +614,9 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
     isVisibleInPos: requestedVisibleInPos,
     isSgr: requestedIsSgr
   })
+  const deliveryPromoPrice = requestedDeliveryPromoPrice > 0 && requestedDeliveryPromoPrice < normalizedPrice
+    ? requestedDeliveryPromoPrice
+    : null
   const sgrPackaging = resolveSgrPackagingData(req.body, isSgr)
 
   if (sgrPackaging.error) {
@@ -831,6 +836,8 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
           netWeightKg: requestedIsFiscalRiskProduct ? netWeightKg : 0,
           grossWeightKg: requestedIsFiscalRiskProduct ? grossWeightKg : 0,
           price: normalizedPrice,
+          deliveryDescription,
+          deliveryPromoPrice,
           costPrice,
           trackLot,
           trackExpiry,
@@ -1001,6 +1008,8 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   const purchaseUomId = purchaseUomIdRaw || null
   const purchaseFactor = toNumber(req.body?.purchaseFactor || 1)
   const price = toNumber(req.body?.price || 0)
+  const deliveryDescription = toNullableText(req.body?.deliveryDescription)
+  const requestedDeliveryPromoPrice = toNumber(req.body?.deliveryPromoPrice || 0)
   const costPrice = toNumber(req.body?.costPrice || 0)
   const netWeightKg = Math.max(0, toNumber(req.body?.netWeightKg || 0))
   const grossWeightKg = Math.max(0, toNumber(req.body?.grossWeightKg || 0))
@@ -1063,6 +1072,9 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
     isVisibleInPos: requestedVisibleInPos,
     isSgr: requestedIsSgr
   })
+  const deliveryPromoPrice = requestedDeliveryPromoPrice > 0 && requestedDeliveryPromoPrice < normalizedPrice
+    ? requestedDeliveryPromoPrice
+    : null
   const sgrPackaging = resolveSgrPackagingData(req.body, isSgr)
 
   if (sgrPackaging.error) {
@@ -1291,6 +1303,8 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
           netWeightKg: requestedIsFiscalRiskProduct ? netWeightKg : 0,
           grossWeightKg: requestedIsFiscalRiskProduct ? grossWeightKg : 0,
           price: normalizedPrice,
+          deliveryDescription,
+          deliveryPromoPrice,
           costPrice,
           trackLot,
           trackExpiry,

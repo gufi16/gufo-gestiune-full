@@ -344,6 +344,8 @@ type IntegrationForm = {
   deliveryVivaSourceCode: string
   deliveryVivaConfigured: boolean
   deliveryRestaurantImageUrl: string
+  deliveryFee: string
+  freeDeliveryMinOrder: string
   deliveryServiceArea: DeliveryServiceAreaForm
   includedCategoryIds: string[]
   includedProductIds: string[]
@@ -477,6 +479,8 @@ function emptyForm(): IntegrationForm {
     deliveryVivaSourceCode: "",
     deliveryVivaConfigured: false,
     deliveryRestaurantImageUrl: "",
+    deliveryFee: "0",
+    freeDeliveryMinOrder: "0",
     deliveryServiceArea: emptyDeliveryServiceArea(),
     includedCategoryIds: [],
     includedProductIds: [],
@@ -1100,6 +1104,8 @@ export default function MarketplacePage() {
                 typeof integration.settingsJson?.deliveryRestaurantImageUrl === "string"
                   ? integration.settingsJson.deliveryRestaurantImageUrl
                   : "",
+              deliveryFee: String(Number(integration.settingsJson?.deliveryFee || 0)),
+              freeDeliveryMinOrder: String(Number(integration.settingsJson?.freeDeliveryMinOrder || 0)),
               deliveryServiceArea: readDeliveryServiceArea(integration.settingsJson?.deliveryServiceArea),
               includedCategoryIds: Array.isArray(integration.settingsJson?.includedCategoryIds)
                 ? integration.settingsJson.includedCategoryIds.filter((item: unknown): item is string => typeof item === "string")
@@ -1351,6 +1357,8 @@ export default function MarketplacePage() {
             deliveryVivaClientSecret: form.deliveryVivaClientSecret.trim() || undefined,
             deliveryVivaSourceCode: form.deliveryVivaSourceCode.trim() || undefined,
             deliveryRestaurantImageUrl: form.deliveryRestaurantImageUrl.trim() || undefined,
+            deliveryFee: form.deliveryFee.trim() ? Math.max(0, Number(form.deliveryFee)) : 0,
+            freeDeliveryMinOrder: form.freeDeliveryMinOrder.trim() ? Math.max(0, Number(form.freeDeliveryMinOrder)) : 0,
             deliveryServiceArea,
             includedCategoryIds: form.includedCategoryIds,
             includedProductIds: form.includedProductIds,
@@ -1861,6 +1869,18 @@ export default function MarketplacePage() {
 
                 {selectedPlatform === "GUFO_DELIVERY" ? (
                   <div className="space-y-3">
+                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                      <div className="mb-3 text-sm font-semibold text-slate-900">Preturi livrare</div>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <DocumentField label="Taxa standard de livrare (lei)">
+                          <input inputMode="decimal" value={currentForm.deliveryFee} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryFee: e.target.value } }))} className={documentInputClass} placeholder="0" />
+                        </DocumentField>
+                        <DocumentField label="Livrare gratuita de la (lei)">
+                          <input inputMode="decimal" value={currentForm.freeDeliveryMinOrder} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], freeDeliveryMinOrder: e.target.value } }))} className={documentInputClass} placeholder="0 = fara prag" />
+                        </DocumentField>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">Taxa se aplica sub prag. La pragul setat sau peste el, clientul vede livrare gratuita.</p>
+                    </div>
                     <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <div>
