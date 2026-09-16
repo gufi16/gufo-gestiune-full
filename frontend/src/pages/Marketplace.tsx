@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Crosshair, Link2, MapPin, Package2, Plus, RefreshCcw, Save, Search, ShoppingBag, Trash2, Truck } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Crosshair, Link2, MapPin, Package2, Pencil, Plus, RefreshCcw, Save, Search, ShoppingBag, Trash2, Truck } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import PageHeader from "../components/PageHeader"
 import {
@@ -900,6 +900,8 @@ export default function MarketplacePage() {
   const [deliveryOptionGroups, setDeliveryOptionGroups] = useState<DeliveryOptionGroup[]>([])
   const [deliveryOptionDraft, setDeliveryOptionDraft] = useState<DeliveryOptionDraft>(emptyDeliveryOptionDraft)
   const [deliveryOptionItemIds, setDeliveryOptionItemIds] = useState<string[]>([])
+  const [deliveryOptionItemAdjustments, setDeliveryOptionItemAdjustments] = useState<Record<string, string>>({})
+  const [editingDeliveryOptionGroupId, setEditingDeliveryOptionGroupId] = useState<string | null>(null)
   const [deliveryOptionProductSearch, setDeliveryOptionProductSearch] = useState("")
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
@@ -1033,21 +1035,27 @@ export default function MarketplacePage() {
     setSavingDeliveryOption(true)
     setError("")
     try {
-      await api("/api/v1/delivery-option-groups", {
-        method: "POST",
+      await api(editingDeliveryOptionGroupId ? `/api/v1/delivery-option-groups/${encodeURIComponent(editingDeliveryOptionGroupId)}` : "/api/v1/delivery-option-groups", {
+        method: editingDeliveryOptionGroupId ? "PUT" : "POST",
         body: JSON.stringify({
           name,
           description: deliveryOptionDraft.description.trim() || null,
           selectionMode: deliveryOptionDraft.selectionMode,
           minSelections: Number(deliveryOptionDraft.minSelections || 0),
           maxSelections: Number(deliveryOptionDraft.maxSelections || 1),
-          items: deliveryOptionItemIds.map((productId, sortOrder) => ({ productId, sortOrder })),
+          items: deliveryOptionItemIds.map((productId, sortOrder) => ({
+            productId,
+            sortOrder,
+            priceAdjustment: Math.max(0, Number(deliveryOptionItemAdjustments[productId] || 0)),
+          })),
         }),
       })
       setDeliveryOptionDraft(emptyDeliveryOptionDraft())
       setDeliveryOptionItemIds([])
+      setDeliveryOptionItemAdjustments({})
+      setEditingDeliveryOptionGroupId(null)
       setDeliveryOptionProductSearch("")
-      setMessage("Grupul de optiuni a fost salvat si va aparea in Gufo Delivery.")
+      setMessage(editingDeliveryOptionGroupId ? "Grupul de optiuni a fost actualizat." : "Grupul de optiuni a fost salvat si va aparea in Gufo Delivery.")
       await loadDeliveryOptionGroups()
       if (selectedIntegration?.id) await loadGufoDeliveryPreview(selectedIntegration.id)
     } catch (e: any) {
@@ -1055,6 +1063,31 @@ export default function MarketplacePage() {
     } finally {
       setSavingDeliveryOption(false)
     }
+  }
+
+  function editDeliveryOptionGroup(group: DeliveryOptionGroup) {
+    setEditingDeliveryOptionGroupId(group.id)
+    setDeliveryOptionDraft({
+      name: group.name,
+      description: group.description || "",
+      selectionMode: group.selectionMode,
+      minSelections: String(group.minSelections),
+      maxSelections: String(group.maxSelections),
+    })
+    setDeliveryOptionItemIds(group.items.map((item) => item.productId))
+    setDeliveryOptionItemAdjustments(
+      Object.fromEntries(group.items.map((item) => [item.productId, String(Number(item.priceAdjustment || 0))]))
+    )
+    setDeliveryOptionProductSearch("")
+    setError("")
+  }
+
+  function cancelDeliveryOptionEditing() {
+    setEditingDeliveryOptionGroupId(null)
+    setDeliveryOptionDraft(emptyDeliveryOptionDraft())
+    setDeliveryOptionItemIds([])
+    setDeliveryOptionItemAdjustments({})
+    setDeliveryOptionProductSearch("")
   }
 
   async function deleteDeliveryOptionGroup(id: string) {
@@ -2608,7 +2641,7 @@ export default function MarketplacePage() {
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
               <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
-                <div className="text-sm font-semibold text-[#17324D]">Adauga grup de alegeri</div>
+                <div className="text-sm font-semibold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grup de alegeri" : "Adauga grup de alegeri"}</div>
                 <div className="mt-1 text-sm text-slate-600">Definesti regula o singura data. In produs alegi daca grupa este oferita clientului sau daca produsul este o alegere in acea grupa.</div>
 
                 <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -2683,23 +2716,52 @@ export default function MarketplacePage() {
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                onChange={() => setDeliveryOptionItemIds((current) => checked ? current.filter((id) => id !== product.id) : [...current, product.id])}
+                                onChange={() => {
+                                  setDeliveryOptionItemIds((current) => checked ? current.filter((id) => id !== product.id) : [...current, product.id])
+                                  setDeliveryOptionItemAdjustments((current) => {
+                                    if (!checked) return { ...current, [product.id]: current[product.id] ?? "0" }
+                                    const { [product.id]: _removed, ...rest } = current
+                                    return rest
+                                  })
+                                }}
                               />
                               <span className="min-w-0">
                                 <span className="block truncate text-sm font-semibold text-slate-800">{product.name}</span>
                                 <span className="block truncate text-xs text-slate-500">{product.sku || "Fara cod"}</span>
                               </span>
                             </span>
-                            <span className="shrink-0 text-xs font-medium text-slate-600">{Number(product.price || 0).toFixed(2)} lei</span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              {checked ? (
+                                <label className="flex items-center gap-1 text-xs text-slate-500" onClick={(event) => event.stopPropagation()}>
+                                  +
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={deliveryOptionItemAdjustments[product.id] ?? "0"}
+                                    onChange={(event) => setDeliveryOptionItemAdjustments((current) => ({ ...current, [product.id]: event.target.value }))}
+                                    className="w-20 rounded-lg border border-sky-200 bg-white px-2 py-1 text-right text-xs font-semibold text-slate-800 outline-none focus:border-sky-500"
+                                    aria-label={`Pret suplimentar pentru ${product.name}`}
+                                  />
+                                  lei
+                                </label>
+                              ) : null}
+                              <span className="text-xs font-medium text-slate-600">{Number(product.price || 0).toFixed(2)} lei</span>
+                            </span>
                           </label>
                         )
                       })}
                     {!products.length ? <InlineNotice tone="info">Nu exista produse disponibile in ERP pentru a le adauga in grupa.</InlineNotice> : null}
                   </div>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-2">
+                  {editingDeliveryOptionGroupId ? (
+                    <button type="button" className={documentButtonSecondaryClass} onClick={cancelDeliveryOptionEditing} disabled={savingDeliveryOption}>
+                      Renunta
+                    </button>
+                  ) : null}
                   <button type="button" className={documentButtonPrimaryClass} onClick={() => void saveDeliveryOptionGroup()} disabled={savingDeliveryOption}>
-                    <Plus size={15} className="mr-1.5" /> {savingDeliveryOption ? "Se salveaza..." : "Creeaza grupa"}
+                    {editingDeliveryOptionGroupId ? <Pencil size={15} className="mr-1.5" /> : <Plus size={15} className="mr-1.5" />} {savingDeliveryOption ? "Se salveaza..." : editingDeliveryOptionGroupId ? "Salveaza modificarile" : "Creeaza grupa"}
                   </button>
                 </div>
               </div>
@@ -2720,7 +2782,10 @@ export default function MarketplacePage() {
                           <div className="font-semibold text-slate-900">{group.name}</div>
                           <div className="mt-1 text-xs text-slate-500">{group.minSelections > 0 ? `Obligatoriu: ${group.minSelections}-${group.maxSelections}` : `Optional: maxim ${group.maxSelections}`} · {group.selectionMode === "SINGLE" ? "o alegere" : "alegeri multiple"}</div>
                         </div>
-                        <button type="button" onClick={() => void deleteDeliveryOptionGroup(group.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50" title="Sterge grupul"><Trash2 size={15} /></button>
+                        <div className="flex items-center gap-1.5">
+                          <button type="button" onClick={() => editDeliveryOptionGroup(group)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sky-200 bg-white text-sky-700 hover:bg-sky-50" title="Editeaza grupul"><Pencil size={15} /></button>
+                          <button type="button" onClick={() => void deleteDeliveryOptionGroup(group.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50" title="Sterge grupul"><Trash2 size={15} /></button>
+                        </div>
                       </div>
                       {group.description ? <div className="mt-2 text-sm text-slate-600">{group.description}</div> : null}
                       <div className="mt-3 text-xs text-slate-500">
