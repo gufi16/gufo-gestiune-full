@@ -3243,6 +3243,62 @@ router.post("/api/v1/public/delivery/checkout", async (req, res) => {
   }
 })
 
+router.get("/api/v1/public/delivery/orders/history", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const customerPhone = req.deliveryCustomer?.phone?.trim()
+    if (!customerPhone) {
+      return res.json({ ok: true, items: [] })
+    }
+
+    const orders = await db.externalOrder.findMany({
+      where: {
+        platform: "GUFO_DELIVERY",
+        customerPhone,
+      },
+      include: {
+        location: { select: { id: true, name: true, code: true } },
+        items: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { placedAt: "desc" },
+      take: 30,
+    })
+
+    return res.json({
+      ok: true,
+      items: orders.map((order) => ({
+        id: order.id,
+        externalOrderId: order.externalOrderId,
+        externalOrderNumber: order.externalOrderNumber || null,
+        status: order.status,
+        publicStatus: mapPublicGufoDeliveryOrderStatus(order.status),
+        customerName: order.customerName || null,
+        paymentLabel: order.paymentLabel || null,
+        total: Number(order.total || 0),
+        currency: order.currency,
+        placedAt: order.placedAt?.toISOString() || order.createdAt.toISOString(),
+        readyAt: order.readyAt?.toISOString() || null,
+        cancelledAt: order.cancelledAt?.toISOString() || null,
+        restaurant: order.location ? { id: order.location.id, name: order.location.name, code: order.location.code || null } : null,
+        items: order.items
+          // Option lines are stored separately for the POS ticket; the parent line already carries them in modifiersJson.
+          .filter((item) => !item.note?.startsWith("Opțiune pentru "))
+          .map((item) => ({
+            productId: item.externalProductId || item.erpProductId || "",
+            name: item.name,
+            quantity: Number(item.qty || 0),
+            modifiers: isRecord(item.modifiersJson) && Array.isArray(item.modifiersJson.items)
+              ? item.modifiersJson.items
+              : Array.isArray(item.modifiersJson)
+                ? item.modifiersJson
+                : [],
+          })),
+      })),
+    })
+  } catch (error: unknown) {
+    return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca istoricul comenzilor Gufo Delivery.") })
+  }
+})
+
 router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) => {
   try {
     const orderId = String(req.params.orderId || "").trim()
