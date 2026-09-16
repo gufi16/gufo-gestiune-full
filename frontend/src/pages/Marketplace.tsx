@@ -908,6 +908,8 @@ export default function MarketplacePage() {
   const [deliveryCategoryPage, setDeliveryCategoryPage] = useState(0)
   const [deliveryCatalogPage, setDeliveryCatalogPage] = useState(0)
   const [deliveryPreviewPage, setDeliveryPreviewPage] = useState(0)
+  const [deliveryConfigurationOpen, setDeliveryConfigurationOpen] = useState(false)
+  const [deliveryCatalogPreviewOpen, setDeliveryCatalogPreviewOpen] = useState(false)
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
@@ -1807,6 +1809,38 @@ export default function MarketplacePage() {
 
       {activeTab === "integrari" ? (
             <div className="space-y-3">
+              {selectedPlatform === "GUFO_DELIVERY" ? (
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+                  <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-5">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Configurare Gufo Delivery</div>
+                    <div className="mt-2 text-xl font-semibold tracking-tight text-[#17324D]">Restaurant, POS, livrare si plata</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">Setarile sunt grupate intr-o fereastra landscape, ca sa nu mai ai o pagina lunga cu scroll.</p>
+                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => setDeliveryConfigurationOpen(true)}>
+                      Configureaza Gufo Delivery
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <DocumentMetric title="Locatie" value={selectedLocation?.name || "Nealeasa"} tone="blue" />
+                    <DocumentMetric title="POS" value={selectedTerminal?.label || selectedTerminal?.deviceId || "Neales"} tone="slate" />
+                    <DocumentMetric title="Livrare" value={currentForm.deliveryEnabled ? "Activa" : "Oprita"} tone={currentForm.deliveryEnabled ? "emerald" : "amber"} />
+                    <DocumentMetric title="Plata online" value={currentForm.deliveryVivaConfigured ? "Configurata" : "Neconfigurata"} tone={currentForm.deliveryVivaConfigured ? "emerald" : "amber"} />
+                  </div>
+                </div>
+              ) : null}
+              <div
+                className={selectedPlatform === "GUFO_DELIVERY" ? (deliveryConfigurationOpen ? "fixed inset-0 z-[90] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden") : ""}
+                onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? () => setDeliveryConfigurationOpen(false) : undefined}
+              >
+                <div
+                  className={selectedPlatform === "GUFO_DELIVERY" ? "mx-auto w-full max-w-[1320px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" : ""}
+                  onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? (event) => event.stopPropagation() : undefined}
+                >
+                  {selectedPlatform === "GUFO_DELIVERY" ? (
+                    <div className="mb-4 flex items-start justify-between gap-3 border-b border-sky-100 pb-4">
+                      <div><div className="text-lg font-bold text-[#17324D]">Configurare Gufo Delivery</div><div className="mt-1 text-sm text-slate-600">Restaurant, POS, livrare, catalog si plata.</div></div>
+                      <button type="button" onClick={() => setDeliveryConfigurationOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
+                    </div>
+                  ) : null}
               <DocumentSection
                 title={
                   selectedPlatform === "GUFO_DELIVERY"
@@ -2655,6 +2689,8 @@ export default function MarketplacePage() {
               </div>
             </div>
           </DocumentSection>
+                </div>
+              </div>
         </div>
       ) : null}
 
@@ -2905,7 +2941,18 @@ export default function MarketplacePage() {
             ) : null}
 
             {gufoDeliveryPreview ? (
-              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.2fr)]">
+              <>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
+                  <div><div className="text-sm font-semibold text-[#17324D]">Preview catalog public</div><div className="mt-1 text-sm text-slate-600">{gufoDeliveryPublishedProducts.length} produse si {gufoDeliveryPublishedCategories.length} categorii pregatite pentru aplicatie.</div></div>
+                  <button type="button" className={documentButtonPrimaryClass} onClick={() => setDeliveryCatalogPreviewOpen(true)}>Vezi catalogul</button>
+                </div>
+                <div className={deliveryCatalogPreviewOpen ? "fixed inset-0 z-[90] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden"} onMouseDown={() => setDeliveryCatalogPreviewOpen(false)}>
+                  <div className="mx-auto w-full max-w-[1320px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+                    <div className="mb-4 flex items-start justify-between gap-3 border-b border-sky-100 pb-4">
+                      <div><div className="text-lg font-bold text-[#17324D]">Catalog Gufo Delivery</div><div className="mt-1 text-sm text-slate-600">Previzualizarea exacta a catalogului public.</div></div>
+                      <button type="button" onClick={() => setDeliveryCatalogPreviewOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
+                    </div>
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.2fr)]">
                 <div className="space-y-3">
                   <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Restaurant public</div>
@@ -3014,6 +3061,9 @@ export default function MarketplacePage() {
                   ) : null}
                 </div>
               </div>
+                  </div>
+                </div>
+              </>
             ) : selectedIntegration?.id && !loadingGufoDeliveryPreview ? (
               <div className="mt-4">
                 <InlineNotice tone="info">
