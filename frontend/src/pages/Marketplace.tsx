@@ -946,6 +946,7 @@ export default function MarketplacePage() {
   const [deliveryPreviewPage, setDeliveryPreviewPage] = useState(0)
   const [deliveryConfigurationOpen, setDeliveryConfigurationOpen] = useState(false)
   const [deliveryConfigurationSection, setDeliveryConfigurationSection] = useState<"restaurant" | "checkout" | "catalog">("restaurant")
+  const [deliveryCheckoutPanel, setDeliveryCheckoutPanel] = useState<"delivery" | "payment" | "account">("delivery")
   const [deliveryCatalogPreviewOpen, setDeliveryCatalogPreviewOpen] = useState(false)
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
@@ -2032,7 +2033,12 @@ export default function MarketplacePage() {
 
                 {selectedPlatform === "GUFO_DELIVERY" ? (
                   <div className="space-y-3">
-                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                    <div className="flex flex-wrap gap-2 rounded-[16px] border border-slate-200 bg-slate-50 p-2">
+                      {([ ["delivery", "Livrare"], ["payment", "Metode plata"], ["account", "Cont online"] ] as const).map(([panel, label]) => (
+                        <button key={panel} type="button" onClick={() => setDeliveryCheckoutPanel(panel)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${deliveryCheckoutPanel === panel ? "bg-[#17324D] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{label}</button>
+                      ))}
+                    </div>
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
                       <div className="mb-3 text-sm font-semibold text-slate-900">Preturi livrare</div>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <DocumentField label="Taxa de livrare sub prag (lei)">
@@ -2044,7 +2050,7 @@ export default function MarketplacePage() {
                       </div>
                       <p className="mt-2 text-xs text-slate-500">Exemplu: taxa 8 lei si prag 45 lei inseamna ca sub 45 lei clientul plateste 8 lei, iar de la 45 lei livrarea este gratuita. Ambele valori sunt afisate in Gufo Delivery.</p>
                     </div>
-                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
                       <div className="mb-1 text-sm font-semibold text-slate-900">Disponibilitate livrari</div>
                       <p className="mb-3 text-xs text-slate-500">Controleaza numai comenzile cu livrare. Restaurantul poate ramane deschis pentru ridicare sau clienti.</p>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
@@ -2064,7 +2070,7 @@ export default function MarketplacePage() {
                       </div>
                       <p className="mt-2 text-xs font-medium text-[#17324D]">{currentForm.deliveryAvailabilityMode === "PAUSED" ? "Clientul vede: Nu livram momentan." : currentForm.deliveryAvailabilityMode === "OPEN_AT" ? "Clientul vede: Livrarea incepe la ora aleasa." : currentForm.deliveryAvailabilityMode === "FORCE_OPEN" ? "Clientul vede: Livrarea este disponibila acum." : "Clientul vede automat daca livrarea este disponibila, incepe in curand sau nu livreaza astazi."}</p>
                     </div>
-                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <div className="text-sm font-semibold text-slate-900">Program livrare</div>
@@ -2094,7 +2100,7 @@ export default function MarketplacePage() {
                       </div>
                       )}
                     </div>
-                    <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-3">
+                    <div className={`rounded-[16px] border border-slate-200 bg-slate-50 p-3 ${deliveryCheckoutPanel !== "payment" ? "hidden" : ""}`}>
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <div>
                           <div className="text-sm font-semibold text-slate-900">Metode de plata</div>
@@ -2125,7 +2131,9 @@ export default function MarketplacePage() {
                           <option value="CARD,GOOGLE_PAY,APPLE_PAY">Card, Google Pay si Apple Pay</option>
                         </select>
                       </DocumentField>
-                      <div className="mt-3 rounded-[16px] border border-slate-200 bg-white p-3">
+                    </div>
+                    <div className={`rounded-[16px] border border-slate-200 bg-slate-50 p-3 ${deliveryCheckoutPanel !== "account" ? "hidden" : ""}`}>
+                      <div className="rounded-[16px] border border-slate-200 bg-white p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <div className="text-sm font-semibold text-slate-900">Cont plata online al locatiei</div>
