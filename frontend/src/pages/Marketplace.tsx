@@ -347,6 +347,9 @@ type IntegrationForm = {
   deliveryFee: string
   freeDeliveryMinOrder: string
   deliverySchedule: DeliveryScheduleForm
+  deliveryScheduleMode: "DAILY" | "CUSTOM"
+  deliveryAvailabilityMode: "SCHEDULE" | "PAUSED" | "FORCE_OPEN" | "OPEN_AT"
+  deliveryResumeAt: string
   deliveryServiceArea: DeliveryServiceAreaForm
   includedCategoryIds: string[]
   includedProductIds: string[]
@@ -511,6 +514,9 @@ function emptyForm(): IntegrationForm {
     deliveryFee: "0",
     freeDeliveryMinOrder: "0",
     deliverySchedule: emptyDeliverySchedule(),
+    deliveryScheduleMode: "DAILY",
+    deliveryAvailabilityMode: "SCHEDULE",
+    deliveryResumeAt: "",
     deliveryServiceArea: emptyDeliveryServiceArea(),
     includedCategoryIds: [],
     includedProductIds: [],
@@ -1196,6 +1202,12 @@ export default function MarketplacePage() {
               deliveryFee: String(Number(integration.settingsJson?.deliveryFee || 0)),
               freeDeliveryMinOrder: String(Number(integration.settingsJson?.freeDeliveryMinOrder || 0)),
               deliverySchedule: readDeliverySchedule(integration.settingsJson?.deliverySchedule),
+              deliveryScheduleMode: integration.settingsJson?.deliveryScheduleMode === "CUSTOM" ? "CUSTOM" : "DAILY",
+              deliveryAvailabilityMode:
+                integration.settingsJson?.deliveryAvailabilityMode === "PAUSED" || integration.settingsJson?.deliveryAvailabilityMode === "FORCE_OPEN" || integration.settingsJson?.deliveryAvailabilityMode === "OPEN_AT"
+                  ? integration.settingsJson.deliveryAvailabilityMode
+                  : "SCHEDULE",
+              deliveryResumeAt: typeof integration.settingsJson?.deliveryResumeAt === "string" ? integration.settingsJson.deliveryResumeAt : "",
               deliveryServiceArea: readDeliveryServiceArea(integration.settingsJson?.deliveryServiceArea),
               includedCategoryIds: Array.isArray(integration.settingsJson?.includedCategoryIds)
                 ? integration.settingsJson.includedCategoryIds.filter((item: unknown): item is string => typeof item === "string")
@@ -1450,6 +1462,9 @@ export default function MarketplacePage() {
             deliveryFee: form.deliveryFee.trim() ? Math.max(0, Number(form.deliveryFee)) : 0,
             freeDeliveryMinOrder: form.freeDeliveryMinOrder.trim() ? Math.max(0, Number(form.freeDeliveryMinOrder)) : 0,
             deliverySchedule: form.deliverySchedule,
+            deliveryScheduleMode: form.deliveryScheduleMode,
+            deliveryAvailabilityMode: form.deliveryAvailabilityMode,
+            deliveryResumeAt: form.deliveryAvailabilityMode === "OPEN_AT" ? form.deliveryResumeAt : undefined,
             deliveryServiceArea,
             includedCategoryIds: form.includedCategoryIds,
             includedProductIds: form.includedProductIds,
@@ -2030,9 +2045,41 @@ export default function MarketplacePage() {
                       <p className="mt-2 text-xs text-slate-500">Exemplu: taxa 8 lei si prag 45 lei inseamna ca sub 45 lei clientul plateste 8 lei, iar de la 45 lei livrarea este gratuita. Ambele valori sunt afisate in Gufo Delivery.</p>
                     </div>
                     <div className="rounded-[16px] border border-slate-200 bg-white p-3">
-                      <div className="mb-1 text-sm font-semibold text-slate-900">Program livrare</div>
-                      <p className="mb-3 text-xs text-slate-500">Programul este calculat in ora Romaniei. In afara lui restaurantul apare inchis in Gufo Delivery si nu poate primi comenzi.</p>
-                      <div className="space-y-2">
+                      <div className="mb-1 text-sm font-semibold text-slate-900">Disponibilitate livrari</div>
+                      <p className="mb-3 text-xs text-slate-500">Controleaza numai comenzile cu livrare. Restaurantul poate ramane deschis pentru ridicare sau clienti.</p>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+                        <DocumentField label="Status livrari">
+                          <select value={currentForm.deliveryAvailabilityMode} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryAvailabilityMode: event.target.value as IntegrationForm["deliveryAvailabilityMode"] } }))} className={documentInputClass}>
+                            <option value="SCHEDULE">Urmeaza programul</option>
+                            <option value="PAUSED">Nu livram momentan</option>
+                            <option value="OPEN_AT">Livrarea incepe la o ora</option>
+                            <option value="FORCE_OPEN">Livrarea este disponibila acum</option>
+                          </select>
+                        </DocumentField>
+                        {currentForm.deliveryAvailabilityMode === "OPEN_AT" ? (
+                          <DocumentField label="Incepe la">
+                            <input type="time" value={currentForm.deliveryResumeAt} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryResumeAt: event.target.value } }))} className={documentInputClass} />
+                          </DocumentField>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-xs font-medium text-[#17324D]">{currentForm.deliveryAvailabilityMode === "PAUSED" ? "Clientul vede: Nu livram momentan." : currentForm.deliveryAvailabilityMode === "OPEN_AT" ? "Clientul vede: Livrarea incepe la ora aleasa." : currentForm.deliveryAvailabilityMode === "FORCE_OPEN" ? "Clientul vede: Livrarea este disponibila acum." : "Clientul vede automat daca livrarea este disponibila, incepe in curand sau nu livreaza astazi."}</p>
+                    </div>
+                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">Program livrare</div>
+                          <p className="mt-1 text-xs text-slate-500">Ora Romaniei. Este folosit doar daca alegi „Urmeaza programul”.</p>
+                        </div>
+                        <button type="button" onClick={() => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryScheduleMode: prev[selectedPlatform].deliveryScheduleMode === "DAILY" ? "CUSTOM" : "DAILY" } }))} className={documentButtonSecondaryClass}>
+                          {currentForm.deliveryScheduleMode === "DAILY" ? "Program diferit pe zile" : "Acelasi program zilnic"}
+                        </button>
+                      </div>
+                      {currentForm.deliveryScheduleMode === "DAILY" ? (() => {
+                        const scheduleDay = currentForm.deliverySchedule.MONDAY
+                        const updateEveryDay = (update: Partial<typeof scheduleDay>) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliverySchedule: deliveryWeekdays.reduce((schedule, day) => ({ ...schedule, [day.key]: { ...prev[selectedPlatform].deliverySchedule[day.key], ...update } }), {} as DeliveryScheduleForm) } }))
+                        return <div className="mt-3 grid grid-cols-[minmax(130px,1fr)_110px_110px] items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><span className="text-sm font-semibold text-slate-800">Zilnic</span><input type="time" value={scheduleDay.open} onChange={(event) => updateEveryDay({ open: event.target.value })} className={documentInputClass} aria-label="Deschidere zilnica" /><input type="time" value={scheduleDay.close} onChange={(event) => updateEveryDay({ close: event.target.value })} className={documentInputClass} aria-label="Inchidere zilnica" /></div>
+                      })() : (
+                      <div className="mt-3 space-y-2">
                         {deliveryWeekdays.map((day) => {
                           const scheduleDay = currentForm.deliverySchedule[day.key]
                           return (
@@ -2045,6 +2092,7 @@ export default function MarketplacePage() {
                           )
                         })}
                       </div>
+                      )}
                     </div>
                     <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">

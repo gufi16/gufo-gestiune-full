@@ -45,6 +45,7 @@ type DeliveryServiceArea = {
 type DeliveryScheduleDayKey = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY"
 type DeliveryScheduleDay = { enabled: boolean; open: string; close: string }
 type DeliverySchedule = Record<DeliveryScheduleDayKey, DeliveryScheduleDay>
+type DeliveryAvailabilityMode = "SCHEDULE" | "PAUSED" | "FORCE_OPEN" | "OPEN_AT"
 
 const DELIVERY_WEEKDAYS: Array<{ key: DeliveryScheduleDayKey; label: string }> = [
   { key: "MONDAY", label: "Luni" }, { key: "TUESDAY", label: "Marti" }, { key: "WEDNESDAY", label: "Miercuri" },
@@ -307,6 +308,12 @@ function deliveryTimeToMinutes(time: string) {
   return hours * 60 + minutes
 }
 
+function normalizeDeliveryAvailabilityMode(value: unknown): DeliveryAvailabilityMode {
+  const mode = String(value || "").trim().toUpperCase()
+  if (mode === "PAUSED" || mode === "FORCE_OPEN" || mode === "OPEN_AT") return mode
+  return "SCHEDULE"
+}
+
 function buildDeliveryAvailability(settings: MarketplaceSettings, now = new Date()) {
   const schedule = normalizeDeliverySchedule(settings.deliverySchedule)
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now)
@@ -318,9 +325,17 @@ function buildDeliveryAvailability(settings: MarketplaceSettings, now = new Date
   const closeMinutes = deliveryTimeToMinutes(day.close)
   const dayLabel = DELIVERY_WEEKDAYS.find((item) => item.key === weekdayKey)?.label || "Astazi"
   const scheduleLabel = day.enabled ? `${day.open} - ${day.close}` : "Inchis"
-  if (day.enabled && openMinutes < closeMinutes && currentMinutes >= openMinutes && currentMinutes < closeMinutes) return { isOpen: true, status: "OPEN", label: "Deschis acum", todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
-  if (day.enabled && openMinutes < closeMinutes && currentMinutes < openMinutes && openMinutes - currentMinutes <= 60) return { isOpen: false, status: "OPENING_SOON", label: `Se deschide in curand la ${day.open}`, todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
-  return { isOpen: false, status: "CLOSED", label: day.enabled ? `Inchis · program azi ${scheduleLabel}` : "Inchis astazi", todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
+  const mode = normalizeDeliveryAvailabilityMode(settings.deliveryAvailabilityMode)
+  const resumeAt = normalizeDeliveryTime(settings.deliveryResumeAt, "")
+  if (mode === "FORCE_OPEN") return { isOpen: true, status: "FORCE_OPEN", label: "Livrarea este disponibila acum", todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+  if (mode === "PAUSED") return { isOpen: false, status: "PAUSED", label: "Nu livram momentan", todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+  if (mode === "OPEN_AT" && resumeAt) {
+    if (currentMinutes < deliveryTimeToMinutes(resumeAt)) return { isOpen: false, status: "OPENING_SOON", label: `Livrarea incepe la ${resumeAt}`, todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+    return { isOpen: true, status: "FORCE_OPEN", label: "Livrarea este disponibila acum", todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+  }
+  if (day.enabled && openMinutes < closeMinutes && currentMinutes >= openMinutes && currentMinutes < closeMinutes) return { isOpen: true, status: "OPEN", label: "Livrarea este disponibila acum", todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+  if (day.enabled && openMinutes < closeMinutes && currentMinutes < openMinutes && openMinutes - currentMinutes <= 60) return { isOpen: false, status: "OPENING_SOON", label: `Livrarea incepe in curand, la ${day.open}`, todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
+  return { isOpen: false, status: "CLOSED", label: day.enabled ? `Nu livram momentan · azi ${scheduleLabel}` : "Nu livram astazi", todayLabel: `Program livrare: ${scheduleLabel}`, schedule }
 }
 
 function normalizeDeliveryPaymentMethods(value: unknown): DeliveryPaymentMethodCode[] {
@@ -3799,6 +3814,8 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     incomingSettings.deliveryOnlineProvider = "VIVA"
     incomingSettings.deliveryServiceArea = deliveryServiceArea || undefined
     incomingSettings.deliverySchedule = deliverySchedule
+    incomingSettings.deliveryAvailabilityMode = normalizeDeliveryAvailabilityMode(incomingSettings.deliveryAvailabilityMode)
+    incomingSettings.deliveryResumeAt = normalizeDeliveryTime(incomingSettings.deliveryResumeAt, "") || undefined
     incomingSettings.targetTerminalId = targetTerminal.id
     incomingSettings.targetTerminalDeviceId = targetTerminal.deviceId || null
     incomingSettings.targetTerminalLabel = targetTerminal.label || null
