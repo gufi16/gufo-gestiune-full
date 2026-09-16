@@ -194,6 +194,7 @@ const ReadyStatusSchema = z.object({
 
 const PublicGufoDeliveryCheckoutSchema = z.object({
   restaurantId: z.string().min(1),
+  fulfillmentType: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
   customer: z.object({
     name: z.string().trim().min(1),
     phone: z.string().trim().min(1),
@@ -208,7 +209,7 @@ const PublicGufoDeliveryCheckoutSchema = z.object({
     lat: z.coerce.number().nullish().transform((value) => value ?? undefined),
     lng: z.coerce.number().nullish().transform((value) => value ?? undefined),
     instructions: z.string().trim().nullish().transform((value) => value || undefined),
-  }),
+  }).optional(),
   payment: z.object({
     type: z.enum(["CASH", "CARD", "GOOGLE_PAY", "APPLE_PAY", "PAID"]).default("CARD"),
   }).default({ type: "CARD" }),
@@ -1188,16 +1189,23 @@ async function buildGufoDeliveryCheckoutImportPayload(
   const deliverySettings = integrationSettings(integration.settingsJson)
   const deliveryAvailability = buildDeliveryAvailability(deliverySettings)
   if (!deliveryAvailability.isOpen) throw new Error(`Restaurantul este momentan indisponibil. ${deliveryAvailability.label}.`)
-  const deliveryArea = normalizeDeliveryServiceArea(deliverySettings.deliveryServiceArea)
-  if (!deliveryArea) {
-    throw new Error("Restaurantul nu are o zona de livrare configurata.")
-  }
-  const deliveryPoint = parseDeliveryGeoPoint(input.deliveryAddress.lat, input.deliveryAddress.lng)
-  if (!deliveryPoint) {
-    throw new Error("Adresa de livrare trebuie pozitionata pe harta inainte de plasarea comenzii.")
-  }
-  if (!deliveryServiceAreaContainsPoint(deliveryArea, deliveryPoint)) {
-    throw new Error("Restaurantul selectat nu livreaza la aceasta adresa.")
+  const isPickup = input.fulfillmentType === "PICKUP"
+  if (!isPickup) {
+    const deliveryArea = normalizeDeliveryServiceArea(deliverySettings.deliveryServiceArea)
+    if (!deliveryArea) {
+      throw new Error("Restaurantul nu are o zona de livrare configurata.")
+    }
+    const deliveryAddress = input.deliveryAddress
+    if (!deliveryAddress) {
+      throw new Error("Alege adresa de livrare inainte de plasarea comenzii.")
+    }
+    const deliveryPoint = parseDeliveryGeoPoint(deliveryAddress.lat, deliveryAddress.lng)
+    if (!deliveryPoint) {
+      throw new Error("Adresa de livrare trebuie pozitionata pe harta inainte de plasarea comenzii.")
+    }
+    if (!deliveryServiceAreaContainsPoint(deliveryArea, deliveryPoint)) {
+      throw new Error("Restaurantul selectat nu livreaza la aceasta adresa.")
+    }
   }
 
   const menuPayload: GufoDeliveryMenuPayload = await buildGufoDeliveryMenuPayload(req, integration)
@@ -1269,7 +1277,7 @@ async function buildGufoDeliveryCheckoutImportPayload(
   const subtotal = toMoneyValue(merchandiseSubtotal + sgrTotal)
   const configuredDeliveryFee = Math.max(0, Number(deliverySettings.deliveryFee || 0))
   const freeDeliveryMinOrder = Math.max(0, Number(deliverySettings.freeDeliveryMinOrder || 0))
-  const deliveryFee = freeDeliveryMinOrder > 0 && merchandiseSubtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee
+  const deliveryFee = isPickup ? 0 : (freeDeliveryMinOrder > 0 && merchandiseSubtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee)
   const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
   const externalOrderId = createGufoDeliveryOrderId()
@@ -1285,7 +1293,7 @@ async function buildGufoDeliveryCheckoutImportPayload(
       externalOrderNumber,
       customerName: input.customer.name,
       customerPhone: input.customer.phone,
-      customerNote: input.customer.note || input.deliveryAddress.instructions || undefined,
+      customerNote: input.customer.note || input.deliveryAddress?.instructions || (isPickup ? "Ridicare personala" : undefined),
       paymentLabel: paymentType,
       currency: "RON" as const,
       subtotal,
@@ -1327,6 +1335,7 @@ async function buildGufoDeliveryCheckoutImportPayload(
         source: "GUFO_DELIVERY_APP",
         restaurant: menuPayload.restaurant,
         delivery: {
+          fulfillmentType: input.fulfillmentType,
           address: input.deliveryAddress,
           fee: deliveryFee,
           freeAbove: freeDeliveryMinOrder || null,
