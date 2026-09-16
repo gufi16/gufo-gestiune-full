@@ -909,6 +909,7 @@ export default function MarketplacePage() {
   const [deliveryCatalogPage, setDeliveryCatalogPage] = useState(0)
   const [deliveryPreviewPage, setDeliveryPreviewPage] = useState(0)
   const [deliveryConfigurationOpen, setDeliveryConfigurationOpen] = useState(false)
+  const [deliveryConfigurationSection, setDeliveryConfigurationSection] = useState<"restaurant" | "checkout" | "catalog">("restaurant")
   const [deliveryCatalogPreviewOpen, setDeliveryCatalogPreviewOpen] = useState(false)
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
@@ -1628,7 +1629,8 @@ export default function MarketplacePage() {
   const deliveryPageSize = 12
   const deliveryCategoryPageCount = Math.max(1, Math.ceil(visibleCategories.length / deliveryPageSize))
   const deliveryCatalogPageCount = Math.max(1, Math.ceil(filteredDeliveryProducts.length / deliveryPageSize))
-  const deliveryPreviewPageCount = Math.max(1, Math.ceil(publishedGufoProducts.length / deliveryPageSize))
+  const deliveryPreviewPageSize = 6
+  const deliveryPreviewPageCount = Math.max(1, Math.ceil(publishedGufoProducts.length / deliveryPreviewPageSize))
   const filteredDeliveryOptionProducts = useMemo(() => {
     const query = deliveryOptionProductSearch.trim().toLocaleLowerCase("ro")
     return products
@@ -1815,7 +1817,7 @@ export default function MarketplacePage() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Configurare Gufo Delivery</div>
                     <div className="mt-2 text-xl font-semibold tracking-tight text-[#17324D]">Restaurant, POS, livrare si plata</div>
                     <p className="mt-2 text-sm leading-6 text-slate-600">Setarile sunt grupate intr-o fereastra landscape, ca sa nu mai ai o pagina lunga cu scroll.</p>
-                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => setDeliveryConfigurationOpen(true)}>
+                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => { setDeliveryConfigurationSection("restaurant"); setDeliveryConfigurationOpen(true) }}>
                       Configureaza Gufo Delivery
                     </button>
                   </div>
@@ -1841,6 +1843,19 @@ export default function MarketplacePage() {
                       <button type="button" onClick={() => setDeliveryConfigurationOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
                     </div>
                   ) : null}
+                  {selectedPlatform === "GUFO_DELIVERY" ? (
+                    <div className="mb-4 grid grid-cols-3 gap-2 rounded-[16px] border border-sky-100 bg-white p-2">
+                      {([
+                        ["restaurant", "Restaurant si POS"],
+                        ["checkout", "Livrare si plata"],
+                        ["catalog", "Catalog public"],
+                      ] as const).map(([section, label]) => (
+                        <button key={section} type="button" onClick={() => setDeliveryConfigurationSection(section)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${deliveryConfigurationSection === section ? "bg-[#17324D] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
               <DocumentSection
                 title={
                   selectedPlatform === "GUFO_DELIVERY"
@@ -1854,9 +1869,9 @@ export default function MarketplacePage() {
                 }
                 actions={null}
               >
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+                <div className={selectedPlatform === "GUFO_DELIVERY" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]"}>
                   <div className="space-y-3">
-                    <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                    <div className={`rounded-[18px] border border-slate-200 bg-slate-50 p-4 ${selectedPlatform === "GUFO_DELIVERY" && deliveryConfigurationSection !== "restaurant" ? "hidden" : ""}`}>
                       <div className="mb-3 flex items-center justify-between gap-2 text-sm font-semibold text-slate-800">
                         <span className="flex items-center gap-2"><Truck size={16} className="text-[#17324D]" />Restaurant si POS</span>
                         {selectedPlatform === "GUFO_DELIVERY" ? (
@@ -1962,7 +1977,7 @@ export default function MarketplacePage() {
                       ) : null}
                     </div>
 
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className={`rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm ${selectedPlatform === "GUFO_DELIVERY" && deliveryConfigurationSection !== "checkout" ? "hidden" : ""}`}>
                       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
                         <Link2 size={16} className="text-[#17324D]" />
                         {selectedPlatform === "GUFO_DELIVERY" ? "Configurare interna Gufo Delivery" : "Date integrare platforma"}
@@ -2170,7 +2185,7 @@ export default function MarketplacePage() {
                 </div>
 
                 {selectedPlatform === "GUFO_DELIVERY" ? (
-                    <div className="space-y-3 rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
+                    <div className={`space-y-3 rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4 ${deliveryConfigurationSection !== "catalog" ? "hidden" : ""}`}>
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <div className="text-sm font-semibold text-[#17324D]">Catalog Gufo Delivery</div>
@@ -2373,7 +2388,7 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className={selectedPlatform === "GUFO_DELIVERY" ? "hidden" : "space-y-3"}>
                 {selectedPlatform !== "GUFO_DELIVERY" ? (
                   <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Webhook</div>
@@ -2944,7 +2959,7 @@ export default function MarketplacePage() {
               <>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
                   <div><div className="text-sm font-semibold text-[#17324D]">Preview catalog public</div><div className="mt-1 text-sm text-slate-600">{gufoDeliveryPublishedProducts.length} produse si {gufoDeliveryPublishedCategories.length} categorii pregatite pentru aplicatie.</div></div>
-                  <button type="button" className={documentButtonPrimaryClass} onClick={() => setDeliveryCatalogPreviewOpen(true)}>Vezi catalogul</button>
+                  <button type="button" className={documentButtonPrimaryClass} onClick={() => { setDeliveryPreviewPage(0); setDeliveryCatalogPreviewOpen(true) }}>Vezi catalogul</button>
                 </div>
                 <div className={deliveryCatalogPreviewOpen ? "fixed inset-0 z-[90] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden"} onMouseDown={() => setDeliveryCatalogPreviewOpen(false)}>
                   <div className="mx-auto w-full max-w-[1320px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
@@ -3033,7 +3048,7 @@ export default function MarketplacePage() {
                           : "Nu exista produse publicate pentru configuratia curenta."}
                       </InlineNotice>
                     ) : (
-                      publishedGufoProducts.slice(deliveryPreviewPage * deliveryPageSize, (deliveryPreviewPage + 1) * deliveryPageSize).map((product) => (
+                      publishedGufoProducts.slice(deliveryPreviewPage * deliveryPreviewPageSize, (deliveryPreviewPage + 1) * deliveryPreviewPageSize).map((product) => (
                         <div key={product.id} className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
