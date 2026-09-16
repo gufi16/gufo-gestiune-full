@@ -696,6 +696,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
 
   // Delivery catalog settings are independent from POS visibility/access rules.
   const deliveryProducts = rawProducts.filter((product) => {
+    // Option products stay available inside a configured group, without becoming menu cards.
+    if (product.isVisibleInDelivery === false) return false
     if (deliveryCatalogMode === "MANUAL_SELECTION") {
       return includedProductIds.has(product.id)
     }
@@ -764,7 +766,9 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
           selectionMode: link.group.selectionMode,
           minSelections: link.group.minSelections,
           maxSelections: link.group.maxSelections,
-          items: link.group.items.map((item) => ({
+          items: link.group.items
+            .filter((item) => !Array.isArray(link.allowedItemIds) || link.allowedItemIds.map((value) => String(value)).includes(item.product.id))
+            .map((item) => ({
             id: item.id,
             productId: item.product.id,
             name: item.product.name,
@@ -775,7 +779,7 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
             sgrValue: Number(item.product.sgrValue || 0),
             sku: item.product.sku,
             vatRate: Number(item.product.vatRate?.rate || 0),
-          })),
+            })),
         })),
         crossSellProducts: product.crossSellLinks
           .filter((link) => link.targetProduct.isActive)

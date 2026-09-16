@@ -997,6 +997,7 @@ model Product {
   isMenu         Boolean        @default(false)
   posMenuCategory String?
   isVisibleInPos Boolean        @default(true)
+  isVisibleInDelivery Boolean   @default(true)
   publishToGlovo Boolean        @default(false)
   includeInNomenclatorExport Boolean @default(true)
   isSgr          Boolean        @default(false)
@@ -1100,6 +1101,7 @@ model DeliveryProductOptionGroup {
   id        String              @id @default(cuid())
   productId String
   groupId   String
+  allowedItemIds Json?
   sortOrder Int                 @default(0)
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt

@@ -4,7 +4,7 @@ import fs from "fs"
 import multer from "multer"
 import ExcelJS from "exceljs"
 import PDFDocument from "pdfkit"
-import { ProductClass, ProductionMode, RecipeStatus, SgrPackagingType, StockCostMethod, TerminalDeviceType } from "@prisma/client"
+import { Prisma, ProductClass, ProductionMode, RecipeStatus, SgrPackagingType, StockCostMethod, TerminalDeviceType } from "@prisma/client"
 import { prisma } from "../lib/prisma"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { buildCompanyScopedTenantWhere, requireRequestCompanyId, resolveRequestCompany } from "../lib/companyScope"
@@ -234,6 +234,45 @@ async function resolveDeliveryOptionGroupIds(tenantId: string, companyId: string
   return normalizedIds
 }
 
+function normalizeDeliveryGroupItemIdsByGroup(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {} as Record<string, string[]>
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([groupId, itemIds]) => [
+        String(groupId || "").trim(),
+        Array.isArray(itemIds) ? normalizeCrossSellProductIds(itemIds) : [],
+      ] as const)
+      .filter(([groupId]) => Boolean(groupId))
+  )
+}
+
+async function validateDeliveryGroupItemSelections(
+  tenantId: string,
+  companyId: string,
+  displayGroupIds: string[],
+  selectedItemIdsByGroup: Record<string, string[]>
+) {
+  const configuredGroupIds = Object.keys(selectedItemIdsByGroup)
+  if (!configuredGroupIds.length) return
+  if (configuredGroupIds.some((groupId) => !displayGroupIds.includes(groupId))) {
+    throw new Error("Ai selectat optiuni pentru o grupa care nu este afisata la produs.")
+  }
+
+  const groups = await prisma.deliveryOptionGroup.findMany({
+    where: { id: { in: configuredGroupIds }, ...buildCompanyScopedTenantWhere(tenantId, companyId) },
+    select: { id: true, items: { select: { productId: true } } },
+  })
+  if (groups.length !== configuredGroupIds.length) throw new Error("Unele grupe Gufo Delivery nu exista.")
+
+  for (const group of groups) {
+    const allowedProducts = new Set(group.items.map((item) => item.productId))
+    const selectedProducts = selectedItemIdsByGroup[group.id] || []
+    if (selectedProducts.some((productId) => !allowedProducts.has(productId))) {
+      throw new Error("Unele optiuni nu apartin grupei selectate.")
+    }
+  }
+}
+
 function hasBarcodePayload(body: Record<string, unknown> | null | undefined) {
   if (!body) return false
   return Object.prototype.hasOwnProperty.call(body, "barcode") || Object.prototype.hasOwnProperty.call(body, "barcodes")
@@ -347,6 +386,7 @@ router.get("/api/v1/products", async (req: AuthedRequest, res) => {
         select: {
           groupId: true,
           sortOrder: true,
+          allowedItemIds: true,
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       },
@@ -570,6 +610,8 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
       : Boolean(req.body?.requiresRecipe)
   const requestedVisibleInPos =
     req.body?.isVisibleInPos === undefined ? true : Boolean(req.body?.isVisibleInPos)
+  const requestedVisibleInDelivery =
+    req.body?.isVisibleInDelivery === undefined ? true : Boolean(req.body?.isVisibleInDelivery)
   const requestedIsSgr = req.body?.isSgr === undefined ? false : Boolean(req.body?.isSgr)
   const requestedIsFiscalRiskProduct =
     req.body?.isFiscalRiskProduct === undefined ? false : Boolean(req.body?.isFiscalRiskProduct)
@@ -583,6 +625,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   const requestedBarcodes = normalizeBarcodeList(req.body?.barcodes ?? req.body?.barcode)
   const requestedCrossSellProductIds = normalizeCrossSellProductIds(req.body?.crossSellProductIds)
   const deliveryDisplayGroupIds = normalizeCrossSellProductIds(req.body?.deliveryDisplayGroupIds)
+  const deliveryGroupItemIdsByGroup = normalizeDeliveryGroupItemIdsByGroup(req.body?.deliveryGroupItemIdsByGroup)
   const deliveryOptionGroupIds = normalizeCrossSellProductIds(req.body?.deliveryOptionGroupIds)
   const allDeliveryGroupIds = [...deliveryDisplayGroupIds, ...deliveryOptionGroupIds]
 
@@ -681,6 +724,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   if (allDeliveryGroupIds.length) {
     await resolveDeliveryOptionGroupIds(tenantId, companyId, allDeliveryGroupIds)
   }
+  await validateDeliveryGroupItemSelections(tenantId, companyId, deliveryDisplayGroupIds, deliveryGroupItemIdsByGroup)
 
   const [vatRate, fallbackVatRate, uom, purchaseUom, category, department, crossSellProducts] = await Promise.all([
     vatRateId
@@ -848,6 +892,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
           isMenu: requestedIsMenu,
           posMenuCategory,
           isVisibleInPos,
+          isVisibleInDelivery: requestedVisibleInDelivery,
           publishToGlovo: requestedPublishToGlovo,
           includeInNomenclatorExport: requestedIncludeInNomenclatorExport,
           isSgr,
@@ -904,7 +949,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
         })
       }
 
-      if (deliveryDisplayGroupIds.length) await tx.deliveryProductOptionGroup.createMany({ data: deliveryDisplayGroupIds.map((groupId, sortOrder) => ({ productId: created.id, groupId, sortOrder })) })
+      if (deliveryDisplayGroupIds.length) await tx.deliveryProductOptionGroup.createMany({ data: deliveryDisplayGroupIds.map((groupId, sortOrder) => ({ productId: created.id, groupId, sortOrder, allowedItemIds: Object.prototype.hasOwnProperty.call(deliveryGroupItemIdsByGroup, groupId) ? deliveryGroupItemIdsByGroup[groupId] as Prisma.InputJsonValue : Prisma.JsonNull })) })
       if (deliveryOptionGroupIds.length) await tx.deliveryOptionGroupItem.createMany({ data: deliveryOptionGroupIds.map((groupId, sortOrder) => ({ groupId, productId: created.id, sortOrder })) })
 
       const withBarcodes = await tx.product.findUniqueOrThrow({
@@ -943,6 +988,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
             select: {
               groupId: true,
               sortOrder: true,
+              allowedItemIds: true,
             },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           },
@@ -1030,6 +1076,8 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
     req.body?.requiresRecipe === undefined ? undefined : Boolean(req.body?.requiresRecipe)
   const requestedVisibleInPos =
     req.body?.isVisibleInPos === undefined ? true : Boolean(req.body?.isVisibleInPos)
+  const requestedVisibleInDelivery =
+    req.body?.isVisibleInDelivery === undefined ? true : Boolean(req.body?.isVisibleInDelivery)
   const requestedIsSgr = req.body?.isSgr === undefined ? false : Boolean(req.body?.isSgr)
   const requestedIsFiscalRiskProduct =
     req.body?.isFiscalRiskProduct === undefined ? false : Boolean(req.body?.isFiscalRiskProduct)
@@ -1043,6 +1091,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   const requestedBarcodes = normalizeBarcodeList(req.body?.barcodes ?? req.body?.barcode)
   const requestedCrossSellProductIds = normalizeCrossSellProductIds(req.body?.crossSellProductIds)
   const deliveryDisplayGroupIds = normalizeCrossSellProductIds(req.body?.deliveryDisplayGroupIds)
+  const deliveryGroupItemIdsByGroup = normalizeDeliveryGroupItemIdsByGroup(req.body?.deliveryGroupItemIdsByGroup)
   const deliveryOptionGroupIds = normalizeCrossSellProductIds(req.body?.deliveryOptionGroupIds)
   const allDeliveryGroupIds = [...deliveryDisplayGroupIds, ...deliveryOptionGroupIds]
   const terminalIds = await resolveProductTerminalIds(tenantId, companyId, req.body)
@@ -1260,6 +1309,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   if (allDeliveryGroupIds.length) {
     await resolveDeliveryOptionGroupIds(tenantId, companyId, allDeliveryGroupIds)
   }
+  await validateDeliveryGroupItemSelections(tenantId, companyId, deliveryDisplayGroupIds, deliveryGroupItemIdsByGroup)
 
   try {
     const forcedInactiveBecauseMissingRecipe = finalRequestedRequiresRecipe && !existingRecipe
@@ -1315,6 +1365,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
           isMenu: requestedIsMenu,
           posMenuCategory,
           isVisibleInPos,
+          isVisibleInDelivery: requestedVisibleInDelivery,
           publishToGlovo: requestedPublishToGlovo,
           includeInNomenclatorExport: requestedIncludeInNomenclatorExport,
           isSgr,
@@ -1378,7 +1429,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
 
       await tx.deliveryProductOptionGroup.deleteMany({ where: { productId: id } })
       await tx.deliveryOptionGroupItem.deleteMany({ where: { productId: id } })
-      if (deliveryDisplayGroupIds.length) await tx.deliveryProductOptionGroup.createMany({ data: deliveryDisplayGroupIds.map((groupId, sortOrder) => ({ productId: id, groupId, sortOrder })) })
+      if (deliveryDisplayGroupIds.length) await tx.deliveryProductOptionGroup.createMany({ data: deliveryDisplayGroupIds.map((groupId, sortOrder) => ({ productId: id, groupId, sortOrder, allowedItemIds: Object.prototype.hasOwnProperty.call(deliveryGroupItemIdsByGroup, groupId) ? deliveryGroupItemIdsByGroup[groupId] as Prisma.InputJsonValue : Prisma.JsonNull })) })
       if (deliveryOptionGroupIds.length) await tx.deliveryOptionGroupItem.createMany({ data: deliveryOptionGroupIds.map((groupId, sortOrder) => ({ groupId, productId: id, sortOrder })) })
 
       return tx.product.findUniqueOrThrow({
@@ -1417,6 +1468,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
             select: {
               groupId: true,
               sortOrder: true,
+              allowedItemIds: true,
             },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           },

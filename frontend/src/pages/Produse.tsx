@@ -21,6 +21,7 @@ type Product = {
   price: number
   deliveryDescription?: string | null
   deliveryPromoPrice?: number | null
+  isVisibleInDelivery?: boolean
   costPrice?: number
   purchaseFactor?: number
   requiresRecipe?: boolean
@@ -38,6 +39,7 @@ type Product = {
   productionMode?: "AUTO" | "MANUAL"
   crossSellProductIds?: string[]
   deliveryDisplayGroupIds?: string[]
+  deliveryGroupItemIdsByGroup?: Record<string, string[]>
   deliveryOptionGroupIds?: string[]
   crossSellProducts?: Array<{
     id: string
@@ -84,6 +86,7 @@ type DeliveryOptionGroupSummary = {
   name: string
   minSelections?: number
   maxSelections?: number
+  items: Array<{ productId: string; product?: { name?: string | null; sku?: string | null } | null }>
 }
 
 type PosTerminal = {
@@ -116,6 +119,7 @@ type FormState = {
   isMenu: boolean
   posMenuCategory: string
   isVisibleInPos: boolean
+  isVisibleInDelivery: boolean
   publishToGlovo: boolean
   includeInNomenclatorExport: boolean
   isSgr: boolean
@@ -130,6 +134,7 @@ type FormState = {
   posSortOrder: string
   crossSellProductIds: string[]
   deliveryDisplayGroupIds: string[]
+  deliveryGroupItemIdsByGroup: Record<string, string[]>
   deliveryOptionGroupIds: string[]
 }
 
@@ -236,6 +241,7 @@ const emptyForm: FormState = {
   isMenu: false,
   posMenuCategory: "",
   isVisibleInPos: true,
+  isVisibleInDelivery: true,
   publishToGlovo: false,
   includeInNomenclatorExport: true,
   isSgr: false,
@@ -250,6 +256,7 @@ const emptyForm: FormState = {
   posSortOrder: "0",
   crossSellProductIds: [],
   deliveryDisplayGroupIds: [],
+  deliveryGroupItemIdsByGroup: {},
   deliveryOptionGroupIds: [],
 }
 
@@ -618,6 +625,12 @@ export function ProductsCatalogPage({
                 name: String(item?.name || "").trim(),
                 minSelections: Number(item?.minSelections || 0),
                 maxSelections: Number(item?.maxSelections || 0),
+                items: Array.isArray(item?.items)
+                  ? item.items.map((option: any) => ({
+                      productId: String(option?.productId || ""),
+                      product: option?.product ? { name: option.product.name, sku: option.product.sku } : null,
+                    })).filter((option: { productId: string }) => Boolean(option.productId))
+                  : [],
               })).filter((item: DeliveryOptionGroupSummary) => item.id && item.name)
             : []
         )
@@ -663,6 +676,12 @@ export function ProductsCatalogPage({
               name: String(item?.name || "").trim(),
               minSelections: Number(item?.minSelections || 0),
               maxSelections: Number(item?.maxSelections || 0),
+              items: Array.isArray(item?.items)
+                ? item.items.map((option: any) => ({
+                    productId: String(option?.productId || ""),
+                    product: option?.product ? { name: option.product.name, sku: option.product.sku } : null,
+                  })).filter((option: { productId: string }) => Boolean(option.productId))
+                : [],
             })).filter((item: DeliveryOptionGroupSummary) => item.id && item.name)
           : []
       )
@@ -729,6 +748,7 @@ function getDefaultVat(list = vatRates) {
       isMenu: false,
       posMenuCategory: "",
       isVisibleInPos: true,
+      isVisibleInDelivery: true,
       publishToGlovo: false,
       includeInNomenclatorExport: true,
       isSgr: false,
@@ -743,6 +763,7 @@ function getDefaultVat(list = vatRates) {
       posSortOrder: "0",
       crossSellProductIds: [],
       deliveryDisplayGroupIds: [],
+      deliveryGroupItemIdsByGroup: {},
       deliveryOptionGroupIds: [],
     })
     setError("")
@@ -784,6 +805,7 @@ function getDefaultVat(list = vatRates) {
       isMenu: item.isMenu === true,
       posMenuCategory: item.posMenuCategory || "",
       isVisibleInPos: item.isVisibleInPos !== false,
+      isVisibleInDelivery: item.isVisibleInDelivery !== false,
       publishToGlovo: item.publishToGlovo === true,
       includeInNomenclatorExport: item.includeInNomenclatorExport !== false,
       isSgr: item.isSgr === true,
@@ -798,6 +820,7 @@ function getDefaultVat(list = vatRates) {
       posSortOrder: String(Math.max(0, Math.round(Number(item.posSortOrder || 0)))),
       crossSellProductIds: Array.isArray(item.crossSellProductIds) ? item.crossSellProductIds : [],
       deliveryDisplayGroupIds: Array.isArray(item.deliveryDisplayGroupIds) ? item.deliveryDisplayGroupIds : [],
+      deliveryGroupItemIdsByGroup: item.deliveryGroupItemIdsByGroup && typeof item.deliveryGroupItemIdsByGroup === "object" ? item.deliveryGroupItemIdsByGroup : {},
       deliveryOptionGroupIds: Array.isArray(item.deliveryOptionGroupIds) ? item.deliveryOptionGroupIds : [],
     })
     setError("")
@@ -960,6 +983,7 @@ function getDefaultVat(list = vatRates) {
           isMenu: form.isMenu,
           posMenuCategory: form.isMenu ? form.posMenuCategory.trim() || null : null,
           isVisibleInPos: form.isVisibleInPos,
+          isVisibleInDelivery: form.isVisibleInDelivery,
           publishToGlovo: form.publishToGlovo,
           includeInNomenclatorExport: form.includeInNomenclatorExport,
           isSgr: form.isSgr,
@@ -974,6 +998,7 @@ function getDefaultVat(list = vatRates) {
           posSortOrder: Math.max(0, Math.round(toNumberSafe(form.posSortOrder || 0))),
           crossSellProductIds: form.crossSellProductIds,
           deliveryDisplayGroupIds: form.deliveryDisplayGroupIds,
+          deliveryGroupItemIdsByGroup: form.deliveryGroupItemIdsByGroup,
           deliveryOptionGroupIds: form.deliveryOptionGroupIds,
         })
       })
@@ -1181,11 +1206,40 @@ function getDefaultVat(list = vatRates) {
       const key = target === "display" ? "deliveryDisplayGroupIds" : "deliveryOptionGroupIds"
       const groupIds = prev[key]
 
+      if (target === "display") {
+        const group = deliveryOptionGroups.find((item) => item.id === groupId)
+        const isRemoving = groupIds.includes(groupId)
+        const { [groupId]: _removed, ...remainingSelections } = prev.deliveryGroupItemIdsByGroup
+        return {
+          ...prev,
+          deliveryDisplayGroupIds: isRemoving ? groupIds.filter((id) => id !== groupId) : [...groupIds, groupId],
+          // A newly assigned group starts with all of its template options selected.
+          deliveryGroupItemIdsByGroup: isRemoving
+            ? remainingSelections
+            : { ...prev.deliveryGroupItemIdsByGroup, [groupId]: prev.deliveryGroupItemIdsByGroup[groupId] || (group?.items || []).map((item) => item.productId) },
+        }
+      }
+
       return {
         ...prev,
         [key]: groupIds.includes(groupId)
           ? groupIds.filter((id) => id !== groupId)
           : [...groupIds, groupId],
+      }
+    })
+  }
+
+  function toggleDeliveryGroupItem(groupId: string, productId: string) {
+    setForm((prev) => {
+      const selected = prev.deliveryGroupItemIdsByGroup[groupId] || []
+      return {
+        ...prev,
+        deliveryGroupItemIdsByGroup: {
+          ...prev.deliveryGroupItemIdsByGroup,
+          [groupId]: selected.includes(productId)
+            ? selected.filter((id) => id !== productId)
+            : [...selected, productId],
+        },
       }
     })
   }
@@ -2615,6 +2669,9 @@ function getDefaultVat(list = vatRates) {
                         />
                         <div style={fieldHint}>Daca introduci un pret mai mic decat pretul normal, clientul vede reducerea cu pretul vechi taiat.</div>
                       </Field>
+                      <SettingRow title="Afiseaza in catalogul Gufo Delivery" description="Opreste pentru sosuri, ingrediente si extra: raman vizibile in categoria lor din Gufo POS si pot fi alese in grupe, dar nu apar ca produse separate in Delivery.">
+                        <Toggle checked={form.isVisibleInDelivery} onChange={(checked) => setForm((prev) => ({ ...prev, isVisibleInDelivery: checked }))} />
+                      </SettingRow>
                     </div>
                     <div style={{ ...hintBoxInline, marginBottom: 2 }}>
                       Stabilesti rolul produsului in comanda clientului. Pentru o shaorma bifezi grupele oferite; pentru ketchup bifezi grupa in care poate fi ales.
@@ -2636,24 +2693,24 @@ function getDefaultVat(list = vatRates) {
                         {deliveryOptionGroups.map((group) => {
                           const checked = form.deliveryDisplayGroupIds.includes(group.id)
                           const position = form.deliveryDisplayGroupIds.indexOf(group.id) + 1
+                          const selectedItemIds = form.deliveryGroupItemIdsByGroup[group.id] || []
                           return (
-                            <label
+                            <div
                               key={group.id}
                               style={{
-                                display: "flex",
-                                alignItems: "center",
+                                display: "grid",
                                 gap: 10,
                                 border: checked ? "1px solid #38bdf8" : "1px solid #dbeafe",
                                 background: checked ? "#ecfeff" : "#f8fafc",
                                 borderRadius: 12,
                                 padding: "11px 12px",
-                                cursor: "pointer",
                               }}
                             >
-                              <input type="checkbox" checked={checked} onChange={() => toggleDeliveryGroup(group.id, "display")} />
-                              <span style={{ color: "#334155", fontSize: 13, fontWeight: 600 }}>{group.name}</span>
-                              {checked ? (
-                                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, color: "#475569", fontSize: 12, fontWeight: 600 }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                                <input type="checkbox" checked={checked} onChange={() => toggleDeliveryGroup(group.id, "display")} />
+                                <span style={{ color: "#334155", fontSize: 13, fontWeight: 600 }}>{group.name}</span>
+                                {checked ? (
+                                  <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, color: "#475569", fontSize: 12, fontWeight: 600 }}>
                                   Poziție
                                   <input
                                     type="number"
@@ -2664,9 +2721,23 @@ function getDefaultVat(list = vatRates) {
                                     onChange={(event) => setDeliveryDisplayGroupPosition(group.id, event.target.value)}
                                     style={{ width: 54, border: "1px solid #bae6fd", borderRadius: 7, padding: "4px 6px", background: "#fff", color: "#0f172a" }}
                                   />
-                                </span>
+                                  </span>
+                                ) : null}
+                              </label>
+                              {checked ? (
+                                <div style={{ borderTop: "1px solid #bae6fd", paddingTop: 10, display: "grid", gap: 7 }}>
+                                  <div style={{ color: "#475569", fontSize: 12, fontWeight: 600 }}>Alege ce optiuni din aceasta grupa sunt valabile pentru acest produs</div>
+                                  {(group.items || []).map((item) => (
+                                    <label key={item.productId} style={{ display: "flex", alignItems: "center", gap: 8, color: "#334155", fontSize: 13, cursor: "pointer" }}>
+                                      <input type="checkbox" checked={selectedItemIds.includes(item.productId)} onChange={() => toggleDeliveryGroupItem(group.id, item.productId)} />
+                                      <span>{item.product?.name || "Produs fara nume"}</span>
+                                      {item.product?.sku ? <span style={{ color: "#94a3b8" }}>({item.product.sku})</span> : null}
+                                    </label>
+                                  ))}
+                                  {!group.items?.length ? <div style={fieldHint}>Grupa nu are inca optiuni. Adauga-le din Marketplace → Gufo Delivery → Optiuni produse.</div> : null}
+                                </div>
                               ) : null}
-                            </label>
+                            </div>
                           )
                         })}
                           </div>

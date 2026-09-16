@@ -48,6 +48,7 @@ type ProductLike = {
   price?: unknown
   deliveryDescription?: unknown
   deliveryPromoPrice?: unknown
+  isVisibleInDelivery?: boolean | null
   costPrice?: unknown
   purchaseFactor?: unknown
   netWeightKg?: unknown
@@ -78,6 +79,7 @@ type ProductLike = {
   deliveryOptionGroups?: Array<{
     groupId?: string | null
     sortOrder?: unknown
+    allowedItemIds?: unknown
   }> | null
   deliveryOptionItems?: Array<{
     groupId?: string | null
@@ -197,11 +199,26 @@ export function serializeProduct(item: ProductLike | null | undefined) {
         .map((entry) => entry.groupId)
     : []
 
+  const deliveryGroupItemIdsByGroup = Array.isArray(item.deliveryOptionGroups)
+    ? Object.fromEntries(
+        item.deliveryOptionGroups
+          .map((entry) => {
+            const groupId = String(entry?.groupId || "").trim()
+            const itemIds = Array.isArray(entry?.allowedItemIds)
+              ? entry.allowedItemIds.map((value) => String(value || "").trim()).filter(Boolean)
+              : null
+            return groupId && itemIds ? [groupId, itemIds] : null
+          })
+          .filter((entry): entry is [string, string[]] => Boolean(entry))
+      )
+    : {}
+
   return {
     ...item,
     price: toNumber(item.price),
     deliveryDescription: String(item.deliveryDescription || "").trim() || null,
     deliveryPromoPrice: toNumber(item.deliveryPromoPrice || 0) || null,
+    isVisibleInDelivery: item.isVisibleInDelivery !== false,
     costPrice: toNumber(item.costPrice),
     purchaseFactor: toNumber(item.purchaseFactor || 1),
     netWeightKg: toNumber(item.netWeightKg || 0),
@@ -233,6 +250,7 @@ export function serializeProduct(item: ProductLike | null | undefined) {
     crossSellProducts,
     crossSellProductIds: crossSellProducts.map((entry) => entry.id),
     deliveryDisplayGroupIds,
+    deliveryGroupItemIdsByGroup,
     deliveryOptionGroupIds,
   }
 }
