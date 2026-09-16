@@ -3030,6 +3030,72 @@ router.get("/api/v1/public/delivery/payments/attempts/:attemptId", requireDelive
   }
 })
 
+router.post("/api/v1/public/delivery/payments/attempts/:attemptId/complete", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const attemptId = String(req.params.attemptId || "").trim()
+    const customerId = String(req.deliveryCustomer?.customerId || "").trim()
+    const transactionId = String(req.body?.transactionId || "").trim()
+    if (!attemptId || !customerId || !transactionId) {
+      return res.status(400).json({ ok: false, error: "Lipseste confirmarea platii." })
+    }
+
+    const attempt = await db.deliveryPaymentAttempt.findFirst({ where: { id: attemptId, customerId } })
+    if (!attempt) {
+      return res.status(404).json({ ok: false, error: "Tentativa de plata nu a fost gasita." })
+    }
+
+    if (attempt.externalOrderId) {
+      return res.json({ ok: true, payment: { attemptId: attempt.id, status: attempt.status, externalOrderId: attempt.externalOrderId } })
+    }
+
+    const vivaConfig = await getVivaConfigForIntegrationId(attempt.integrationId)
+    const transaction = await retrieveVivaTransaction(vivaConfig, transactionId)
+    const transactionStatusId = String(transaction?.statusId || transaction?.StatusId || "").trim().toUpperCase()
+    const transactionOrderCode = String(transaction?.orderCode || transaction?.OrderCode || "").trim()
+    const transactionAmount = Number(transaction?.amount ?? transaction?.Amount ?? NaN)
+
+    if (transactionOrderCode !== String(attempt.vivaOrderCode || "")) {
+      return res.status(400).json({ ok: false, error: "Tranzactia nu apartine acestei comenzi." })
+    }
+    if (!Number.isFinite(transactionAmount) || Math.round(transactionAmount * 100) !== Math.round(Number(attempt.amount) * 100)) {
+      return res.status(400).json({ ok: false, error: "Suma confirmata de procesator nu corespunde comenzii." })
+    }
+    if (transactionStatusId !== "F") {
+      return res.json({ ok: true, payment: { attemptId: attempt.id, status: transactionStatusId || attempt.status } })
+    }
+
+    const checkoutPayloadParsed = PublicGufoDeliveryCheckoutSchema.safeParse(attempt.checkoutPayloadJson)
+    if (!checkoutPayloadParsed.success) {
+      throw new Error("Payloadul platii nu mai poate fi reconstruit pentru ERP.")
+    }
+
+    const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayloadParsed.data)
+    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload)
+    if (!externalOrder?.id) {
+      throw new Error("Nu am putut crea comanda ERP dupa confirmarea platii Viva.")
+    }
+
+    await db.deliveryPaymentAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: "PAID",
+        vivaTransactionId: transactionId,
+        externalOrderId: externalOrder.id,
+        paidAt: new Date(),
+        responsePayloadJson: transaction as Prisma.InputJsonValue,
+      },
+    })
+
+    await saveDeliveryCustomerCardFromTransaction(attempt.customerId, attempt.integrationId, vivaConfig, transactionId, transaction).catch((error: unknown) => {
+      console.warn("Could not save Gufo Delivery payment card:", getErrorMessage(error, "Unknown card tokenization error"))
+    })
+
+    return res.json({ ok: true, payment: { attemptId: attempt.id, status: "PAID", externalOrderId: externalOrder.id } })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut confirma plata Viva.") })
+  }
+})
+
 router.post("/api/v1/public/delivery/payments/viva/webhook", async (req, res) => {
   try {
     const source = isRecord(req.body) ? req.body : {}
