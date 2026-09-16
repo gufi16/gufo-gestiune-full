@@ -902,6 +902,7 @@ export default function MarketplacePage() {
   const [deliveryOptionItemIds, setDeliveryOptionItemIds] = useState<string[]>([])
   const [deliveryOptionItemAdjustments, setDeliveryOptionItemAdjustments] = useState<Record<string, string>>({})
   const [editingDeliveryOptionGroupId, setEditingDeliveryOptionGroupId] = useState<string | null>(null)
+  const [deliveryOptionEditorOpen, setDeliveryOptionEditorOpen] = useState(false)
   const [deliveryOptionProductSearch, setDeliveryOptionProductSearch] = useState("")
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
@@ -1034,6 +1035,7 @@ export default function MarketplacePage() {
     }
     setSavingDeliveryOption(true)
     setError("")
+    const isEditing = Boolean(editingDeliveryOptionGroupId)
     try {
       await api(editingDeliveryOptionGroupId ? `/api/v1/delivery-option-groups/${encodeURIComponent(editingDeliveryOptionGroupId)}` : "/api/v1/delivery-option-groups", {
         method: editingDeliveryOptionGroupId ? "PUT" : "POST",
@@ -1054,8 +1056,9 @@ export default function MarketplacePage() {
       setDeliveryOptionItemIds([])
       setDeliveryOptionItemAdjustments({})
       setEditingDeliveryOptionGroupId(null)
+      setDeliveryOptionEditorOpen(false)
       setDeliveryOptionProductSearch("")
-      setMessage(editingDeliveryOptionGroupId ? "Grupul de optiuni a fost actualizat." : "Grupul de optiuni a fost salvat si va aparea in Gufo Delivery.")
+      setMessage(isEditing ? "Grupul de optiuni a fost actualizat." : "Grupul de optiuni a fost salvat si va aparea in Gufo Delivery.")
       await loadDeliveryOptionGroups()
       if (selectedIntegration?.id) await loadGufoDeliveryPreview(selectedIntegration.id)
     } catch (e: any) {
@@ -1066,6 +1069,7 @@ export default function MarketplacePage() {
   }
 
   function editDeliveryOptionGroup(group: DeliveryOptionGroup) {
+    setDeliveryOptionEditorOpen(true)
     setEditingDeliveryOptionGroupId(group.id)
     setDeliveryOptionDraft({
       name: group.name,
@@ -1083,11 +1087,22 @@ export default function MarketplacePage() {
   }
 
   function cancelDeliveryOptionEditing() {
+    setDeliveryOptionEditorOpen(false)
     setEditingDeliveryOptionGroupId(null)
     setDeliveryOptionDraft(emptyDeliveryOptionDraft())
     setDeliveryOptionItemIds([])
     setDeliveryOptionItemAdjustments({})
     setDeliveryOptionProductSearch("")
+  }
+
+  function createDeliveryOptionGroup() {
+    setEditingDeliveryOptionGroupId(null)
+    setDeliveryOptionDraft(emptyDeliveryOptionDraft())
+    setDeliveryOptionItemIds([])
+    setDeliveryOptionItemAdjustments({})
+    setDeliveryOptionProductSearch("")
+    setError("")
+    setDeliveryOptionEditorOpen(true)
   }
 
   async function deleteDeliveryOptionGroup(id: string) {
@@ -2639,14 +2654,19 @@ export default function MarketplacePage() {
               </button>
             }
           >
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="order-2 rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 xl:order-2">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid grid-cols-1 gap-4">
+              {deliveryOptionEditorOpen ? (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm" onMouseDown={cancelDeliveryOptionEditing}>
+                  <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-base font-bold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grupa" : "Grupa noua"}</div>
                     <div className="mt-1 text-sm text-slate-600">Aici definesti lista completa de alegeri. Filtrarea pe fiecare preparat se face din editorul produsului.</div>
                   </div>
-                  {editingDeliveryOptionGroupId ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">Editare activa</span> : null}
+                  <div className="flex items-center gap-2">
+                    {editingDeliveryOptionGroupId ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">Editare activa</span> : null}
+                    <button type="button" onClick={cancelDeliveryOptionEditing} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -2755,15 +2775,17 @@ export default function MarketplacePage() {
                     {editingDeliveryOptionGroupId ? <Pencil size={15} className="mr-1.5" /> : <Plus size={15} className="mr-1.5" />} {savingDeliveryOption ? "Se salveaza..." : editingDeliveryOptionGroupId ? "Salveaza modificarile" : "Creeaza grupa"}
                   </button>
                 </div>
-              </div>
+                  </div>
+                </div>
+              ) : null}
 
-              <div className="order-1 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm xl:order-1">
+              <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-slate-900">Grupe de optiuni</div>
                     <div className="mt-1 text-xs text-slate-500">{deliveryOptionGroups.length} grupe reutilizabile.</div>
                   </div>
-                  <button type="button" className="inline-flex h-8 items-center rounded-lg bg-[#0B78E3] px-2.5 text-xs font-bold text-white hover:bg-[#0866BF]" onClick={cancelDeliveryOptionEditing}>
+                  <button type="button" className="inline-flex h-8 items-center rounded-lg bg-[#0B78E3] px-2.5 text-xs font-bold text-white hover:bg-[#0866BF]" onClick={createDeliveryOptionGroup}>
                     <Plus size={14} className="mr-1" /> Noua
                   </button>
                 </div>
