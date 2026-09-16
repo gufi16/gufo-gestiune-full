@@ -904,6 +904,10 @@ export default function MarketplacePage() {
   const [editingDeliveryOptionGroupId, setEditingDeliveryOptionGroupId] = useState<string | null>(null)
   const [deliveryOptionEditorOpen, setDeliveryOptionEditorOpen] = useState(false)
   const [deliveryOptionProductSearch, setDeliveryOptionProductSearch] = useState("")
+  const [deliveryOptionProductPage, setDeliveryOptionProductPage] = useState(0)
+  const [deliveryCategoryPage, setDeliveryCategoryPage] = useState(0)
+  const [deliveryCatalogPage, setDeliveryCatalogPage] = useState(0)
+  const [deliveryPreviewPage, setDeliveryPreviewPage] = useState(0)
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
@@ -1058,6 +1062,7 @@ export default function MarketplacePage() {
       setEditingDeliveryOptionGroupId(null)
       setDeliveryOptionEditorOpen(false)
       setDeliveryOptionProductSearch("")
+      setDeliveryOptionProductPage(0)
       setMessage(isEditing ? "Grupul de optiuni a fost actualizat." : "Grupul de optiuni a fost salvat si va aparea in Gufo Delivery.")
       await loadDeliveryOptionGroups()
       if (selectedIntegration?.id) await loadGufoDeliveryPreview(selectedIntegration.id)
@@ -1083,6 +1088,7 @@ export default function MarketplacePage() {
       Object.fromEntries(group.items.map((item) => [item.productId, String(Number(item.priceAdjustment || 0))]))
     )
     setDeliveryOptionProductSearch("")
+    setDeliveryOptionProductPage(0)
     setError("")
   }
 
@@ -1093,6 +1099,7 @@ export default function MarketplacePage() {
     setDeliveryOptionItemIds([])
     setDeliveryOptionItemAdjustments({})
     setDeliveryOptionProductSearch("")
+    setDeliveryOptionProductPage(0)
   }
 
   function createDeliveryOptionGroup() {
@@ -1101,6 +1108,7 @@ export default function MarketplacePage() {
     setDeliveryOptionItemIds([])
     setDeliveryOptionItemAdjustments({})
     setDeliveryOptionProductSearch("")
+    setDeliveryOptionProductPage(0)
     setError("")
     setDeliveryOptionEditorOpen(true)
   }
@@ -1615,6 +1623,17 @@ export default function MarketplacePage() {
         .some((value) => String(value).toLowerCase().includes(query)),
     )
   }, [deliveryProductSearch, visibleProducts])
+  const deliveryPageSize = 12
+  const deliveryCategoryPageCount = Math.max(1, Math.ceil(visibleCategories.length / deliveryPageSize))
+  const deliveryCatalogPageCount = Math.max(1, Math.ceil(filteredDeliveryProducts.length / deliveryPageSize))
+  const deliveryPreviewPageCount = Math.max(1, Math.ceil(publishedGufoProducts.length / deliveryPageSize))
+  const filteredDeliveryOptionProducts = useMemo(() => {
+    const query = deliveryOptionProductSearch.trim().toLocaleLowerCase("ro")
+    return products
+      .filter((product) => product.isVisibleInPos !== false)
+      .filter((product) => !query || `${product.name} ${product.sku}`.toLocaleLowerCase("ro").includes(query))
+  }, [deliveryOptionProductSearch, products])
+  const deliveryOptionProductPageCount = Math.max(1, Math.ceil(filteredDeliveryOptionProducts.length / deliveryPageSize))
   const selectedLocation = locations.find((item) => item.id === currentForm.locationId) || selectedIntegration?.location || null
   const gufoDeliveryInternalCode = buildGufoDeliveryInternalCode(selectedLocation)
   const currentTabs = selectedPlatform === "GUFO_DELIVERY" ? gufoDeliveryTabs : tabs
@@ -2173,8 +2192,8 @@ export default function MarketplacePage() {
                     {currentForm.deliveryCatalogMode === "CATEGORY_SELECTION" ? (
                       <div className="space-y-2">
                         <div className="text-sm font-medium text-slate-800">Categorii incluse</div>
-                        <div className="grid max-h-72 grid-cols-1 gap-2 overflow-auto rounded-[16px] border border-slate-200 bg-white p-3 md:grid-cols-2">
-                          {visibleCategories.map((category) => {
+                        <div className="grid grid-cols-1 gap-2 rounded-[16px] border border-slate-200 bg-white p-3 md:grid-cols-2">
+                          {visibleCategories.slice(deliveryCategoryPage * deliveryPageSize, (deliveryCategoryPage + 1) * deliveryPageSize).map((category) => {
                             const checked = currentForm.includedCategoryIds.includes(category.id)
                             return (
                               <label key={category.id} className="flex items-start gap-2 rounded-[14px] border border-slate-200 px-3 py-2 text-sm text-slate-700">
@@ -2199,6 +2218,15 @@ export default function MarketplacePage() {
                             )
                           })}
                         </div>
+                        {deliveryCategoryPageCount > 1 ? (
+                          <div className="flex items-center justify-between text-xs text-slate-600">
+                            <span>Pagina {deliveryCategoryPage + 1} din {deliveryCategoryPageCount}</span>
+                            <span className="flex gap-2">
+                              <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryCategoryPage((page) => Math.max(0, page - 1))} disabled={deliveryCategoryPage === 0}>Inapoi</button>
+                              <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryCategoryPage((page) => Math.min(deliveryCategoryPageCount - 1, page + 1))} disabled={deliveryCategoryPage >= deliveryCategoryPageCount - 1}>Inainte</button>
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -2208,7 +2236,7 @@ export default function MarketplacePage() {
                           <DocumentField label="Cauta produs">
                             <input
                               value={deliveryProductSearch}
-                              onChange={(e) => setDeliveryProductSearch(e.target.value)}
+                              onChange={(e) => { setDeliveryProductSearch(e.target.value); setDeliveryCatalogPage(0) }}
                               className={documentInputClass}
                               placeholder="pizza, cola, burger..."
                             />
@@ -2218,8 +2246,8 @@ export default function MarketplacePage() {
                           </div>
                         </div>
 
-                        <div className="grid max-h-80 grid-cols-1 gap-2 overflow-auto rounded-[16px] border border-slate-200 bg-white p-3">
-                          {filteredDeliveryProducts.map((product) => {
+                        <div className="grid grid-cols-1 gap-2 rounded-[16px] border border-slate-200 bg-white p-3">
+                          {filteredDeliveryProducts.slice(deliveryCatalogPage * deliveryPageSize, (deliveryCatalogPage + 1) * deliveryPageSize).map((product) => {
                             const checked = currentForm.includedProductIds.includes(product.id)
                             return (
                               <label key={product.id} className="flex items-start justify-between gap-3 rounded-[14px] border border-slate-200 px-3 py-2 text-sm text-slate-700">
@@ -2251,6 +2279,15 @@ export default function MarketplacePage() {
                             )
                           })}
                         </div>
+                        {deliveryCatalogPageCount > 1 ? (
+                          <div className="flex items-center justify-between text-xs text-slate-600">
+                            <span>Pagina {deliveryCatalogPage + 1} din {deliveryCatalogPageCount}</span>
+                            <span className="flex gap-2">
+                              <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryCatalogPage((page) => Math.max(0, page - 1))} disabled={deliveryCatalogPage === 0}>Inapoi</button>
+                              <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryCatalogPage((page) => Math.min(deliveryCatalogPageCount - 1, page + 1))} disabled={deliveryCatalogPage >= deliveryCatalogPageCount - 1}>Inainte</button>
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -2627,22 +2664,12 @@ export default function MarketplacePage() {
             title="Zona de livrare"
             description="Deseneaza aria in care acest restaurant accepta comenzi. Filtrarea este aplicata dupa adresa clientului si este verificata din nou la checkout."
           >
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <DeliveryServiceAreaEditor
-                value={currentForm.deliveryServiceArea}
-                onChange={(deliveryServiceArea) =>
-                  setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryServiceArea } }))
-                }
-              />
-              <aside className="rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4 text-sm text-slate-700">
-                <div className="text-sm font-bold text-[#17324D]">Reguli de livrare</div>
-                <div className="mt-3 space-y-3">
-                  <div className="rounded-xl border border-white bg-white p-3"><span className="font-semibold text-slate-900">Cerc</span><p className="mt-1 text-xs text-slate-600">Alege un punct central si raza pentru o zona simpla.</p></div>
-                  <div className="rounded-xl border border-white bg-white p-3"><span className="font-semibold text-slate-900">Poligon</span><p className="mt-1 text-xs text-slate-600">Adauga minimum trei puncte pentru o zona personalizata.</p></div>
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">Adresa clientului este verificata din nou la checkout, inainte de plasarea comenzii.</div>
-                </div>
-              </aside>
-            </div>
+            <DeliveryServiceAreaEditor
+              value={currentForm.deliveryServiceArea}
+              onChange={(deliveryServiceArea) =>
+                setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryServiceArea } }))
+              }
+            />
             <div className="mt-4 flex justify-end">
               <button type="button" className={documentButtonPrimaryClass} onClick={() => void saveIntegration("GUFO_DELIVERY")} disabled={saving}>
                 <Save size={15} className="mr-1.5" />
@@ -2668,7 +2695,7 @@ export default function MarketplacePage() {
               {deliveryOptionEditorOpen ? (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm" onMouseDown={cancelDeliveryOptionEditing}>
                   <div className="max-h-[94vh] w-full max-w-[1240px] overflow-y-auto rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sky-100 pb-4">
                   <div>
                     <div className="text-base font-bold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grupa" : "Grupa noua"}</div>
                     <div className="mt-1 text-sm text-slate-600">Aici definesti lista completa de alegeri. Filtrarea pe fiecare preparat se face din editorul produsului.</div>
@@ -2679,7 +2706,9 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
+                  <div className="rounded-[18px] border border-sky-100 bg-white p-4">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <DocumentField label="Numele pe care il vede clientul">
                     <input value={deliveryOptionDraft.name} onChange={(e) => setDeliveryOptionDraft((value) => ({ ...value, name: e.target.value }))} className={documentInputClass} placeholder="Alege sosul" />
                   </DocumentField>
@@ -2695,16 +2724,17 @@ export default function MarketplacePage() {
                   <DocumentField label="Maxim de ales">
                     <input type="number" min="1" value={deliveryOptionDraft.maxSelections} onChange={(e) => setDeliveryOptionDraft((value) => ({ ...value, maxSelections: e.target.value }))} className={documentInputClass} />
                   </DocumentField>
-                </div>
+                  </div>
 
                 <div className="mt-3">
                   <DocumentField label="Explicatie pentru client (optional)">
                     <input value={deliveryOptionDraft.description} onChange={(e) => setDeliveryOptionDraft((value) => ({ ...value, description: e.target.value }))} className={documentInputClass} placeholder="Alege sosurile preferate" />
                   </DocumentField>
                 </div>
-                <div className="mt-3 rounded-[12px] border border-sky-100 bg-white px-3 py-2 text-xs text-slate-600">`0` la minim inseamna optional. Produsele din lista sunt doar optiuni: le poti ascunde din catalogul Delivery fara sa le ascunzi din Gufo POS.</div>
+                <div className="mt-3 rounded-[12px] border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-slate-600">`0` la minim inseamna optional. Produsele din lista sunt doar optiuni: le poti ascunde din catalogul Delivery fara sa le ascunzi din Gufo POS.</div>
+                  </div>
 
-                <div className="mt-4 rounded-[16px] border border-slate-200 bg-white p-3">
+                <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <div>
                       <div className="text-sm font-semibold text-slate-900">Produse disponibile in aceasta grupa</div>
@@ -2716,19 +2746,14 @@ export default function MarketplacePage() {
                     <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       value={deliveryOptionProductSearch}
-                      onChange={(event) => setDeliveryOptionProductSearch(event.target.value)}
+                      onChange={(event) => { setDeliveryOptionProductSearch(event.target.value); setDeliveryOptionProductPage(0) }}
                       className={`${documentInputClass} pl-9`}
                       placeholder="Cauta maioneza, ketchup, salata..."
                     />
                   </div>
-                  <div className="mt-3 grid max-h-[420px] grid-cols-1 gap-1 overflow-y-auto pr-1 lg:grid-cols-2">
-                    {products
-                      .filter((product) => product.isVisibleInPos !== false)
-                      .filter((product) => {
-                        const query = deliveryOptionProductSearch.trim().toLocaleLowerCase("ro")
-                        return !query || `${product.name} ${product.sku}`.toLocaleLowerCase("ro").includes(query)
-                      })
-                      .slice(0, 80)
+                  <div className="mt-3 grid grid-cols-1 gap-1 lg:grid-cols-2">
+                    {filteredDeliveryOptionProducts
+                      .slice(deliveryOptionProductPage * deliveryPageSize, (deliveryOptionProductPage + 1) * deliveryPageSize)
                       .map((product) => {
                         const checked = deliveryOptionItemIds.includes(product.id)
                         return (
@@ -2772,10 +2797,20 @@ export default function MarketplacePage() {
                           </label>
                         )
                       })}
-                    {!products.length ? <InlineNotice tone="info">Nu exista produse disponibile in ERP pentru a le adauga in grupa.</InlineNotice> : null}
+                    {!filteredDeliveryOptionProducts.length ? <InlineNotice tone="info">Nu exista produse disponibile in ERP pentru a le adauga in grupa.</InlineNotice> : null}
                   </div>
+                  {deliveryOptionProductPageCount > 1 ? (
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                      <span>Pagina {deliveryOptionProductPage + 1} din {deliveryOptionProductPageCount}</span>
+                      <span className="flex gap-2">
+                        <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryOptionProductPage((page) => Math.max(0, page - 1))} disabled={deliveryOptionProductPage === 0}>Inapoi</button>
+                        <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryOptionProductPage((page) => Math.min(deliveryOptionProductPageCount - 1, page + 1))} disabled={deliveryOptionProductPage >= deliveryOptionProductPageCount - 1}>Inainte</button>
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="mt-4 flex justify-end gap-2">
+                </div>
+                <div className="sticky bottom-0 mt-5 flex justify-end gap-2 border-t border-sky-100 bg-[#F8FBFF] pt-4">
                   {editingDeliveryOptionGroupId ? (
                     <button type="button" className={documentButtonSecondaryClass} onClick={cancelDeliveryOptionEditing} disabled={savingDeliveryOption}>
                       Renunta
@@ -2925,7 +2960,7 @@ export default function MarketplacePage() {
                       <DocumentField label="Cauta in preview">
                         <input
                           value={deliveryProductSearch}
-                          onChange={(e) => setDeliveryProductSearch(e.target.value)}
+                          onChange={(e) => { setDeliveryProductSearch(e.target.value); setDeliveryPreviewPage(0) }}
                           className={documentInputClass}
                           placeholder="pizza, cola, burger..."
                         />
@@ -2943,7 +2978,7 @@ export default function MarketplacePage() {
                     </div>
                   ) : null}
 
-                  <div className="mt-4 grid max-h-[520px] grid-cols-1 gap-2 overflow-auto">
+                  <div className="mt-4 grid grid-cols-1 gap-2">
                     {!publishedGufoProducts.length ? (
                       <InlineNotice>
                         {deliveryProductSearch.trim()
@@ -2951,7 +2986,7 @@ export default function MarketplacePage() {
                           : "Nu exista produse publicate pentru configuratia curenta."}
                       </InlineNotice>
                     ) : (
-                      publishedGufoProducts.map((product) => (
+                      publishedGufoProducts.slice(deliveryPreviewPage * deliveryPageSize, (deliveryPreviewPage + 1) * deliveryPageSize).map((product) => (
                         <div key={product.id} className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -2968,6 +3003,15 @@ export default function MarketplacePage() {
                       ))
                     )}
                   </div>
+                  {deliveryPreviewPageCount > 1 ? (
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                      <span>Pagina {deliveryPreviewPage + 1} din {deliveryPreviewPageCount}</span>
+                      <span className="flex gap-2">
+                        <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryPreviewPage((page) => Math.max(0, page - 1))} disabled={deliveryPreviewPage === 0}>Inapoi</button>
+                        <button type="button" className={documentButtonSecondaryClass} onClick={() => setDeliveryPreviewPage((page) => Math.min(deliveryPreviewPageCount - 1, page + 1))} disabled={deliveryPreviewPage >= deliveryPreviewPageCount - 1}>Inainte</button>
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : selectedIntegration?.id && !loadingGufoDeliveryPreview ? (
