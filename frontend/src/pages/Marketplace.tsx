@@ -346,6 +346,7 @@ type IntegrationForm = {
   deliveryRestaurantImageUrl: string
   deliveryFee: string
   freeDeliveryMinOrder: string
+  deliverySchedule: DeliveryScheduleForm
   deliveryServiceArea: DeliveryServiceAreaForm
   includedCategoryIds: string[]
   includedProductIds: string[]
@@ -364,6 +365,34 @@ type IntegrationForm = {
   portalCancelNotificationsEnabled: boolean
   menuManagedByIntegration: boolean
   settingsJson: string
+}
+
+type DeliveryScheduleDayKey = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY"
+type DeliveryScheduleForm = Record<DeliveryScheduleDayKey, { enabled: boolean; open: string; close: string }>
+
+const deliveryWeekdays: Array<{ key: DeliveryScheduleDayKey; label: string }> = [
+  { key: "MONDAY", label: "Luni" }, { key: "TUESDAY", label: "Marti" }, { key: "WEDNESDAY", label: "Miercuri" },
+  { key: "THURSDAY", label: "Joi" }, { key: "FRIDAY", label: "Vineri" }, { key: "SATURDAY", label: "Sambata" }, { key: "SUNDAY", label: "Duminica" },
+]
+
+function emptyDeliverySchedule(): DeliveryScheduleForm {
+  return deliveryWeekdays.reduce((schedule, day) => {
+    schedule[day.key] = { enabled: true, open: "09:00", close: "22:00" }
+    return schedule
+  }, {} as DeliveryScheduleForm)
+}
+
+function readDeliverySchedule(value: any): DeliveryScheduleForm {
+  const defaults = emptyDeliverySchedule()
+  return deliveryWeekdays.reduce((schedule, day) => {
+    const item = value && typeof value[day.key] === "object" ? value[day.key] : {}
+    schedule[day.key] = {
+      enabled: item.enabled !== false,
+      open: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(item.open || "")) ? item.open : defaults[day.key].open,
+      close: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(item.close || "")) ? item.close : defaults[day.key].close,
+    }
+    return schedule
+  }, {} as DeliveryScheduleForm)
 }
 
 const tabs = [
@@ -481,6 +510,7 @@ function emptyForm(): IntegrationForm {
     deliveryRestaurantImageUrl: "",
     deliveryFee: "0",
     freeDeliveryMinOrder: "0",
+    deliverySchedule: emptyDeliverySchedule(),
     deliveryServiceArea: emptyDeliveryServiceArea(),
     includedCategoryIds: [],
     includedProductIds: [],
@@ -1165,6 +1195,7 @@ export default function MarketplacePage() {
                   : "",
               deliveryFee: String(Number(integration.settingsJson?.deliveryFee || 0)),
               freeDeliveryMinOrder: String(Number(integration.settingsJson?.freeDeliveryMinOrder || 0)),
+              deliverySchedule: readDeliverySchedule(integration.settingsJson?.deliverySchedule),
               deliveryServiceArea: readDeliveryServiceArea(integration.settingsJson?.deliveryServiceArea),
               includedCategoryIds: Array.isArray(integration.settingsJson?.includedCategoryIds)
                 ? integration.settingsJson.includedCategoryIds.filter((item: unknown): item is string => typeof item === "string")
@@ -1418,6 +1449,7 @@ export default function MarketplacePage() {
             deliveryRestaurantImageUrl: form.deliveryRestaurantImageUrl.trim() || undefined,
             deliveryFee: form.deliveryFee.trim() ? Math.max(0, Number(form.deliveryFee)) : 0,
             freeDeliveryMinOrder: form.freeDeliveryMinOrder.trim() ? Math.max(0, Number(form.freeDeliveryMinOrder)) : 0,
+            deliverySchedule: form.deliverySchedule,
             deliveryServiceArea,
             includedCategoryIds: form.includedCategoryIds,
             includedProductIds: form.includedProductIds,
@@ -1988,14 +2020,31 @@ export default function MarketplacePage() {
                     <div className="rounded-[16px] border border-slate-200 bg-white p-3">
                       <div className="mb-3 text-sm font-semibold text-slate-900">Preturi livrare</div>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <DocumentField label="Taxa standard de livrare (lei)">
+                        <DocumentField label="Taxa de livrare sub prag (lei)">
                           <input inputMode="decimal" value={currentForm.deliveryFee} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryFee: e.target.value } }))} className={documentInputClass} placeholder="0" />
                         </DocumentField>
-                        <DocumentField label="Livrare gratuita de la (lei)">
-                          <input inputMode="decimal" value={currentForm.freeDeliveryMinOrder} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], freeDeliveryMinOrder: e.target.value } }))} className={documentInputClass} placeholder="0 = fara prag" />
+                        <DocumentField label="Prag pentru livrare gratuita (lei)">
+                          <input inputMode="decimal" value={currentForm.freeDeliveryMinOrder} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], freeDeliveryMinOrder: e.target.value } }))} className={documentInputClass} placeholder="Exemplu: 45" />
                         </DocumentField>
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Taxa se aplica sub prag. La pragul setat sau peste el, clientul vede livrare gratuita.</p>
+                      <p className="mt-2 text-xs text-slate-500">Exemplu: taxa 8 lei si prag 45 lei inseamna ca sub 45 lei clientul plateste 8 lei, iar de la 45 lei livrarea este gratuita. Ambele valori sunt afisate in Gufo Delivery.</p>
+                    </div>
+                    <div className="rounded-[16px] border border-slate-200 bg-white p-3">
+                      <div className="mb-1 text-sm font-semibold text-slate-900">Program livrare</div>
+                      <p className="mb-3 text-xs text-slate-500">Programul este calculat in ora Romaniei. In afara lui restaurantul apare inchis in Gufo Delivery si nu poate primi comenzi.</p>
+                      <div className="space-y-2">
+                        {deliveryWeekdays.map((day) => {
+                          const scheduleDay = currentForm.deliverySchedule[day.key]
+                          return (
+                            <div key={day.key} className="grid grid-cols-[minmax(92px,1fr)_auto_110px_110px] items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                              <span className="text-sm font-semibold text-slate-800">{day.label}</span>
+                              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600"><input type="checkbox" checked={scheduleDay.enabled} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliverySchedule: { ...prev[selectedPlatform].deliverySchedule, [day.key]: { ...scheduleDay, enabled: event.target.checked } } } }))} /> Deschis</label>
+                              <input type="time" disabled={!scheduleDay.enabled} value={scheduleDay.open} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliverySchedule: { ...prev[selectedPlatform].deliverySchedule, [day.key]: { ...scheduleDay, open: event.target.value } } } }))} className={documentInputClass} aria-label={`Deschidere ${day.label}`} />
+                              <input type="time" disabled={!scheduleDay.enabled} value={scheduleDay.close} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliverySchedule: { ...prev[selectedPlatform].deliverySchedule, [day.key]: { ...scheduleDay, close: event.target.value } } } }))} className={documentInputClass} aria-label={`Inchidere ${day.label}`} />
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                     <div className="rounded-[16px] border border-slate-200 bg-slate-50 p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">

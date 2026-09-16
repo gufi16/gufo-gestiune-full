@@ -42,6 +42,14 @@ type DeliveryServiceArea = {
   radiusKm: number
   polygon: DeliveryGeoPoint[]
 }
+type DeliveryScheduleDayKey = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY"
+type DeliveryScheduleDay = { enabled: boolean; open: string; close: string }
+type DeliverySchedule = Record<DeliveryScheduleDayKey, DeliveryScheduleDay>
+
+const DELIVERY_WEEKDAYS: Array<{ key: DeliveryScheduleDayKey; label: string }> = [
+  { key: "MONDAY", label: "Luni" }, { key: "TUESDAY", label: "Marti" }, { key: "WEDNESDAY", label: "Miercuri" },
+  { key: "THURSDAY", label: "Joi" }, { key: "FRIDAY", label: "Vineri" }, { key: "SATURDAY", label: "Sambata" }, { key: "SUNDAY", label: "Duminica" },
+]
 type VivaMerchantConfig = {
   environment: string
   isDemo: boolean
@@ -270,6 +278,49 @@ function normalizeDeliveryCatalogMode(value: unknown): DeliveryCatalogMode {
   if (normalized === "CATEGORY_SELECTION") return "CATEGORY_SELECTION"
   if (normalized === "MANUAL_SELECTION") return "MANUAL_SELECTION"
   return "ALL_VISIBLE"
+}
+
+function normalizeDeliveryTime(value: unknown, fallback: string) {
+  const time = String(value || "").trim()
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : fallback
+}
+
+function defaultDeliverySchedule(): DeliverySchedule {
+  return DELIVERY_WEEKDAYS.reduce((schedule, day) => {
+    schedule[day.key] = { enabled: true, open: "09:00", close: "22:00" }
+    return schedule
+  }, {} as DeliverySchedule)
+}
+
+function normalizeDeliverySchedule(value: unknown): DeliverySchedule {
+  const rawSchedule = isRecord(value) ? value : {}
+  const defaults = defaultDeliverySchedule()
+  return DELIVERY_WEEKDAYS.reduce((schedule, day) => {
+    const rawDay: JsonRecord = isRecord(rawSchedule[day.key]) ? rawSchedule[day.key] as JsonRecord : {}
+    schedule[day.key] = { enabled: rawDay.enabled !== false, open: normalizeDeliveryTime(rawDay.open, defaults[day.key].open), close: normalizeDeliveryTime(rawDay.close, defaults[day.key].close) }
+    return schedule
+  }, {} as DeliverySchedule)
+}
+
+function deliveryTimeToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number)
+  return hours * 60 + minutes
+}
+
+function buildDeliveryAvailability(settings: MarketplaceSettings, now = new Date()) {
+  const schedule = normalizeDeliverySchedule(settings.deliverySchedule)
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  const weekdayKey = String(values.weekday || "monday").toUpperCase() as DeliveryScheduleDayKey
+  const day = schedule[weekdayKey] || schedule.MONDAY
+  const currentMinutes = Number(values.hour || 0) * 60 + Number(values.minute || 0)
+  const openMinutes = deliveryTimeToMinutes(day.open)
+  const closeMinutes = deliveryTimeToMinutes(day.close)
+  const dayLabel = DELIVERY_WEEKDAYS.find((item) => item.key === weekdayKey)?.label || "Astazi"
+  const scheduleLabel = day.enabled ? `${day.open} - ${day.close}` : "Inchis"
+  if (day.enabled && openMinutes < closeMinutes && currentMinutes >= openMinutes && currentMinutes < closeMinutes) return { isOpen: true, status: "OPEN", label: "Deschis acum", todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
+  if (day.enabled && openMinutes < closeMinutes && currentMinutes < openMinutes && openMinutes - currentMinutes <= 60) return { isOpen: false, status: "OPENING_SOON", label: `Se deschide in curand la ${day.open}`, todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
+  return { isOpen: false, status: "CLOSED", label: day.enabled ? `Inchis · program azi ${scheduleLabel}` : "Inchis astazi", todayLabel: `${dayLabel}: ${scheduleLabel}`, schedule }
 }
 
 function normalizeDeliveryPaymentMethods(value: unknown): DeliveryPaymentMethodCode[] {
@@ -679,6 +730,7 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
   const includedProductIds = new Set(normalizeUniqueStringArray(settings.includedProductIds))
   const deliveryShowCategories = settings.deliveryShowCategories !== false
   const paymentConfig = buildGufoDeliveryPaymentConfig(settings)
+  const deliveryAvailability = buildDeliveryAvailability(settings)
 
   const effectiveDeliveryCategoryIds = new Set<string>(includedCategoryIds)
   if (deliveryCatalogMode === "CATEGORY_SELECTION") {
@@ -822,6 +874,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
       county: location.county || null,
       country: location.country || "RO",
       postalCode: location.postalCode || null,
+      deliveryStatus: { isOpen: deliveryAvailability.isOpen, status: deliveryAvailability.status, label: deliveryAvailability.label, todayLabel: deliveryAvailability.todayLabel },
+      deliverySchedule: deliveryAvailability.schedule,
     },
     catalog: {
       mode: deliveryCatalogMode,
@@ -1117,6 +1171,8 @@ async function buildGufoDeliveryCheckoutImportPayload(
   }
 
   const deliverySettings = integrationSettings(integration.settingsJson)
+  const deliveryAvailability = buildDeliveryAvailability(deliverySettings)
+  if (!deliveryAvailability.isOpen) throw new Error(`Restaurantul este momentan indisponibil. ${deliveryAvailability.label}.`)
   const deliveryArea = normalizeDeliveryServiceArea(deliverySettings.deliveryServiceArea)
   if (!deliveryArea) {
     throw new Error("Restaurantul nu are o zona de livrare configurata.")
@@ -2609,6 +2665,7 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
       const location = integration.location
       const deliveryArea = normalizeDeliveryServiceArea(settings.deliveryServiceArea)
       const imageUrl = await resolveDeliveryRestaurantCoverImage(req, integration)
+      const deliveryAvailability = buildDeliveryAvailability(settings)
       return {
         id: integration.id,
         slug: slugifyDeliveryText(location?.code || location?.name || integration.id),
@@ -2620,7 +2677,10 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
         county: location?.county || null,
         country: location?.country || "RO",
         postalCode: location?.postalCode || null,
-        isOpen: true,
+        isOpen: deliveryAvailability.isOpen,
+        deliveryStatus: { isOpen: deliveryAvailability.isOpen, status: deliveryAvailability.status, label: deliveryAvailability.label, todayLabel: deliveryAvailability.todayLabel },
+        deliverySchedule: deliveryAvailability.schedule,
+        deliveryPricing: { fee: Math.max(0, Number(settings.deliveryFee || 0)), freeAbove: Math.max(0, Number(settings.freeDeliveryMinOrder || 0)) },
         catalogMode: normalizeDeliveryCatalogMode(settings.deliveryCatalogMode),
         showCategories: settings.deliveryShowCategories !== false,
         paymentConfig: buildGufoDeliveryPaymentConfig(settings),
@@ -2671,11 +2731,13 @@ router.get("/api/v1/public/delivery/restaurants/:restaurantId/checkout-config", 
     }
 
     const settings = integrationSettings(integration.settingsJson)
+    const deliveryAvailability = buildDeliveryAvailability(settings)
     return res.json({
       ok: true,
       restaurant: {
         id: integration.id,
         name: integration.location?.name || "Restaurant",
+        deliveryStatus: { isOpen: deliveryAvailability.isOpen, status: deliveryAvailability.status, label: deliveryAvailability.label, todayLabel: deliveryAvailability.todayLabel },
       },
       paymentConfig: buildGufoDeliveryPaymentConfig(settings),
       deliveryPricing: {
@@ -3684,6 +3746,13 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     const includedProductIds = normalizeUniqueStringArray(incomingSettings.includedProductIds)
     const rawDeliveryServiceArea = incomingSettings.deliveryServiceArea
     const deliveryServiceArea = rawDeliveryServiceArea == null ? null : normalizeDeliveryServiceArea(rawDeliveryServiceArea)
+    const deliverySchedule = normalizeDeliverySchedule(incomingSettings.deliverySchedule)
+    const invalidScheduleDay = DELIVERY_WEEKDAYS.find((day) => {
+      const entry = deliverySchedule[day.key]
+      return entry.enabled && deliveryTimeToMinutes(entry.open) >= deliveryTimeToMinutes(entry.close)
+    })
+
+    if (invalidScheduleDay) return res.status(400).json({ ok: false, error: `Programul pentru ${invalidScheduleDay.label} trebuie sa aiba inchiderea dupa deschidere.` })
 
     if (rawDeliveryServiceArea != null && !deliveryServiceArea) {
       return res.status(400).json({ ok: false, error: "Zona de livrare trebuie sa aiba un cerc valid sau cel putin trei puncte de poligon." })
@@ -3729,6 +3798,7 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     incomingSettings.deliveryPaymentMethods = normalizeDeliveryPaymentMethods(incomingSettings.deliveryPaymentMethods)
     incomingSettings.deliveryOnlineProvider = "VIVA"
     incomingSettings.deliveryServiceArea = deliveryServiceArea || undefined
+    incomingSettings.deliverySchedule = deliverySchedule
     incomingSettings.targetTerminalId = targetTerminal.id
     incomingSettings.targetTerminalDeviceId = targetTerminal.deviceId || null
     incomingSettings.targetTerminalLabel = targetTerminal.label || null
