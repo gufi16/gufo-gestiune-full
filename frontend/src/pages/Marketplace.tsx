@@ -2639,23 +2639,14 @@ export default function MarketplacePage() {
               </button>
             }
           >
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-              <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
-                <div className="text-sm font-semibold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grup de alegeri" : "Adauga grup de alegeri"}</div>
-                <div className="mt-1 text-sm text-slate-600">Definesti regula o singura data. In produs alegi daca grupa este oferita clientului sau daca produsul este o alegere in acea grupa.</div>
-
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {[
-                    ["1", "Creeaza grupa", "Ex: Alege sosul"],
-                    ["2", "Ataseaz-o produsului", "Ex: Shaorma mica"],
-                    ["3", "Adauga alegerile", "Ex: ketchup, maioneza"],
-                  ].map(([step, title, detail]) => (
-                    <div key={step} className="rounded-[14px] border border-sky-100 bg-white px-3 py-2.5">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">Pasul {step}</div>
-                      <div className="mt-1 text-xs font-semibold text-slate-800">{title}</div>
-                      <div className="mt-0.5 text-[11px] text-slate-500">{detail}</div>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="order-2 rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 xl:order-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-base font-bold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grupa" : "Grupa noua"}</div>
+                    <div className="mt-1 text-sm text-slate-600">Aici definesti lista completa de alegeri. Filtrarea pe fiecare preparat se face din editorul produsului.</div>
+                  </div>
+                  {editingDeliveryOptionGroupId ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">Editare activa</span> : null}
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -2681,7 +2672,7 @@ export default function MarketplacePage() {
                     <input value={deliveryOptionDraft.description} onChange={(e) => setDeliveryOptionDraft((value) => ({ ...value, description: e.target.value }))} className={documentInputClass} placeholder="Alege sosurile preferate" />
                   </DocumentField>
                 </div>
-                <div className="mt-3 rounded-[12px] border border-sky-100 bg-white px-3 py-2 text-xs text-slate-600">`0` la minim inseamna optional. `1` sau mai mult inseamna ca clientul trebuie sa aleaga inainte sa adauge produsul in cos. Ordinea se stabilește separat, în produsul la care aloci grupa.</div>
+                <div className="mt-3 rounded-[12px] border border-sky-100 bg-white px-3 py-2 text-xs text-slate-600">`0` la minim inseamna optional. Produsele din lista sunt doar optiuni: le poti ascunde din catalogul Delivery fara sa le ascunzi din Gufo POS.</div>
 
                 <div className="mt-4 rounded-[16px] border border-slate-200 bg-white p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -2700,7 +2691,7 @@ export default function MarketplacePage() {
                       placeholder="Cauta maioneza, ketchup, salata..."
                     />
                   </div>
-                  <div className="mt-3 max-h-56 space-y-1 overflow-y-auto pr-1">
+                  <div className="mt-3 grid max-h-[420px] grid-cols-1 gap-1 overflow-y-auto pr-1 lg:grid-cols-2">
                     {products
                       .filter((product) => product.isVisibleInPos !== false)
                       .filter((product) => {
@@ -2766,20 +2757,23 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="order-1 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm xl:order-1">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-slate-900">Grupuri configurate</div>
-                    <div className="mt-1 text-sm text-slate-500">{deliveryOptionGroups.length} grupuri disponibile pentru catalogul acestei firme.</div>
+                    <div className="text-sm font-semibold text-slate-900">Grupe de optiuni</div>
+                    <div className="mt-1 text-xs text-slate-500">{deliveryOptionGroups.length} grupe reutilizabile.</div>
                   </div>
+                  <button type="button" className="inline-flex h-8 items-center rounded-lg bg-[#0B78E3] px-2.5 text-xs font-bold text-white hover:bg-[#0866BF]" onClick={cancelDeliveryOptionEditing}>
+                    <Plus size={14} className="mr-1" /> Noua
+                  </button>
                 </div>
                 <div className="mt-4 space-y-3">
                   {!deliveryOptionGroups.length ? <InlineNotice tone="info">Nu exista inca grupuri. Creeaza „Adauga sosuri” sau „Alege legumele” din formularul alaturat.</InlineNotice> : null}
                   {deliveryOptionGroups.map((group) => (
-                    <div key={group.id} className="rounded-[16px] border border-slate-200 bg-slate-50 p-3">
+                    <div key={group.id} className={`rounded-[16px] border p-3 transition ${editingDeliveryOptionGroupId === group.id ? "border-sky-400 bg-sky-50 shadow-sm" : "border-slate-200 bg-slate-50 hover:border-sky-200"}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="font-semibold text-slate-900">{group.name}</div>
+                          <button type="button" onClick={() => editDeliveryOptionGroup(group)} className="text-left font-semibold text-slate-900 hover:text-sky-700">{group.name}</button>
                           <div className="mt-1 text-xs text-slate-500">{group.minSelections > 0 ? `Obligatoriu: ${group.minSelections}-${group.maxSelections}` : `Optional: maxim ${group.maxSelections}`} · {group.selectionMode === "SINGLE" ? "o alegere" : "alegeri multiple"}</div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -2788,8 +2782,8 @@ export default function MarketplacePage() {
                         </div>
                       </div>
                       {group.description ? <div className="mt-2 text-sm text-slate-600">{group.description}</div> : null}
-                      <div className="mt-3 text-xs text-slate-500">
-                        {group.productLinks.length} produse afiseaza grupul · {group.items.length} produse sunt disponibile ca alegere
+                      <div className="mt-3 rounded-lg bg-white px-2.5 py-2 text-xs text-slate-500">
+                        {group.items.length} optiuni in grupa · folosita de {group.productLinks.length} produse
                       </div>
                     </div>
                   ))}
