@@ -621,6 +621,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
                       deliveryPromoPrice: true,
                       isSgr: true,
                       sgrValue: true,
+                      sku: true,
+                      vatRate: { select: { rate: true } },
                     },
                   },
                 },
@@ -732,6 +734,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
         price: Number(product.deliveryPromoPrice || product.price || 0),
         originalPrice: product.deliveryPromoPrice ? Number(product.price || 0) : null,
         description: product.deliveryDescription || null,
+        isSgr: product.isSgr,
+        sgrValue: Number(product.sgrValue || 0),
         currency: "RON",
         isAvailable: true,
         categoryId: product.categoryId || null,
@@ -769,6 +773,8 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
             isDefault: item.isDefault,
             isSgr: item.product.isSgr,
             sgrValue: Number(item.product.sgrValue || 0),
+            sku: item.product.sku,
+            vatRate: Number(item.product.vatRate?.rate || 0),
           })),
         })),
         crossSellProducts: product.crossSellLinks
@@ -1152,6 +1158,14 @@ async function buildGufoDeliveryCheckoutImportPayload(
       if (group.selectionMode === "SINGLE" && count > 1) throw new Error(`Grupa „${group.name}” permite o singura alegere.`)
     }
 
+    const sgrOptionEntries = resolvedOptions.filter(({ option }) => option.isSgr)
+    const sgrPerUnit =
+      (product.isSgr ? toMoneyValue(product.sgrValue) : 0) +
+      sgrOptionEntries.reduce((sum, { option }) => sum + toMoneyValue(option.sgrValue), 0)
+    const nonSgrOptionAdjustment = resolvedOptions
+      .filter(({ option }) => !option.isSgr)
+      .reduce((sum, entry) => sum + toMoneyValue(entry.option.priceAdjustment), 0)
+
     return {
       product,
       qty: item.qty,
@@ -1161,15 +1175,26 @@ async function buildGufoDeliveryCheckoutImportPayload(
         ...resolvedOptions.map(({ group, option }) => `${group.name}: ${option.name}`),
       ],
       optionAdjustment: resolvedOptions.reduce((sum, entry) => sum + toMoneyValue(entry.option.priceAdjustment), 0),
+      nonSgrOptionAdjustment,
+      sgrTotal: toMoneyValue(sgrPerUnit * item.qty),
+      sgrOptions: sgrOptionEntries.map(({ option }) => ({
+        productId: option.productId,
+        name: option.name,
+        sku: option.sku || undefined,
+        vatRate: Number(option.vatRate || 0),
+        unitPrice: toMoneyValue(option.priceAdjustment),
+      })),
     }
   })
 
-  const subtotal = toMoneyValue(
+  const merchandiseSubtotal = toMoneyValue(
     normalizedItems.reduce((sum, item) => sum + (toMoneyValue(item.product.price) + item.optionAdjustment) * item.qty, 0)
   )
+  const sgrTotal = toMoneyValue(normalizedItems.reduce((sum, item) => sum + item.sgrTotal, 0))
+  const subtotal = toMoneyValue(merchandiseSubtotal + sgrTotal)
   const configuredDeliveryFee = Math.max(0, Number(deliverySettings.deliveryFee || 0))
   const freeDeliveryMinOrder = Math.max(0, Number(deliverySettings.freeDeliveryMinOrder || 0))
-  const deliveryFee = freeDeliveryMinOrder > 0 && subtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee
+  const deliveryFee = freeDeliveryMinOrder > 0 && merchandiseSubtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee
   const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
   const externalOrderId = createGufoDeliveryOrderId()
@@ -1193,20 +1218,36 @@ async function buildGufoDeliveryCheckoutImportPayload(
       placedAt: new Date(),
       displayNumber: externalOrderNumber,
       station: "GUFO_DELIVERY",
-      items: normalizedItems.map((item, index) => ({
-        externalLineId: `${externalOrderId}-${index + 1}`,
-        externalProductId: item.product.id,
-        name: item.product.name,
-        sku: item.product.sku || undefined,
-        qty: item.qty,
-        unitPrice: toMoneyValue(item.product.price),
-        vatRate: Number(item.product.vatRate || 0),
-        note: item.note,
-        modifiers: item.modifiers,
-        erpProductId: item.product.id,
-        departmentId: undefined,
-        station: "GUFO_DELIVERY",
-      })),
+      items: normalizedItems.flatMap((item, index) => [
+        {
+          externalLineId: `${externalOrderId}-${index + 1}`,
+          externalProductId: item.product.id,
+          name: item.product.name,
+          sku: item.product.sku || undefined,
+          qty: item.qty,
+          unitPrice: toMoneyValue(item.product.price + item.nonSgrOptionAdjustment),
+          vatRate: Number(item.product.vatRate || 0),
+          note: item.note,
+          modifiers: item.modifiers,
+          erpProductId: item.product.id,
+          departmentId: undefined,
+          station: "GUFO_DELIVERY",
+        },
+        ...item.sgrOptions.map((option, optionIndex) => ({
+          externalLineId: `${externalOrderId}-${index + 1}-option-${optionIndex + 1}`,
+          externalProductId: option.productId,
+          name: option.name,
+          sku: option.sku,
+          qty: item.qty,
+          unitPrice: option.unitPrice,
+          vatRate: option.vatRate,
+          note: `Opțiune pentru ${item.product.name}`,
+          modifiers: [],
+          erpProductId: option.productId,
+          departmentId: undefined,
+          station: "GUFO_DELIVERY",
+        })),
+      ]),
       rawPayload: {
         source: "GUFO_DELIVERY_APP",
         restaurant: menuPayload.restaurant,
@@ -1214,6 +1255,8 @@ async function buildGufoDeliveryCheckoutImportPayload(
           address: input.deliveryAddress,
           fee: deliveryFee,
           freeAbove: freeDeliveryMinOrder || null,
+          merchandiseSubtotal,
+          sgrTotal,
         },
         customer: {
           name: input.customer.name,
