@@ -2677,6 +2677,7 @@ function getDefaultVat(list = vatRates) {
                       Stabilesti rolul produsului in comanda clientului. Pentru o shaorma bifezi grupele oferite; pentru ketchup bifezi grupa in care poate fi ales.
                     </div>
 
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
                     <details style={compactDisclosure}>
                       <summary style={compactDisclosureSummary}>
                         <span>Grupe afisate la acest produs</span>
@@ -2791,6 +2792,8 @@ function getDefaultVat(list = vatRates) {
                         </Field>
                       </div>
                     </details>
+
+                    </div>
 
                     {deliveryOptionGroupsError ? (
                       <div
@@ -4513,8 +4516,8 @@ const modalOverlay: CSSProperties = {
 
 const modalCard: CSSProperties = {
   width: "100%",
-  maxWidth: 980,
-  height: "min(700px, calc(100dvh - 48px))",
+  maxWidth: 1240,
+  height: "min(780px, calc(100dvh - 36px))",
   maxHeight: "calc(100dvh - 48px)",
   display: "flex",
   flexDirection: "column",

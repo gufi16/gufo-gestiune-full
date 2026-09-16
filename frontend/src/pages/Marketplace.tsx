@@ -1801,7 +1801,7 @@ export default function MarketplacePage() {
                 }
                 actions={null}
               >
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
                   <div className="space-y-3">
                     <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                       <div className="mb-3 flex items-center justify-between gap-2 text-sm font-semibold text-slate-800">
@@ -2627,12 +2627,22 @@ export default function MarketplacePage() {
             title="Zona de livrare"
             description="Deseneaza aria in care acest restaurant accepta comenzi. Filtrarea este aplicata dupa adresa clientului si este verificata din nou la checkout."
           >
-            <DeliveryServiceAreaEditor
-              value={currentForm.deliveryServiceArea}
-              onChange={(deliveryServiceArea) =>
-                setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryServiceArea } }))
-              }
-            />
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <DeliveryServiceAreaEditor
+                value={currentForm.deliveryServiceArea}
+                onChange={(deliveryServiceArea) =>
+                  setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryServiceArea } }))
+                }
+              />
+              <aside className="rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4 text-sm text-slate-700">
+                <div className="text-sm font-bold text-[#17324D]">Reguli de livrare</div>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-xl border border-white bg-white p-3"><span className="font-semibold text-slate-900">Cerc</span><p className="mt-1 text-xs text-slate-600">Alege un punct central si raza pentru o zona simpla.</p></div>
+                  <div className="rounded-xl border border-white bg-white p-3"><span className="font-semibold text-slate-900">Poligon</span><p className="mt-1 text-xs text-slate-600">Adauga minimum trei puncte pentru o zona personalizata.</p></div>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">Adresa clientului este verificata din nou la checkout, inainte de plasarea comenzii.</div>
+                </div>
+              </aside>
+            </div>
             <div className="mt-4 flex justify-end">
               <button type="button" className={documentButtonPrimaryClass} onClick={() => void saveIntegration("GUFO_DELIVERY")} disabled={saving}>
                 <Save size={15} className="mr-1.5" />
@@ -2657,7 +2667,7 @@ export default function MarketplacePage() {
             <div className="grid grid-cols-1 gap-4">
               {deliveryOptionEditorOpen ? (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm" onMouseDown={cancelDeliveryOptionEditing}>
-                  <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+                  <div className="max-h-[94vh] w-full max-w-[1240px] overflow-y-auto rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-base font-bold text-[#17324D]">{editingDeliveryOptionGroupId ? "Editeaza grupa" : "Grupa noua"}</div>
@@ -2860,7 +2870,7 @@ export default function MarketplacePage() {
             ) : null}
 
             {gufoDeliveryPreview ? (
-              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+              <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.2fr)]">
                 <div className="space-y-3">
                   <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Restaurant public</div>
