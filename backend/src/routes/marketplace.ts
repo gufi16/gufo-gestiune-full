@@ -194,6 +194,13 @@ const ReadyStatusSchema = z.object({
   message: z.string().trim().optional(),
 })
 
+const UpdateGufoDeliveryCatalogPromotionSchema = z.object({
+  integrationId: z.string().min(1),
+  discountPercent: z.coerce.number().min(0).max(99.99),
+  applyDelivery: z.boolean().default(true),
+  applyPos: z.boolean().default(false),
+})
+
 const PublicGufoDeliveryCheckoutSchema = z.object({
   restaurantId: z.string().min(1),
   fulfillmentType: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
@@ -3414,6 +3421,44 @@ router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) =>
 })
 
 router.use(requireAuth)
+
+router.patch("/api/v1/marketplace/gufo-delivery/catalog-promotion", async (req: AuthedRequest, res) => {
+  const tenantId = req.auth?.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Missing tenant context" })
+
+  const parsed = UpdateGufoDeliveryCatalogPromotionSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+  const { integrationId, discountPercent, applyDelivery, applyPos } = parsed.data
+  if (!applyDelivery && !applyPos) {
+    return res.status(400).json({ ok: false, error: "Alege Gufo Delivery, Gufo POS sau ambele." })
+  }
+
+  const integration = (await getPublicGufoDeliveryIntegrations()).find((item) => item.id === integrationId && item.tenantId === tenantId)
+  if (!integration) return res.status(404).json({ ok: false, error: "Integrarea Gufo Delivery nu a fost gasita." })
+
+  const menu = await buildGufoDeliveryMenuPayload(req, integration)
+  const productIds = menu.catalog.products.map((product) => product.id)
+  const products = await db.product.findMany({
+    where: { id: { in: productIds }, tenantId: integration.tenantId },
+    select: { id: true, price: true },
+  })
+
+  await db.$transaction(products.map((product) => {
+    const normalPrice = Number(product.price || 0)
+    const promoPrice = discountPercent > 0
+      ? toMoneyValue(normalPrice * (1 - discountPercent / 100))
+      : null
+    return db.product.update({
+      where: { id: product.id },
+      data: {
+        ...(applyDelivery ? { deliveryPromoPrice: promoPrice } : {}),
+        ...(applyPos ? { posPromoPrice: promoPrice } : {}),
+      },
+    })
+  }))
+
+  return res.json({ ok: true, updatedProducts: products.length, discountPercent, applyDelivery, applyPos })
+})
 
 router.get("/api/v1/marketplace/platforms", (_req, res) => {
   return res.json({
