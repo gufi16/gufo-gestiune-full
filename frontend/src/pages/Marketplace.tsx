@@ -968,7 +968,7 @@ export default function MarketplacePage() {
   const [promotionDraft, setPromotionDraft] = useState<ProductPromotionDraft | null>(null)
   const [promotionLoading, setPromotionLoading] = useState(false)
   const [promotionSaving, setPromotionSaving] = useState(false)
-  const [catalogPromotionOpen, setCatalogPromotionOpen] = useState(false)
+  const [catalogPromotionPanelOpen, setCatalogPromotionPanelOpen] = useState(false)
   const [catalogPromotionSaving, setCatalogPromotionSaving] = useState(false)
   const [catalogPromotionDraft, setCatalogPromotionDraft] = useState<CatalogPromotionDraft>({ discountPercent: "", applyDelivery: true, applyPos: false })
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
@@ -1457,7 +1457,7 @@ export default function MarketplacePage() {
         method: "PATCH",
         body: JSON.stringify({ integrationId: selectedIntegration.id, ...catalogPromotionDraft, discountPercent }),
       })
-      setCatalogPromotionOpen(false)
+      setCatalogPromotionPanelOpen(false)
       setMessage(`Reducerea a fost aplicata la ${response.updatedProducts} produse din catalog.`)
       await loadGufoDeliveryPreview(selectedIntegration.id)
     } catch (e: any) {
@@ -3129,9 +3129,6 @@ export default function MarketplacePage() {
             description="Verifici exact ce restaurant si ce produse pleaca acum spre aplicatia clientului, pe baza configuratiei ERP."
             actions={
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={documentButtonPrimaryClass} disabled={!selectedIntegration?.id} onClick={() => setCatalogPromotionOpen(true)}>
-                  <Tag size={14} className="mr-1.5" />Reducere catalog
-                </button>
                 <button
                   type="button"
                   className={documentButtonSecondaryClass}
@@ -3172,14 +3169,46 @@ export default function MarketplacePage() {
               <>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
                   <div><div className="text-sm font-semibold text-[#17324D]">Preview catalog public</div><div className="mt-1 text-sm text-slate-600">{gufoDeliveryPublishedProducts.length} produse si {gufoDeliveryPublishedCategories.length} categorii pregatite pentru aplicatie.</div></div>
-                  <button type="button" className={documentButtonPrimaryClass} onClick={() => { setDeliveryPreviewPage(0); setDeliveryCatalogPreviewOpen(true) }}>Vezi catalogul</button>
+                  <button type="button" className={documentButtonPrimaryClass} onClick={() => { setDeliveryPreviewPage(0); setCatalogPromotionPanelOpen(false); setDeliveryCatalogPreviewOpen(true) }}>Vezi catalogul</button>
                 </div>
                 <div className={deliveryCatalogPreviewOpen ? "fixed inset-0 z-[90] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden"} onMouseDown={() => setDeliveryCatalogPreviewOpen(false)}>
                   <div className="mx-auto w-full max-w-[1320px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
                     <div className="mb-4 flex items-start justify-between gap-3 border-b border-sky-100 pb-4">
                       <div><div className="text-lg font-bold text-[#17324D]">Catalog Gufo Delivery</div><div className="mt-1 text-sm text-slate-600">Previzualizarea exacta a catalogului public.</div></div>
-                      <button type="button" onClick={() => setDeliveryCatalogPreviewOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
+                      <div className="flex items-center gap-2">
+                        <button type="button" className={documentButtonPrimaryClass} onClick={() => setCatalogPromotionPanelOpen((open) => !open)}>
+                          <Tag size={14} className="mr-1.5" />Reducere tot catalogul
+                        </button>
+                        <button type="button" onClick={() => setDeliveryCatalogPreviewOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" title="Inchide">×</button>
+                      </div>
                     </div>
+                    {catalogPromotionPanelOpen ? (
+                      <div className="mb-4 rounded-[18px] border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-amber-950">Reducere pentru toate produsele din acest catalog</div>
+                            <div className="mt-1 text-sm text-amber-900/80">Se aplică la cele {gufoDeliveryPublishedProducts.length} produse publicate. Introdu <span className="font-semibold">0</span> ca să elimini reducerea pentru țintele bifate.</div>
+                          </div>
+                          <div className="grid w-full gap-2 sm:grid-cols-[150px_1fr] lg:w-auto">
+                            <DocumentField label="Reducere (%)">
+                              <input inputMode="decimal" value={catalogPromotionDraft.discountPercent} onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, discountPercent: event.target.value }))} placeholder="Ex: 10" className={documentInputClass} />
+                            </DocumentField>
+                            <div className="flex flex-wrap items-center gap-2 pb-0.5">
+                              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+                                <input type="checkbox" checked={catalogPromotionDraft.applyDelivery} onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, applyDelivery: event.target.checked }))} /> Gufo Delivery
+                              </label>
+                              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+                                <input type="checkbox" checked={catalogPromotionDraft.applyPos} onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, applyPos: event.target.checked }))} /> Gufo POS
+                              </label>
+                              <button type="button" onClick={() => void saveCatalogPromotion()} disabled={catalogPromotionSaving} className={documentButtonPrimaryClass}>
+                                <Save size={14} className="mr-1.5" />{catalogPromotionSaving ? "Se salveaza..." : "Aplica"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 text-xs leading-5 text-amber-900/80">Doar Delivery înseamnă că promoția se vede doar în aplicația Gufo Delivery. Comanda venită din Delivery păstrează reducerea și pe bonul fiscal din POS, fără să reducă vânzările directe din POS.</div>
+                      </div>
+                    ) : null}
               <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.2fr)]">
                 <div className="space-y-3">
                   <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-4">
@@ -3354,51 +3383,6 @@ export default function MarketplacePage() {
                   <button type="button" onClick={() => setPromotionDraft(null)} disabled={promotionSaving} className={documentButtonSecondaryClass}>Renunta</button>
                   <button type="button" onClick={() => void saveProductPromotion()} disabled={promotionSaving || promotionLoading || !promotionDraft} className={documentButtonPrimaryClass}>
                     <Save size={14} className="mr-1.5" />{promotionSaving ? "Se salveaza..." : "Salveaza reducerea"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {catalogPromotionOpen ? (
-            <div className="fixed inset-0 z-[101] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onMouseDown={() => !catalogPromotionSaving && setCatalogPromotionOpen(false)}>
-              <div className="w-full max-w-2xl rounded-[24px] border border-slate-200 bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-                <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Reducere catalog</div>
-                    <div className="mt-1 text-xl font-bold text-[#17324D]">Toate produsele publicate</div>
-                    <div className="mt-1 text-sm text-slate-500">Se aplică la cele {gufoDeliveryPublishedProducts.length} produse din catalogul acestei locații.</div>
-                  </div>
-                  <button type="button" onClick={() => !catalogPromotionSaving && setCatalogPromotionOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" aria-label="Inapoi">←</button>
-                </div>
-                <div className="grid gap-5 px-6 py-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)]">
-                  <div>
-                    <DocumentField label="Reducere procentuală">
-                      <input
-                        inputMode="decimal"
-                        value={catalogPromotionDraft.discountPercent}
-                        onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, discountPercent: event.target.value }))}
-                        placeholder="Ex: 10"
-                        className={documentInputClass}
-                      />
-                    </DocumentField>
-                    <div className="mt-2 text-xs leading-5 text-slate-500">Introduci `10` pentru 10%. Introduci `0` pentru a elimina reducerea din țintele bifate. Dacă alegi doar Delivery, comenzile venite din Delivery păstrează totuși reducerea pe bonul fiscal din POS.</div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-sm font-semibold text-slate-900">Aplică reducerea în</div>
-                    <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700">
-                      <input type="checkbox" checked={catalogPromotionDraft.applyDelivery} onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, applyDelivery: event.target.checked }))} />
-                      Gufo Delivery
-                    </label>
-                    <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700">
-                      <input type="checkbox" checked={catalogPromotionDraft.applyPos} onChange={(event) => setCatalogPromotionDraft((current) => ({ ...current, applyPos: event.target.checked }))} />
-                      Gufo POS
-                    </label>
-                  </div>
-                </div>
-                <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
-                  <button type="button" onClick={() => setCatalogPromotionOpen(false)} disabled={catalogPromotionSaving} className={documentButtonSecondaryClass}>Renunta</button>
-                  <button type="button" onClick={() => void saveCatalogPromotion()} disabled={catalogPromotionSaving} className={documentButtonPrimaryClass}>
-                    <Save size={14} className="mr-1.5" />{catalogPromotionSaving ? "Se salveaza..." : "Aplica reducerea"}
                   </button>
                 </div>
               </div>
