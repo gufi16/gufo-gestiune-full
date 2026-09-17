@@ -176,6 +176,8 @@ const ImportMarketplaceOrderSchema = z.object({
       sku: z.string().trim().optional(),
       qty: z.coerce.number().positive(),
       unitPrice: z.coerce.number().nonnegative().default(0),
+      originalUnitPrice: z.coerce.number().nonnegative().optional(),
+      discountPercent: z.coerce.number().min(0).max(100).optional(),
       vatRate: z.coerce.number().int().nonnegative().optional(),
       note: z.string().trim().optional(),
       modifiers: z.array(z.string()).optional(),
@@ -1248,6 +1250,11 @@ async function buildGufoDeliveryCheckoutImportPayload(
     const nonSgrOptionAdjustment = resolvedOptions
       .filter(({ option }) => !option.isSgr)
       .reduce((sum, entry) => sum + toMoneyValue(entry.option.priceAdjustment), 0)
+    const discountedUnitPrice = toMoneyValue(product.price + nonSgrOptionAdjustment)
+    const originalUnitPrice = toMoneyValue((product.originalPrice ?? product.price) + nonSgrOptionAdjustment)
+    const discountPercent = originalUnitPrice > 0
+      ? toMoneyValue(((originalUnitPrice - discountedUnitPrice) / originalUnitPrice) * 100)
+      : 0
 
     return {
       product,
@@ -1259,6 +1266,9 @@ async function buildGufoDeliveryCheckoutImportPayload(
       ],
       optionAdjustment: resolvedOptions.reduce((sum, entry) => sum + toMoneyValue(entry.option.priceAdjustment), 0),
       nonSgrOptionAdjustment,
+      discountedUnitPrice,
+      originalUnitPrice,
+      discountPercent: Math.max(0, discountPercent),
       sgrTotal: toMoneyValue(sgrPerUnit * item.qty),
       sgrOptions: sgrOptionEntries.map(({ option }) => ({
         productId: option.productId,
@@ -1271,7 +1281,7 @@ async function buildGufoDeliveryCheckoutImportPayload(
   })
 
   const merchandiseSubtotal = toMoneyValue(
-    normalizedItems.reduce((sum, item) => sum + (toMoneyValue(item.product.price) + item.optionAdjustment) * item.qty, 0)
+    normalizedItems.reduce((sum, item) => sum + item.discountedUnitPrice * item.qty, 0)
   )
   const sgrTotal = toMoneyValue(normalizedItems.reduce((sum, item) => sum + item.sgrTotal, 0))
   const subtotal = toMoneyValue(merchandiseSubtotal + sgrTotal)
@@ -1308,7 +1318,9 @@ async function buildGufoDeliveryCheckoutImportPayload(
           name: item.product.name,
           sku: item.product.sku || undefined,
           qty: item.qty,
-          unitPrice: toMoneyValue(item.product.price + item.nonSgrOptionAdjustment),
+          unitPrice: item.originalUnitPrice,
+          originalUnitPrice: item.originalUnitPrice,
+          discountPercent: item.discountPercent,
           vatRate: Number(item.product.vatRate || 0),
           note: item.note,
           modifiers: item.modifiers,
@@ -1370,6 +1382,22 @@ function mapPublicGufoDeliveryOrderStatus(status: string) {
   return normalized || "PLACED"
 }
 
+// Fiscalizarea din POS este ultimul eveniment cert pe care il primim de la restaurant.
+// Pentru client o prezentam ca plecare spre adresa, apoi o mutam in istoric dupa 25 minute.
+const GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS = 25 * 60 * 1000
+
+function resolveGufoDeliveryCustomerStatus(status: string, fiscalizedAt: Date | null | undefined) {
+  const normalized = String(status || "").trim().toUpperCase()
+  if (normalized !== "FISCALIZED" && normalized !== "DELIVERED") return normalized || "RECEIVED"
+
+  const fiscalizedAtMs = fiscalizedAt?.getTime()
+  if (fiscalizedAtMs && Date.now() - fiscalizedAtMs >= GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS) {
+    return "COMPLETED"
+  }
+
+  return "DELIVERED"
+}
+
 function buildDraftCart(payload: z.infer<typeof ImportMarketplaceOrderSchema>) {
   return {
     source: "MARKETPLACE",
@@ -1391,6 +1419,8 @@ function buildDraftCart(payload: z.infer<typeof ImportMarketplaceOrderSchema>) {
       sku: item.sku || null,
       qty: item.qty,
       unitPrice: item.unitPrice,
+      originalUnitPrice: item.originalUnitPrice ?? item.unitPrice,
+      discountPercent: item.discountPercent ?? 0,
       vatRate: item.vatRate ?? null,
       note: item.note || null,
       modifiers: item.modifiers || [],
@@ -3265,18 +3295,20 @@ router.get("/api/v1/public/delivery/orders/history", requireDeliveryCustomerAuth
 
     return res.json({
       ok: true,
-      items: orders.map((order) => ({
+      items: orders.map((order) => {
+        const customerStatus = resolveGufoDeliveryCustomerStatus(order.status, order.fiscalizedAt)
+        return {
         id: order.id,
         externalOrderId: order.externalOrderId,
         externalOrderNumber: order.externalOrderNumber || null,
-        status: order.status,
-        publicStatus: mapPublicGufoDeliveryOrderStatus(order.status),
+        status: customerStatus,
+        publicStatus: mapPublicGufoDeliveryOrderStatus(customerStatus),
         customerName: order.customerName || null,
         paymentLabel: order.paymentLabel || null,
         total: Number(order.total || 0),
         currency: order.currency,
         placedAt: order.placedAt?.toISOString() || order.createdAt.toISOString(),
-        readyAt: order.readyAt?.toISOString() || null,
+        readyAt: order.readyAt?.toISOString() || order.fiscalizedAt?.toISOString() || null,
         cancelledAt: order.cancelledAt?.toISOString() || null,
         restaurant: order.location ? { id: order.location.id, name: order.location.name, code: order.location.code || null } : null,
         items: order.items
@@ -3292,7 +3324,8 @@ router.get("/api/v1/public/delivery/orders/history", requireDeliveryCustomerAuth
                 ? item.modifiersJson
                 : [],
           })),
-      })),
+        }
+      }),
     })
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca istoricul comenzilor Gufo Delivery.") })
@@ -3339,21 +3372,23 @@ router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) =>
       return res.status(404).json({ ok: false, error: "Comanda Gufo Delivery nu a fost gasita." })
     }
 
+    const customerStatus = resolveGufoDeliveryCustomerStatus(order.status, order.fiscalizedAt)
+
     return res.json({
       ok: true,
       order: {
         id: order.id,
         externalOrderId: order.externalOrderId,
         externalOrderNumber: order.externalOrderNumber || order.kitchenTicket?.displayNumber || null,
-        status: order.status,
-        publicStatus: mapPublicGufoDeliveryOrderStatus(order.status),
+        status: customerStatus,
+        publicStatus: mapPublicGufoDeliveryOrderStatus(customerStatus),
         customerName: order.customerName || null,
         paymentLabel: order.paymentLabel || null,
         total: Number(order.total || 0),
         currency: order.currency,
         placedAt: order.placedAt?.toISOString() || order.createdAt.toISOString(),
         acknowledgedAt: order.acknowledgedAt?.toISOString() || null,
-        readyAt: order.readyAt?.toISOString() || order.kitchenTicket?.readyAt?.toISOString() || null,
+        readyAt: order.readyAt?.toISOString() || order.fiscalizedAt?.toISOString() || order.kitchenTicket?.readyAt?.toISOString() || null,
         deliveredAt: order.fiscalizedAt?.toISOString() || null,
         cancelledAt: order.cancelledAt?.toISOString() || null,
         restaurant: order.location

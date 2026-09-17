@@ -48,6 +48,7 @@ type ProductLike = {
   price?: unknown
   deliveryDescription?: unknown
   deliveryPromoPrice?: unknown
+  posPromoPrice?: unknown
   isVisibleInDelivery?: boolean | null
   costPrice?: unknown
   purchaseFactor?: unknown
@@ -218,6 +219,7 @@ export function serializeProduct(item: ProductLike | null | undefined) {
     price: toNumber(item.price),
     deliveryDescription: String(item.deliveryDescription || "").trim() || null,
     deliveryPromoPrice: toNumber(item.deliveryPromoPrice || 0) || null,
+    posPromoPrice: toNumber(item.posPromoPrice || 0) || null,
     isVisibleInDelivery: item.isVisibleInDelivery !== false,
     costPrice: toNumber(item.costPrice),
     purchaseFactor: toNumber(item.purchaseFactor || 1),

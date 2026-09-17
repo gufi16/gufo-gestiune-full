@@ -1,0 +1,2 @@
+ALTER TABLE "Product"
+  ADD COLUMN IF NOT EXISTS "posPromoPrice" DECIMAL(12,2);

@@ -987,6 +987,7 @@ model Product {
   price          Decimal        @default(0)
   deliveryDescription String?
   deliveryPromoPrice  Decimal?
+  posPromoPrice       Decimal?
   costPrice      Decimal        @default(0)
   trackLot       Boolean        @default(false)
   trackExpiry    Boolean        @default(false)

@@ -21,6 +21,7 @@ type Product = {
   price: number
   deliveryDescription?: string | null
   deliveryPromoPrice?: number | null
+  posPromoPrice?: number | null
   isVisibleInDelivery?: boolean
   costPrice?: number
   purchaseFactor?: number
@@ -114,6 +115,7 @@ type FormState = {
   price: string
   deliveryDescription: string
   deliveryPromoPrice: string
+  posPromoPrice: string
   costPrice: string
   isActive: boolean
   isMenu: boolean
@@ -236,6 +238,7 @@ const emptyForm: FormState = {
   price: "0",
   deliveryDescription: "",
   deliveryPromoPrice: "",
+  posPromoPrice: "",
   costPrice: "0",
   isActive: true,
   isMenu: false,
@@ -800,6 +803,7 @@ function getDefaultVat(list = vatRates) {
       price: normalizePositiveString(item.price || 0, "0"),
       deliveryDescription: item.deliveryDescription || "",
       deliveryPromoPrice: item.deliveryPromoPrice ? normalizePositiveString(item.deliveryPromoPrice, "") : "",
+      posPromoPrice: item.posPromoPrice ? normalizePositiveString(item.posPromoPrice, "") : "",
       costPrice: normalizePositiveString(item.costPrice || 0, "0"),
       isActive: item.isActive !== false,
       isMenu: item.isMenu === true,
@@ -978,6 +982,7 @@ function getDefaultVat(list = vatRates) {
           price: normalizedPrice,
           deliveryDescription: form.deliveryDescription.trim() || null,
           deliveryPromoPrice: form.deliveryPromoPrice.trim() ? toNumberSafe(form.deliveryPromoPrice) : null,
+          posPromoPrice: form.posPromoPrice.trim() ? toNumberSafe(form.posPromoPrice) : null,
           costPrice: normalizedCost,
           isActive: form.isActive,
           isMenu: form.isMenu,
@@ -2659,15 +2664,47 @@ function getDefaultVat(list = vatRates) {
                           style={{ ...input, minHeight: 76, resize: "vertical" }}
                         />
                       </Field>
-                      <Field label="Pret promotional Delivery (optional)">
+                      <Field label="Pret promotional (optional)">
                         <input
                           inputMode="decimal"
-                          value={form.deliveryPromoPrice}
-                          onChange={(event) => setForm((prev) => ({ ...prev, deliveryPromoPrice: event.target.value }))}
+                          value={form.deliveryPromoPrice || form.posPromoPrice}
+                          onChange={(event) => setForm((prev) => {
+                            const promoPrice = event.target.value
+                            return {
+                              ...prev,
+                              // Delivery is the safe default until the operator chooses another target.
+                              deliveryPromoPrice: prev.deliveryPromoPrice || !prev.posPromoPrice ? promoPrice : prev.deliveryPromoPrice,
+                              posPromoPrice: prev.posPromoPrice ? promoPrice : prev.posPromoPrice,
+                            }
+                          })}
                           placeholder={`Pret normal: ${formatMoneyRo(toNumberSafe(form.price))}`}
                           style={input}
                         />
-                        <div style={fieldHint}>Daca introduci un pret mai mic decat pretul normal, clientul vede reducerea cu pretul vechi taiat.</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(form.deliveryPromoPrice)}
+                              onChange={(event) => setForm((prev) => ({
+                                ...prev,
+                                deliveryPromoPrice: event.target.checked ? (prev.posPromoPrice || prev.deliveryPromoPrice || prev.price) : "",
+                              }))}
+                            />
+                            Gufo Delivery
+                          </label>
+                          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(form.posPromoPrice)}
+                              onChange={(event) => setForm((prev) => ({
+                                ...prev,
+                                posPromoPrice: event.target.checked ? (prev.deliveryPromoPrice || prev.posPromoPrice || prev.price) : "",
+                              }))}
+                            />
+                            Gufo POS
+                          </label>
+                        </div>
+                        <div style={fieldHint}>Bifezi unde se aplica. Prețul trebuie sa fie mai mic decat pretul normal; in POS reducerea este transmisa separat pe bonul fiscal.</div>
                       </Field>
                       <SettingRow title="Afiseaza in catalogul Gufo Delivery" description="Opreste pentru sosuri, ingrediente si extra: raman vizibile in categoria lor din Gufo POS si pot fi alese in grupe, dar nu apar ca produse separate in Delivery.">
                         <Toggle checked={form.isVisibleInDelivery} onChange={(checked) => setForm((prev) => ({ ...prev, isVisibleInDelivery: checked }))} />

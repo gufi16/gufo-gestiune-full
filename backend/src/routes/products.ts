@@ -587,6 +587,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   const price = toNumber(req.body?.price || 0)
   const deliveryDescription = toNullableText(req.body?.deliveryDescription)
   const requestedDeliveryPromoPrice = toNumber(req.body?.deliveryPromoPrice || 0)
+  const requestedPosPromoPrice = toNumber(req.body?.posPromoPrice || 0)
   const costPrice = toNumber(req.body?.costPrice || 0)
   const netWeightKg = Math.max(0, toNumber(req.body?.netWeightKg || 0))
   const grossWeightKg = Math.max(0, toNumber(req.body?.grossWeightKg || 0))
@@ -659,6 +660,9 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   })
   const deliveryPromoPrice = requestedDeliveryPromoPrice > 0 && requestedDeliveryPromoPrice < normalizedPrice
     ? requestedDeliveryPromoPrice
+    : null
+  const posPromoPrice = requestedPosPromoPrice > 0 && requestedPosPromoPrice < normalizedPrice
+    ? requestedPosPromoPrice
     : null
   const sgrPackaging = resolveSgrPackagingData(req.body, isSgr)
 
@@ -882,6 +886,7 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
           price: normalizedPrice,
           deliveryDescription,
           deliveryPromoPrice,
+          posPromoPrice,
           costPrice,
           trackLot,
           trackExpiry,
@@ -1056,6 +1061,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   const price = toNumber(req.body?.price || 0)
   const deliveryDescription = toNullableText(req.body?.deliveryDescription)
   const requestedDeliveryPromoPrice = toNumber(req.body?.deliveryPromoPrice || 0)
+  const requestedPosPromoPrice = toNumber(req.body?.posPromoPrice || 0)
   const costPrice = toNumber(req.body?.costPrice || 0)
   const netWeightKg = Math.max(0, toNumber(req.body?.netWeightKg || 0))
   const grossWeightKg = Math.max(0, toNumber(req.body?.grossWeightKg || 0))
@@ -1123,6 +1129,9 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   })
   const deliveryPromoPrice = requestedDeliveryPromoPrice > 0 && requestedDeliveryPromoPrice < normalizedPrice
     ? requestedDeliveryPromoPrice
+    : null
+  const posPromoPrice = requestedPosPromoPrice > 0 && requestedPosPromoPrice < normalizedPrice
+    ? requestedPosPromoPrice
     : null
   const sgrPackaging = resolveSgrPackagingData(req.body, isSgr)
 
@@ -1355,6 +1364,7 @@ router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
           price: normalizedPrice,
           deliveryDescription,
           deliveryPromoPrice,
+          posPromoPrice,
           costPrice,
           trackLot,
           trackExpiry,
