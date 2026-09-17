@@ -1035,6 +1035,59 @@ router.post("/api/v1/products", async (req: AuthedRequest, res) => {
   }
 })
 
+router.get("/api/v1/products/:id/promotion", async (req: AuthedRequest, res) => {
+  const { tenantId } = getScopedAuth(req)
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Unauthorized" })
+  const companyId = await requireRequestCompanyId(req)
+  if (!companyId) return res.status(400).json({ ok: false, error: "Compania activa lipseste." })
+
+  const item = await prisma.product.findFirst({
+    where: { id: String(req.params.id), tenantId, companyId },
+    select: { id: true, name: true, price: true, deliveryPromoPrice: true, posPromoPrice: true },
+  })
+  if (!item) return res.status(404).json({ ok: false, error: "Produsul nu a fost gasit." })
+
+  return res.json({
+    ok: true,
+    item: {
+      id: item.id,
+      name: item.name,
+      price: toNumber(item.price),
+      deliveryPromoPrice: toNumber(item.deliveryPromoPrice || 0) || null,
+      posPromoPrice: toNumber(item.posPromoPrice || 0) || null,
+    },
+  })
+})
+
+router.patch("/api/v1/products/:id/promotion", async (req: AuthedRequest, res) => {
+  const { tenantId } = getScopedAuth(req)
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Unauthorized" })
+  const companyId = await requireRequestCompanyId(req)
+  if (!companyId) return res.status(400).json({ ok: false, error: "Compania activa lipseste." })
+
+  const product = await prisma.product.findFirst({
+    where: { id: String(req.params.id), tenantId, companyId },
+    select: { id: true, price: true },
+  })
+  if (!product) return res.status(404).json({ ok: false, error: "Produsul nu a fost gasit." })
+
+  const normalPrice = toNumber(product.price)
+  const requestedDeliveryPromoPrice = toNumber(req.body?.deliveryPromoPrice || 0)
+  const requestedPosPromoPrice = toNumber(req.body?.posPromoPrice || 0)
+  const deliveryPromoPrice = requestedDeliveryPromoPrice > 0 && requestedDeliveryPromoPrice < normalPrice
+    ? requestedDeliveryPromoPrice
+    : null
+  const posPromoPrice = requestedPosPromoPrice > 0 && requestedPosPromoPrice < normalPrice
+    ? requestedPosPromoPrice
+    : null
+
+  const item = await prisma.product.update({
+    where: { id: product.id },
+    data: { deliveryPromoPrice, posPromoPrice },
+  })
+  return res.json({ ok: true, item: serializeProduct(item) })
+})
+
 router.put("/api/v1/products/:id", async (req: AuthedRequest, res) => {
   const { tenantId } = getScopedAuth(req)
   if (!tenantId) return res.status(401).json({ ok: false, error: "Unauthorized" })

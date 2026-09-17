@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Crosshair, Link2, MapPin, Package2, Pencil, Plus, RefreshCcw, Save, Search, ShoppingBag, Trash2, Truck } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Crosshair, Link2, MapPin, Package2, Pencil, Plus, RefreshCcw, Save, Search, ShoppingBag, Tag, Trash2, Truck } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import PageHeader from "../components/PageHeader"
 import {
@@ -250,6 +250,7 @@ type GlovoCatalogPushResult = {
       id: string
       name: string
       price: number
+      originalPrice?: number | null
       available: boolean
       image_url?: string
     }>
@@ -315,6 +316,7 @@ type GufoDeliveryCatalogPreview = {
       sku?: string | null
       name: string
       price: number
+      originalPrice?: number | null
       currency?: string
       isAvailable?: boolean
       categoryId?: string | null
@@ -327,6 +329,15 @@ type GufoDeliveryCatalogPreview = {
     }>
   }
   updatedAt: string
+}
+
+type ProductPromotionDraft = {
+  id: string
+  name: string
+  normalPrice: number
+  promoPrice: string
+  applyDelivery: boolean
+  applyPos: boolean
 }
 
 type IntegrationForm = {
@@ -948,6 +959,9 @@ export default function MarketplacePage() {
   const [deliveryConfigurationSection, setDeliveryConfigurationSection] = useState<"restaurant" | "checkout" | "catalog">("restaurant")
   const [deliveryCheckoutPanel, setDeliveryCheckoutPanel] = useState<"delivery" | "payment" | "account">("delivery")
   const [deliveryCatalogPreviewOpen, setDeliveryCatalogPreviewOpen] = useState(false)
+  const [promotionDraft, setPromotionDraft] = useState<ProductPromotionDraft | null>(null)
+  const [promotionLoading, setPromotionLoading] = useState(false)
+  const [promotionSaving, setPromotionSaving] = useState(false)
   const [savingDeliveryOption, setSavingDeliveryOption] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
@@ -1359,6 +1373,59 @@ export default function MarketplacePage() {
       setGufoDeliveryPreview(null)
     } finally {
       setLoadingGufoDeliveryPreview(false)
+    }
+  }
+
+  async function openProductPromotion(product: GufoDeliveryCatalogPreview["catalog"]["products"][number]) {
+    setPromotionLoading(true)
+    setError("")
+    try {
+      const response = await api<{ item: { id: string; name: string; price: number; deliveryPromoPrice?: number | null; posPromoPrice?: number | null } }>(
+        `/api/v1/products/${encodeURIComponent(product.id)}/promotion`
+      )
+      const item = response.item
+      const deliveryPromoPrice = item.deliveryPromoPrice || null
+      const posPromoPrice = item.posPromoPrice || null
+      setPromotionDraft({
+        id: item.id,
+        name: item.name,
+        normalPrice: Number(item.price || 0),
+        promoPrice: String(deliveryPromoPrice || posPromoPrice || ""),
+        applyDelivery: Boolean(deliveryPromoPrice),
+        applyPos: Boolean(posPromoPrice),
+      })
+    } catch (e: any) {
+      setError(e?.message || "Nu am putut incarca reducerea produsului.")
+    } finally {
+      setPromotionLoading(false)
+    }
+  }
+
+  async function saveProductPromotion() {
+    if (!promotionDraft) return
+    const promoPrice = Number(promotionDraft.promoPrice.replace(",", "."))
+    if ((promotionDraft.applyDelivery || promotionDraft.applyPos) && !(promoPrice > 0 && promoPrice < promotionDraft.normalPrice)) {
+      setError("Prețul promoțional trebuie sa fie mai mare decat zero si mai mic decat prețul normal.")
+      return
+    }
+
+    setPromotionSaving(true)
+    setError("")
+    try {
+      await api(`/api/v1/products/${encodeURIComponent(promotionDraft.id)}/promotion`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          deliveryPromoPrice: promotionDraft.applyDelivery ? promoPrice : null,
+          posPromoPrice: promotionDraft.applyPos ? promoPrice : null,
+        }),
+      })
+      setPromotionDraft(null)
+      setMessage(`Reducerea pentru „${promotionDraft.name}” a fost salvată.`)
+      if (selectedIntegration?.id) await loadGufoDeliveryPreview(selectedIntegration.id)
+    } catch (e: any) {
+      setError(e?.message || "Nu am putut salva reducerea produsului.")
+    } finally {
+      setPromotionSaving(false)
     }
   }
 
@@ -3162,8 +3229,18 @@ export default function MarketplacePage() {
                                 {[product.sku, product.category?.name].filter(Boolean).join(" • ") || "Fara categorie"}
                               </div>
                             </div>
-                            <div className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                              {formatMoney(product.price)}
+                            <div className="flex shrink-0 items-center gap-2">
+                              <div className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                {product.originalPrice ? <span className="mr-1.5 text-slate-400 line-through">{formatMoney(product.originalPrice)}</span> : null}
+                                {formatMoney(product.price)}
+                              </div>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                                onClick={() => void openProductPromotion(product)}
+                              >
+                                <Tag size={13} /> Reducere
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -3192,6 +3269,55 @@ export default function MarketplacePage() {
               </div>
             ) : null}
           </DocumentSection>
+          {promotionDraft || promotionLoading ? (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onMouseDown={() => !promotionSaving && setPromotionDraft(null)}>
+              <div className="w-full max-w-2xl rounded-[24px] border border-slate-200 bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+                <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Reducere produs</div>
+                    <div className="mt-1 text-xl font-bold text-[#17324D]">{promotionDraft?.name || "Se incarca produsul..."}</div>
+                    {promotionDraft ? <div className="mt-1 text-sm text-slate-500">Preț normal: {formatMoney(promotionDraft.normalPrice)}</div> : null}
+                  </div>
+                  <button type="button" onClick={() => !promotionSaving && setPromotionDraft(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-lg text-slate-600 hover:bg-slate-100" aria-label="Inapoi">←</button>
+                </div>
+                {promotionLoading || !promotionDraft ? (
+                  <div className="px-6 py-10 text-center text-sm text-slate-500">Se incarca setarile produsului...</div>
+                ) : (
+                  <div className="grid gap-5 px-6 py-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)]">
+                    <div>
+                      <DocumentField label="Preț promoțional">
+                        <input
+                          inputMode="decimal"
+                          value={promotionDraft.promoPrice}
+                          onChange={(event) => setPromotionDraft((current) => current ? { ...current, promoPrice: event.target.value } : current)}
+                          placeholder={`Mai mic decat ${formatMoney(promotionDraft.normalPrice)}`}
+                          className={documentInputClass}
+                        />
+                      </DocumentField>
+                      <div className="mt-2 text-xs leading-5 text-slate-500">În Gufo Delivery clientul vede prețul vechi tăiat. În Gufo POS, bonul fiscal păstrează prețul normal și scade reducerea pe linie separată.</div>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-sm font-semibold text-slate-900">Aplică reducerea în</div>
+                      <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700">
+                        <input type="checkbox" checked={promotionDraft.applyDelivery} onChange={(event) => setPromotionDraft((current) => current ? { ...current, applyDelivery: event.target.checked } : current)} />
+                        Gufo Delivery
+                      </label>
+                      <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700">
+                        <input type="checkbox" checked={promotionDraft.applyPos} onChange={(event) => setPromotionDraft((current) => current ? { ...current, applyPos: event.target.checked } : current)} />
+                        Gufo POS
+                      </label>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={() => setPromotionDraft(null)} disabled={promotionSaving} className={documentButtonSecondaryClass}>Renunta</button>
+                  <button type="button" onClick={() => void saveProductPromotion()} disabled={promotionSaving || promotionLoading || !promotionDraft} className={documentButtonPrimaryClass}>
+                    <Save size={14} className="mr-1.5" />{promotionSaving ? "Se salveaza..." : "Salveaza reducerea"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : activeTab === "mapari" ? (
         <div className="space-y-3">
