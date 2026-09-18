@@ -2896,6 +2896,22 @@ router.post("/api/v1/public/delivery/announcements/:announcementId/read", requir
   }
 })
 
+router.post("/api/v1/public/delivery/notifications/devices", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const customerId = String(req.deliveryCustomer?.customerId || "").trim()
+    const token = String(req.body?.token || "").trim()
+    if (!customerId || token.length < 40 || token.length > 4096) return res.status(400).json({ ok: false, error: "Tokenul dispozitivului nu este valid." })
+    await db.deliveryPushToken.upsert({
+      where: { token },
+      create: { customerId, token, platform: "ANDROID" },
+      update: { customerId, platform: "ANDROID", lastSeenAt: new Date() },
+    })
+    return res.json({ ok: true })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut activa notificarile pe acest dispozitiv.") })
+  }
+})
+
 router.get("/api/v1/public/delivery/restaurants/:restaurantId/checkout-config", async (req, res) => {
   try {
     const restaurantId = String(req.params.restaurantId || "").trim()

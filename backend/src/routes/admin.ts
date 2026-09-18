@@ -48,6 +48,7 @@ import {
   resolveEffectiveModuleCodes,
 } from "../lib/moduleCatalog"
 import { hasTenantModule } from "../lib/tenantModules"
+import { sendDeliveryAnnouncementPush } from "../lib/deliveryPush"
 
 const router = Router()
 
@@ -329,6 +330,7 @@ router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requir
       expiresAt: parsed.data.expiresAt || null,
     },
   })
+  if (item.isPublished) void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
   return res.json({ ok: true, item })
 })
 
@@ -336,7 +338,7 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
   const parsed = DeliveryAnnouncementSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
   const id = String(req.params.id || "").trim()
-  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true } })
+  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true, isPublished: true } })
   if (!existing) return res.status(404).json({ ok: false, error: "Noutatea nu a fost gasita." })
   const item = await prisma.deliveryAnnouncement.update({
     where: { id: existing.id },
@@ -347,6 +349,7 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
       expiresAt: parsed.data.expiresAt || null,
     },
   })
+  if (item.isPublished && !existing.isPublished) void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
   return res.json({ ok: true, item })
 })
 

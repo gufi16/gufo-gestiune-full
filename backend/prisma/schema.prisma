@@ -575,6 +575,7 @@ model DeliveryCustomerAccount {
   paymentMethods DeliveryCustomerPaymentMethod[]
   restaurantReviews DeliveryRestaurantReview[]
   announcementReads DeliveryAnnouncementRead[]
+  pushTokens       DeliveryPushToken[]
 
   @@unique([authProvider, providerUserId])
   @@index([createdAt])
@@ -739,6 +740,20 @@ model DeliveryAnnouncementRead {
   customer     DeliveryCustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([announcementId, customerId])
+  @@index([customerId])
+}
+
+model DeliveryPushToken {
+  id         String   @id @default(cuid())
+  customerId String
+  token      String   @unique
+  platform   String   @default("ANDROID")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  customer DeliveryCustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
   @@index([customerId])
 }
 
