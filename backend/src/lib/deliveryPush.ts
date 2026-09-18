@@ -50,6 +50,8 @@ export async function sendDeliveryAnnouncementPush(input: { title: string; body:
       data: { type: "delivery_announcement", announcementId: input.announcementId },
       android: {
         priority: "high",
+        // Retain an announcement while the phone is offline; FCM delivers it on reconnection.
+        ttl: 7 * 24 * 60 * 60 * 1000,
         notification: { channelId: "gufo_delivery_news", sound: "default" },
       },
     })
