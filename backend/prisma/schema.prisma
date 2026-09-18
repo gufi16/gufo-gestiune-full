@@ -573,6 +573,7 @@ model DeliveryCustomerAccount {
   addresses DeliveryCustomerAddress[]
   sessions  DeliveryCustomerSession[]
   paymentMethods DeliveryCustomerPaymentMethod[]
+  restaurantReviews DeliveryRestaurantReview[]
 
   @@unique([authProvider, providerUserId])
   @@index([createdAt])
@@ -687,6 +688,25 @@ model DeliveryPaymentAttempt {
   @@index([integrationId])
   @@index([status])
   @@index([createdAt])
+}
+
+model DeliveryRestaurantReview {
+  id              String   @id @default(cuid())
+  customerId      String
+  integrationId   String
+  externalOrderId String   @unique
+  rating          Int
+  comment         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer      DeliveryCustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  integration   ExternalIntegration     @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  externalOrder ExternalOrder           @relation(fields: [externalOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, externalOrderId])
+  @@index([integrationId])
+  @@index([customerId])
 }
 
 model UserCompanyAccess {
@@ -2251,6 +2271,7 @@ model ExternalIntegration {
 
   orders              ExternalOrder[]
   marketplaceMappings MarketplaceProductMapping[]
+  deliveryReviews     DeliveryRestaurantReview[]
 
   @@index([tenantId])
   @@index([locationId])
@@ -2292,6 +2313,7 @@ model ExternalOrder {
   kitchenTicket KitchenTicket?
   saleDraft     SaleDraft?
   sale          Sale?
+  deliveryReviews DeliveryRestaurantReview[]
 
   @@unique([tenantId, platform, externalOrderId])
   @@index([tenantId])

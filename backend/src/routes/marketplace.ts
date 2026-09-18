@@ -242,6 +242,11 @@ const PublicGufoDeliveryVivaPrepareSchema = PublicGufoDeliveryCheckoutSchema.ext
   }),
 })
 
+const DeliveryRestaurantReviewSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().trim().max(800).optional(),
+})
+
 const DeliveryCardSetupSchema = z.object({
   restaurantId: z.string().min(1),
 })
@@ -584,6 +589,20 @@ async function getPublicGufoDeliveryIntegrations() {
 async function resolvePublicGufoDeliveryIntegration(restaurantId: string) {
   const items = await getPublicGufoDeliveryIntegrations()
   return items.find((item) => item.id === restaurantId) || null
+}
+
+async function getDeliveryReviewStats(integrationIds: string[]) {
+  if (integrationIds.length === 0) return new Map<string, { rating: number; count: number }>()
+  const summaries = await db.deliveryRestaurantReview.groupBy({
+    by: ["integrationId"],
+    where: { integrationId: { in: integrationIds } },
+    _avg: { rating: true },
+    _count: { _all: true },
+  })
+  return new Map(summaries.map((item) => [item.integrationId, {
+    rating: Math.round(Number(item._avg.rating || 0) * 10) / 10,
+    count: item._count._all,
+  }]))
 }
 
 async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliveryIntegrationPublic) {
@@ -2714,6 +2733,7 @@ router.post("/api/v1/marketplace/webhooks/glovo/cancel/:storeId?", async (req, r
 router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
   try {
     const integrations = await getPublicGufoDeliveryIntegrations()
+    const reviewStats = await getDeliveryReviewStats(integrations.map((integration) => integration.id))
     const deliveryPoint = await resolvePublicRestaurantDeliveryPoint(req)
     const coveredIntegrations = integrations.filter((integration) => {
       if (!deliveryPoint) return true
@@ -2727,6 +2747,7 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
       const deliveryArea = normalizeDeliveryServiceArea(settings.deliveryServiceArea)
       const imageUrl = await resolveDeliveryRestaurantCoverImage(req, integration)
       const deliveryAvailability = buildDeliveryAvailability(settings)
+      const reviews = reviewStats.get(integration.id)
       return {
         id: integration.id,
         slug: slugifyDeliveryText(location?.code || location?.name || integration.id),
@@ -2745,6 +2766,8 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
         catalogMode: normalizeDeliveryCatalogMode(settings.deliveryCatalogMode),
         showCategories: settings.deliveryShowCategories !== false,
         paymentConfig: buildGufoDeliveryPaymentConfig(settings),
+        rating: reviews?.rating || 0,
+        reviewCount: reviews?.count || 0,
         deliveryArea: {
           configured: Boolean(deliveryArea),
           mode: deliveryArea?.mode || null,
@@ -2773,9 +2796,38 @@ router.get("/api/v1/public/delivery/restaurants/:restaurantId/menu", async (req,
     }
 
     const payload = await buildGufoDeliveryMenuPayload(req, integration)
-    return res.json(payload)
+    const reviews = await getDeliveryReviewStats([integration.id])
+    const stats = reviews.get(integration.id)
+    return res.json({ ...payload, restaurant: { ...payload.restaurant, rating: stats?.rating || 0, reviewCount: stats?.count || 0 } })
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca meniul Gufo Delivery.") })
+  }
+})
+
+router.post("/api/v1/public/delivery/orders/:orderId/review", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const parsed = DeliveryRestaurantReviewSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+    const customerId = String(req.deliveryCustomer?.customerId || "").trim()
+    const customerPhone = String(req.deliveryCustomer?.phone || "").trim()
+    const orderId = String(req.params.orderId || "").trim()
+    const order = await db.externalOrder.findFirst({
+      where: { id: orderId, platform: "GUFO_DELIVERY", customerPhone: customerPhone || undefined },
+      select: { id: true, integrationId: true, status: true },
+    })
+    if (!customerId || !order?.integrationId) return res.status(404).json({ ok: false, error: "Comanda nu poate fi evaluata pentru acest cont." })
+    if (!["DELIVERED", "COMPLETED", "FISCALIZED"].includes(order.status)) {
+      return res.status(409).json({ ok: false, error: "Poți evalua restaurantul după finalizarea comenzii." })
+    }
+    const review = await db.deliveryRestaurantReview.upsert({
+      where: { externalOrderId: order.id },
+      create: { customerId, integrationId: order.integrationId, externalOrderId: order.id, rating: parsed.data.rating, comment: parsed.data.comment || null },
+      update: { rating: parsed.data.rating, comment: parsed.data.comment || null },
+    })
+    const stats = (await getDeliveryReviewStats([order.integrationId])).get(order.integrationId)
+    return res.json({ ok: true, review: { id: review.id, rating: review.rating, comment: review.comment, updatedAt: review.updatedAt.toISOString() }, rating: stats?.rating || review.rating, reviewCount: stats?.count || 1 })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut salva recenzia.") })
   }
 })
 
