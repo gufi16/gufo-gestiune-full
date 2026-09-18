@@ -56,6 +56,7 @@ import ControlPanelDashboard from "./pages/control/ControlPanelDashboard"
 import ControlPanelClients from "./pages/control/ControlPanelClients"
 import ControlPanelClientDetails from "./pages/control/ControlPanelClientDetails"
 import ControlPanelIntegrations from "./pages/control/ControlPanelIntegrations"
+import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliveryAnnouncements"
 import { firstAllowedRoute, hasModule } from "./lib/modules"
 
 function RequireModule({
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/control-panel/clienti" element={<ControlPanelClients />} />
         <Route path="/control-panel/clienti/:id" element={<ControlPanelClientDetails />} />
         <Route path="/control-panel/integrari" element={<ControlPanelIntegrations />} />
+        <Route path="/control-panel/noutati" element={<ControlPanelDeliveryAnnouncements />} />
         <Route path="/control-panel/licente" element={<ControlPanelDashboard />} />
         <Route path="/control-panel/facturare" element={<ControlPanelDashboard />} />
         <Route path="/control-panel/audit" element={<ControlPanelDashboard />} />

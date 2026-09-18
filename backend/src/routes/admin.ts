@@ -51,6 +51,13 @@ import { hasTenantModule } from "../lib/tenantModules"
 
 const router = Router()
 
+const DeliveryAnnouncementSchema = z.object({
+  title: z.string().trim().min(3).max(120),
+  body: z.string().trim().min(3).max(1200),
+  isPublished: z.boolean().default(true),
+  expiresAt: z.coerce.date().nullable().optional(),
+})
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
@@ -300,6 +307,56 @@ function cleanupTenantBackupArtifacts(filePaths: string[]) {
     }
   }
 }
+
+router.get("/api/v1/admin/platform/delivery-announcements", requireAuth, requireOwner, async (_req, res) => {
+  const items = await prisma.deliveryAnnouncement.findMany({
+    where: { integrationId: null },
+    include: { _count: { select: { reads: true } } },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: 100,
+  })
+  return res.json({ ok: true, items })
+})
+
+router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = DeliveryAnnouncementSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+  const item = await prisma.deliveryAnnouncement.create({
+    data: {
+      title: parsed.data.title,
+      body: parsed.data.body,
+      isPublished: parsed.data.isPublished,
+      expiresAt: parsed.data.expiresAt || null,
+    },
+  })
+  return res.json({ ok: true, item })
+})
+
+router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = DeliveryAnnouncementSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+  const id = String(req.params.id || "").trim()
+  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true } })
+  if (!existing) return res.status(404).json({ ok: false, error: "Noutatea nu a fost gasita." })
+  const item = await prisma.deliveryAnnouncement.update({
+    where: { id: existing.id },
+    data: {
+      title: parsed.data.title,
+      body: parsed.data.body,
+      isPublished: parsed.data.isPublished,
+      expiresAt: parsed.data.expiresAt || null,
+    },
+  })
+  return res.json({ ok: true, item })
+})
+
+router.delete("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, requireOwner, async (req, res) => {
+  const id = String(req.params.id || "").trim()
+  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true } })
+  if (!existing) return res.status(404).json({ ok: false, error: "Noutatea nu a fost gasita." })
+  await prisma.deliveryAnnouncement.delete({ where: { id: existing.id } })
+  return res.json({ ok: true })
+})
 
 router.get("/api/v1/admin/platform/efactura", requireAuth, requireOwner, async (_req, res) => {
   const config = await prisma.platformConfig.findUnique({

@@ -201,6 +201,14 @@ const UpdateGufoDeliveryCatalogPromotionSchema = z.object({
   applyPos: z.boolean().default(false),
 })
 
+const DeliveryAnnouncementSchema = z.object({
+  integrationId: z.string().min(1),
+  title: z.string().trim().min(3).max(120),
+  body: z.string().trim().min(3).max(1200),
+  isPublished: z.boolean().default(true),
+  expiresAt: z.coerce.date().nullable().optional(),
+})
+
 const PublicGufoDeliveryCheckoutSchema = z.object({
   restaurantId: z.string().min(1),
   fulfillmentType: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
@@ -2831,6 +2839,63 @@ router.post("/api/v1/public/delivery/orders/:orderId/review", requireDeliveryCus
   }
 })
 
+router.get("/api/v1/public/delivery/announcements", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const customerId = String(req.deliveryCustomer?.customerId || "").trim()
+    if (!customerId) return res.status(401).json({ ok: false, error: "Sesiunea clientului lipseste." })
+    const now = new Date()
+    const items = await db.deliveryAnnouncement.findMany({
+      where: {
+        isPublished: true,
+        publishedAt: { lte: now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        integrationId: null,
+      },
+      include: {
+        integration: { include: { location: { select: { name: true } } } },
+        reads: { where: { customerId }, select: { id: true } },
+      },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 60,
+    })
+    return res.json({
+      ok: true,
+      items: items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        body: item.body,
+        restaurantName: item.integration?.location?.name || "Gufo Delivery",
+        publishedAt: item.publishedAt.toISOString(),
+        expiresAt: item.expiresAt?.toISOString() || null,
+        isRead: item.reads.length > 0,
+      })),
+    })
+  } catch (error: unknown) {
+    return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca noutatile.") })
+  }
+})
+
+router.post("/api/v1/public/delivery/announcements/:announcementId/read", requireDeliveryCustomerAuth, async (req: DeliveryCustomerAuthRequest, res) => {
+  try {
+    const customerId = String(req.deliveryCustomer?.customerId || "").trim()
+    const announcementId = String(req.params.announcementId || "").trim()
+    if (!customerId || !announcementId) return res.status(400).json({ ok: false, error: "Lipsesc datele notificarii." })
+    const announcement = await db.deliveryAnnouncement.findFirst({
+      where: { id: announcementId, isPublished: true, integrationId: null },
+      select: { id: true },
+    })
+    if (!announcement) return res.status(404).json({ ok: false, error: "Noutatea nu mai este disponibila." })
+    await db.deliveryAnnouncementRead.upsert({
+      where: { announcementId_customerId: { announcementId, customerId } },
+      create: { announcementId, customerId },
+      update: { readAt: new Date() },
+    })
+    return res.json({ ok: true })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut marca noutatea ca citita.") })
+  }
+})
+
 router.get("/api/v1/public/delivery/restaurants/:restaurantId/checkout-config", async (req, res) => {
   try {
     const restaurantId = String(req.params.restaurantId || "").trim()
@@ -3473,6 +3538,52 @@ router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) =>
 })
 
 router.use(requireAuth)
+
+router.get("/api/v1/marketplace/gufo-delivery/announcements", async (req: AuthedRequest, res) => {
+  const tenantId = req.auth?.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Missing tenant context" })
+  const integrationId = String(req.query.integrationId || "").trim()
+  const where: Prisma.DeliveryAnnouncementWhereInput = {
+    integration: { tenantId, platform: "GUFO_DELIVERY" },
+    ...(integrationId ? { integrationId } : {}),
+  }
+  const items = await db.deliveryAnnouncement.findMany({
+    where,
+    include: { integration: { include: { location: { select: { name: true, code: true } } } }, _count: { select: { reads: true } } },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: 100,
+  })
+  return res.json({ ok: true, items })
+})
+
+router.post("/api/v1/marketplace/gufo-delivery/announcements", async (req: AuthedRequest, res) => {
+  const tenantId = req.auth?.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Missing tenant context" })
+  const parsed = DeliveryAnnouncementSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+  const integration = await db.externalIntegration.findFirst({ where: { id: parsed.data.integrationId, tenantId, platform: "GUFO_DELIVERY" }, select: { id: true } })
+  if (!integration) return res.status(404).json({ ok: false, error: "Restaurantul Gufo Delivery nu a fost gasit." })
+  const item = await db.deliveryAnnouncement.create({
+    data: {
+      integrationId: integration.id,
+      title: parsed.data.title,
+      body: parsed.data.body,
+      isPublished: parsed.data.isPublished,
+      expiresAt: parsed.data.expiresAt || null,
+    },
+  })
+  return res.json({ ok: true, item })
+})
+
+router.delete("/api/v1/marketplace/gufo-delivery/announcements/:announcementId", async (req: AuthedRequest, res) => {
+  const tenantId = req.auth?.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Missing tenant context" })
+  const id = String(req.params.announcementId || "").trim()
+  const item = await db.deliveryAnnouncement.findFirst({ where: { id, integration: { tenantId, platform: "GUFO_DELIVERY" } }, select: { id: true } })
+  if (!item) return res.status(404).json({ ok: false, error: "Noutatea nu a fost gasita." })
+  await db.deliveryAnnouncement.delete({ where: { id: item.id } })
+  return res.json({ ok: true })
+})
 
 router.patch("/api/v1/marketplace/gufo-delivery/catalog-promotion", async (req: AuthedRequest, res) => {
   const tenantId = req.auth?.tenantId

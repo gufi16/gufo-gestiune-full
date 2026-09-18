@@ -574,6 +574,7 @@ model DeliveryCustomerAccount {
   sessions  DeliveryCustomerSession[]
   paymentMethods DeliveryCustomerPaymentMethod[]
   restaurantReviews DeliveryRestaurantReview[]
+  announcementReads DeliveryAnnouncementRead[]
 
   @@unique([authProvider, providerUserId])
   @@index([createdAt])
@@ -706,6 +707,38 @@ model DeliveryRestaurantReview {
 
   @@unique([customerId, externalOrderId])
   @@index([integrationId])
+  @@index([customerId])
+}
+
+model DeliveryAnnouncement {
+  id            String   @id @default(cuid())
+  integrationId String?
+  title         String
+  body          String
+  isPublished   Boolean  @default(true)
+  publishedAt   DateTime @default(now())
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  integration ExternalIntegration?      @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  reads       DeliveryAnnouncementRead[]
+
+  @@index([integrationId])
+  @@index([isPublished, publishedAt])
+  @@index([expiresAt])
+}
+
+model DeliveryAnnouncementRead {
+  id             String   @id @default(cuid())
+  announcementId String
+  customerId     String
+  readAt         DateTime @default(now())
+
+  announcement DeliveryAnnouncement    @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  customer     DeliveryCustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, customerId])
   @@index([customerId])
 }
 
@@ -2272,6 +2305,7 @@ model ExternalIntegration {
   orders              ExternalOrder[]
   marketplaceMappings MarketplaceProductMapping[]
   deliveryReviews     DeliveryRestaurantReview[]
+  deliveryAnnouncements DeliveryAnnouncement[]
 
   @@index([tenantId])
   @@index([locationId])
