@@ -187,10 +187,13 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "10mb" }))
 app.use(cookieParser())
 app.use(morgan("dev"))
-app.use("/uploads", express.static(uploadsDir))
+// Product uploads have unique filenames, so browsers and the delivery app can safely
+// cache them for a long time instead of downloading the same photos on each visit.
+const uploadsStaticOptions = { maxAge: "30d", immutable: true, etag: true }
+app.use("/uploads", express.static(uploadsDir, uploadsStaticOptions))
 // Tenant domains proxy API calls under /api, while their root is the ERP SPA.
 // Keep uploaded images on the API route so they never resolve to the SPA HTML.
-app.use("/api/uploads", express.static(uploadsDir))
+app.use("/api/uploads", express.static(uploadsDir, uploadsStaticOptions))
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res)
   res.json = ((body: unknown) => originalJson(repairDeepStrings(body))) as typeof res.json
