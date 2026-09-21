@@ -361,6 +361,9 @@ type IntegrationForm = {
   deliveryVivaSourceCode: string
   deliveryVivaConfigured: boolean
   deliveryRestaurantImageUrl: string
+  deliveryPublicAddress: string
+  deliveryContactPhone: string
+  deliveryEtaMinutes: string
   deliveryFee: string
   freeDeliveryMinOrder: string
   deliverySchedule: DeliveryScheduleForm
@@ -528,6 +531,9 @@ function emptyForm(): IntegrationForm {
     deliveryVivaSourceCode: "",
     deliveryVivaConfigured: false,
     deliveryRestaurantImageUrl: "",
+    deliveryPublicAddress: "",
+    deliveryContactPhone: "",
+    deliveryEtaMinutes: "35",
     deliveryFee: "0",
     freeDeliveryMinOrder: "0",
     deliverySchedule: emptyDeliverySchedule(),
@@ -1223,6 +1229,9 @@ export default function MarketplacePage() {
                 typeof integration.settingsJson?.deliveryRestaurantImageUrl === "string"
                   ? integration.settingsJson.deliveryRestaurantImageUrl
                   : "",
+              deliveryPublicAddress: typeof integration.settingsJson?.deliveryPublicAddress === "string" ? integration.settingsJson.deliveryPublicAddress : "",
+              deliveryContactPhone: typeof integration.settingsJson?.deliveryContactPhone === "string" ? integration.settingsJson.deliveryContactPhone : "",
+              deliveryEtaMinutes: String(Math.max(5, Number(integration.settingsJson?.deliveryEtaMinutes || 35))),
               deliveryFee: String(Number(integration.settingsJson?.deliveryFee || 0)),
               freeDeliveryMinOrder: String(Number(integration.settingsJson?.freeDeliveryMinOrder || 0)),
               deliverySchedule: readDeliverySchedule(integration.settingsJson?.deliverySchedule),
@@ -1565,6 +1574,9 @@ export default function MarketplacePage() {
             deliveryVivaClientSecret: form.deliveryVivaClientSecret.trim() || undefined,
             deliveryVivaSourceCode: form.deliveryVivaSourceCode.trim() || undefined,
             deliveryRestaurantImageUrl: form.deliveryRestaurantImageUrl.trim() || undefined,
+            deliveryPublicAddress: form.deliveryPublicAddress.trim() || undefined,
+            deliveryContactPhone: form.deliveryContactPhone.trim() || undefined,
+            deliveryEtaMinutes: form.deliveryEtaMinutes.trim() ? Math.max(5, Number(form.deliveryEtaMinutes)) : 35,
             deliveryFee: form.deliveryFee.trim() ? Math.max(0, Number(form.deliveryFee)) : 0,
             freeDeliveryMinOrder: form.freeDeliveryMinOrder.trim() ? Math.max(0, Number(form.freeDeliveryMinOrder)) : 0,
             deliverySchedule: form.deliverySchedule,
@@ -2126,6 +2138,14 @@ export default function MarketplacePage() {
                             ) : null}
                           </DocumentField>
                           <p className="mt-1 text-xs text-slate-500">Fotografia aleasa se incarca si se publica automat. Daca nu alegi una, se foloseste automat o imagine din produse sau categorii.</p>
+                          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <DocumentField label="Adresa publica a restaurantului">
+                              <input value={currentForm.deliveryPublicAddress} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryPublicAddress: event.target.value } }))} className={documentInputClass} placeholder="Ex: Str. Memorandumului 21, Cluj-Napoca" />
+                            </DocumentField>
+                            <DocumentField label="Telefon restaurant">
+                              <input inputMode="tel" value={currentForm.deliveryContactPhone} onChange={(event) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryContactPhone: event.target.value } }))} className={documentInputClass} placeholder="Ex: 0740 000 000" />
+                            </DocumentField>
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -2151,6 +2171,9 @@ export default function MarketplacePage() {
                         </DocumentField>
                         <DocumentField label="Prag pentru livrare gratuita (lei)">
                           <input inputMode="decimal" value={currentForm.freeDeliveryMinOrder} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], freeDeliveryMinOrder: e.target.value } }))} className={documentInputClass} placeholder="Exemplu: 45" />
+                        </DocumentField>
+                        <DocumentField label="Durata estimata livrare (minute)">
+                          <input inputMode="numeric" value={currentForm.deliveryEtaMinutes} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryEtaMinutes: e.target.value } }))} className={documentInputClass} placeholder="35" />
                         </DocumentField>
                       </div>
                       <p className="mt-2 text-xs text-slate-500">Exemplu: taxa 8 lei si prag 45 lei inseamna ca sub 45 lei clientul plateste 8 lei, iar de la 45 lei livrarea este gratuita. Ambele valori sunt afisate in Gufo Delivery.</p>

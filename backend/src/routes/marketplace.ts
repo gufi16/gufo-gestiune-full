@@ -133,6 +133,10 @@ type GufoDeliveryIntegrationPublic = Prisma.ExternalIntegrationGetPayload<{
           select: {
             id: true
             isVatPayer: true
+            name: true
+            cui: true
+            regNo: true
+            phone: true
           }
         }
       }
@@ -580,6 +584,10 @@ async function getPublicGufoDeliveryIntegrations() {
             select: {
               id: true,
               isVatPayer: true,
+              name: true,
+              cui: true,
+              regNo: true,
+              phone: true,
             },
           },
         },
@@ -921,11 +929,18 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
           || products.find((item) => Boolean(item.imageUrl))?.imageUrl
           || null
       ),
-      address: location.address || null,
+      address: String(settings.deliveryPublicAddress || location.address || "").trim() || null,
       city: location.city || null,
       county: location.county || null,
       country: location.country || "RO",
       postalCode: location.postalCode || null,
+      deliveryEtaMinutes: Math.max(5, Number(settings.deliveryEtaMinutes || 35)),
+      legalInfo: {
+        businessName: location.company?.name || location.name,
+        phone: String(settings.deliveryContactPhone || location.company?.phone || "").trim() || null,
+        cui: location.company?.cui || null,
+        regNo: location.company?.regNo || null,
+      },
       deliveryStatus: { isOpen: deliveryAvailability.isOpen, status: deliveryAvailability.status, label: deliveryAvailability.label, todayLabel: deliveryAvailability.todayLabel },
       deliverySchedule: deliveryAvailability.schedule,
     },
@@ -2762,7 +2777,7 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
         name: location?.name || "Restaurant",
         code: location?.code || null,
         imageUrl,
-        address: location?.address || null,
+        address: String(settings.deliveryPublicAddress || location?.address || "").trim() || null,
         city: location?.city || null,
         county: location?.county || null,
         country: location?.country || "RO",
@@ -2771,6 +2786,13 @@ router.get("/api/v1/public/delivery/restaurants", async (req, res) => {
         deliveryStatus: { isOpen: deliveryAvailability.isOpen, status: deliveryAvailability.status, label: deliveryAvailability.label, todayLabel: deliveryAvailability.todayLabel },
         deliverySchedule: deliveryAvailability.schedule,
         deliveryPricing: { fee: Math.max(0, Number(settings.deliveryFee || 0)), freeAbove: Math.max(0, Number(settings.freeDeliveryMinOrder || 0)) },
+        deliveryEtaMinutes: Math.max(5, Number(settings.deliveryEtaMinutes || 35)),
+        legalInfo: {
+          businessName: location?.company?.name || location?.name || null,
+          phone: String(settings.deliveryContactPhone || location?.company?.phone || "").trim() || null,
+          cui: location?.company?.cui || null,
+          regNo: location?.company?.regNo || null,
+        },
         catalogMode: normalizeDeliveryCatalogMode(settings.deliveryCatalogMode),
         showCategories: settings.deliveryShowCategories !== false,
         paymentConfig: buildGufoDeliveryPaymentConfig(settings),
