@@ -330,7 +330,11 @@ router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requir
       expiresAt: parsed.data.expiresAt || null,
     },
   })
-  if (item.isPublished) void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
+  if (item.isPublished) {
+    void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
+      .then((result) => console.info("[delivery-push] announcement sent", { announcementId: item.id, ...result }))
+      .catch((error) => console.error("[delivery-push] announcement failed", { announcementId: item.id, error }))
+  }
   return res.json({ ok: true, item })
 })
 
@@ -349,7 +353,11 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
       expiresAt: parsed.data.expiresAt || null,
     },
   })
-  if (item.isPublished && !existing.isPublished) void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
+  if (item.isPublished && !existing.isPublished) {
+    void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
+      .then((result) => console.info("[delivery-push] announcement sent", { announcementId: item.id, ...result }))
+      .catch((error) => console.error("[delivery-push] announcement failed", { announcementId: item.id, error }))
+  }
   return res.json({ ok: true, item })
 })
 
