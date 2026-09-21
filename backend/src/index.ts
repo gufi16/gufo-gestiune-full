@@ -8,6 +8,7 @@ import { z } from "zod"
 import fs from "fs"
 import path from "path"
 import crypto from "crypto"
+import sharp from "sharp"
 import { assertPersistentUploadsConfig, ensureUploadSubdir, getUploadsRoot } from "./lib/uploads"
 import { loadEnv } from "./lib/loadEnv"
 import {
@@ -190,6 +191,30 @@ app.use(morgan("dev"))
 // Product uploads have unique filenames, so browsers and the delivery app can safely
 // cache them for a long time instead of downloading the same photos on each visit.
 const uploadsStaticOptions = { maxAge: "30d", immutable: true, etag: true }
+
+// Mobile clients request product thumbnails with ?w=... . Originals are retained for
+// ERP editing, while the delivery catalog receives a much smaller WebP payload.
+function serveOptimizedProductImage(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const requestedWidth = Number(req.query.w)
+  if (!Number.isFinite(requestedWidth) || requestedWidth < 64) return next()
+
+  const productsDir = path.resolve(uploadsDir, "products")
+  const filename = path.basename(String(req.params.filename || ""))
+  const sourcePath = path.resolve(productsDir, filename)
+  if (!filename || !sourcePath.startsWith(`${productsDir}${path.sep}`) || !fs.existsSync(sourcePath)) return next()
+
+  const width = Math.min(Math.round(requestedWidth), 1600)
+  res.setHeader("Cache-Control", "public, max-age=2592000, immutable")
+  res.type("image/webp")
+  const transformer = sharp(sourcePath, { failOn: "none" })
+    .rotate()
+    .resize({ width, withoutEnlargement: true })
+    .webp({ quality: 78, effort: 4 })
+  transformer.on("error", next)
+  transformer.pipe(res)
+}
+
+app.get(["/uploads/products/:filename", "/api/uploads/products/:filename"], serveOptimizedProductImage)
 app.use("/uploads", express.static(uploadsDir, uploadsStaticOptions))
 // Tenant domains proxy API calls under /api, while their root is the ERP SPA.
 // Keep uploaded images on the API route so they never resolve to the SPA HTML.
