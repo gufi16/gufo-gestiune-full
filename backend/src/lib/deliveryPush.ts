@@ -1,5 +1,6 @@
 import { cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app"
 import { getMessaging } from "firebase-admin/messaging"
+import fs from "node:fs"
 import { prisma } from "./prisma"
 
 type FirebaseCredentials = {
@@ -11,7 +12,13 @@ type FirebaseCredentials = {
 function firebaseCredentials(): FirebaseCredentials | null {
   const inline = String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "").trim()
   const encoded = String(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 || "").trim()
-  const raw = inline || (encoded ? Buffer.from(encoded, "base64").toString("utf8") : "")
+  const serviceAccountFile = String(
+    process.env.FIREBASE_SERVICE_ACCOUNT_FILE || "/app/secrets/gufo-delivery-firebase.json"
+  ).trim()
+  const fileContents = !inline && !encoded && serviceAccountFile && fs.existsSync(serviceAccountFile)
+    ? fs.readFileSync(serviceAccountFile, "utf8")
+    : ""
+  const raw = inline || (encoded ? Buffer.from(encoded, "base64").toString("utf8") : fileContents)
   if (!raw) return null
   try {
     const credentials = JSON.parse(raw) as FirebaseCredentials
