@@ -1105,18 +1105,24 @@ export async function buildCatalogPayload(req: Request, tenantId: string) {
   const rawProducts = await prisma.product.findMany({
     where: {
       isActive: true,
-      isVisibleInPos: true,
       ...scopedWhere,
       OR: [
-        { categoryId: null },
         {
-          category: {
-            is: {
-              isActive: true,
-              isVisibleInPos: true,
+          isVisibleInPos: true,
+          OR: [
+            { categoryId: null },
+            {
+              category: {
+                is: {
+                  isActive: true,
+                  isVisibleInPos: true,
+                },
+              },
             },
-          },
+          ],
         },
+        // This system service is only used when a Gufo Delivery order has a delivery fee.
+        { sku: "__GUFO_DELIVERY_FEE__" },
       ],
     },
     include: {

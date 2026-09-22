@@ -366,7 +366,6 @@ type IntegrationForm = {
   deliveryContactPhone: string
   deliveryEtaMinutes: string
   deliveryFee: string
-  deliveryFeeProductId: string
   freeDeliveryMinOrder: string
   deliverySchedule: DeliveryScheduleForm
   deliveryScheduleMode: "DAILY" | "CUSTOM"
@@ -537,7 +536,6 @@ function emptyForm(): IntegrationForm {
     deliveryContactPhone: "",
     deliveryEtaMinutes: "35",
     deliveryFee: "0",
-    deliveryFeeProductId: "",
     freeDeliveryMinOrder: "0",
     deliverySchedule: emptyDeliverySchedule(),
     deliveryScheduleMode: "DAILY",
@@ -1236,7 +1234,6 @@ export default function MarketplacePage() {
               deliveryContactPhone: typeof integration.settingsJson?.deliveryContactPhone === "string" ? integration.settingsJson.deliveryContactPhone : "",
               deliveryEtaMinutes: String(Math.max(5, Number(integration.settingsJson?.deliveryEtaMinutes || 35))),
               deliveryFee: String(Number(integration.settingsJson?.deliveryFee || 0)),
-              deliveryFeeProductId: typeof integration.settingsJson?.deliveryFeeProductId === "string" ? integration.settingsJson.deliveryFeeProductId : "",
               freeDeliveryMinOrder: String(Number(integration.settingsJson?.freeDeliveryMinOrder || 0)),
               deliverySchedule: readDeliverySchedule(integration.settingsJson?.deliverySchedule),
               deliveryScheduleMode: integration.settingsJson?.deliveryScheduleMode === "CUSTOM" ? "CUSTOM" : "DAILY",
@@ -1532,11 +1529,6 @@ export default function MarketplacePage() {
         setSaving(false)
         return
       }
-      if (platform === "GUFO_DELIVERY" && Number(form.deliveryFee.replace(",", ".")) > 0 && !form.deliveryFeeProductId) {
-        setError("Selecteaza produsul fiscal pentru taxa de livrare. Acesta va aparea separat pe bon.")
-        setSaving(false)
-        return
-      }
       if (platform === "GUFO_DELIVERY" && form.deliveryCatalogMode === "CATEGORY_SELECTION" && form.includedCategoryIds.length === 0) {
         setError("Selecteaza cel putin o categorie pentru catalogul Gufo Delivery.")
         setSaving(false)
@@ -1587,7 +1579,6 @@ export default function MarketplacePage() {
             deliveryContactPhone: form.deliveryContactPhone.trim() || undefined,
             deliveryEtaMinutes: form.deliveryEtaMinutes.trim() ? Math.max(5, Number(form.deliveryEtaMinutes)) : 35,
             deliveryFee: form.deliveryFee.trim() ? Math.max(0, Number(form.deliveryFee)) : 0,
-            deliveryFeeProductId: form.deliveryFeeProductId || undefined,
             freeDeliveryMinOrder: form.freeDeliveryMinOrder.trim() ? Math.max(0, Number(form.freeDeliveryMinOrder)) : 0,
             deliverySchedule: form.deliverySchedule,
             deliveryScheduleMode: form.deliveryScheduleMode,
@@ -2182,19 +2173,11 @@ export default function MarketplacePage() {
                         <DocumentField label="Prag pentru livrare gratuita (lei)">
                           <input inputMode="decimal" value={currentForm.freeDeliveryMinOrder} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], freeDeliveryMinOrder: e.target.value } }))} className={documentInputClass} placeholder="Exemplu: 45" />
                         </DocumentField>
-                        <DocumentField label="Produs fiscal taxa de livrare">
-                          <select value={currentForm.deliveryFeeProductId} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryFeeProductId: e.target.value } }))} className={documentInputClass}>
-                            <option value="">Selecteaza serviciul fiscal</option>
-                            {products.filter((product) => product.class === "SERVICIU_VANDUT").map((product) => (
-                              <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>
-                            ))}
-                          </select>
-                        </DocumentField>
                         <DocumentField label="Durata estimata livrare (minute)">
                           <input inputMode="numeric" value={currentForm.deliveryEtaMinutes} onChange={(e) => setForms((prev) => ({ ...prev, [selectedPlatform]: { ...prev[selectedPlatform], deliveryEtaMinutes: e.target.value } }))} className={documentInputClass} placeholder="35" />
                         </DocumentField>
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">Taxa se adauga ca linie distincta pe bonul fiscal folosind serviciul selectat mai sus. Creeaza serviciul cu TVA si cont contabil validate de contabil; nu il include in catalogul public.</p>
+                      <p className="mt-2 text-xs text-slate-500">Daca percepi o taxa, Gufo creeaza automat serviciul fiscal „Taxa livrare”, il trece separat pe bon si il trimite contabil ca serviciu. Nu apare in catalogul clientului si nu se gestioneaza ca stoc.</p>
                     </div>
                     <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
                       <div className="mb-1 text-sm font-semibold text-slate-900">Disponibilitate livrari</div>

@@ -59,6 +59,7 @@ type ReportsRecipeLike = {
 }
 
 type ReportsProductLike = {
+  sku?: string | null
   class?: string | null
   isSgr?: boolean | null
   sgrValue?: unknown
@@ -895,7 +896,7 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
         const lineCost = qty * productUnitCost(item.product)
         const lineProfit = lineRevenueNet - lineCost
 
-        if (sale.externalOrder?.platform === "GUFO_DELIVERY" && item.product?.class === "SERVICIU_VANDUT") {
+        if (sale.externalOrder?.platform === "GUFO_DELIVERY" && item.product?.sku === "__GUFO_DELIVERY_FEE__") {
           deliveryFeeTotal += toNumber(item.lineTotalAfterDiscount) || qty * unitPriceGross
           hasDeliveryFee = true
         }

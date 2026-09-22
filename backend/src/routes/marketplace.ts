@@ -607,6 +607,63 @@ async function resolvePublicGufoDeliveryIntegration(restaurantId: string) {
   return items.find((item) => item.id === restaurantId) || null
 }
 
+const GUFO_DELIVERY_FEE_SERVICE_SKU = "__GUFO_DELIVERY_FEE__"
+
+async function ensureGufoDeliveryFeeService(integration: GufoDeliveryIntegrationPublic) {
+  const companyId = integration.location?.companyId || integration.location?.company?.id || null
+  const existing = await db.product.findFirst({
+    where: { tenantId: integration.tenantId, companyId, sku: GUFO_DELIVERY_FEE_SERVICE_SKU },
+    include: { vatRate: { select: { rate: true } } },
+  })
+  if (existing) {
+    if (existing.class !== "SERVICIU_VANDUT") {
+      throw new Error("Codul rezervat pentru taxa de livrare este folosit de un produs incompatibil.")
+    }
+    return existing
+  }
+
+  const vatRate = await db.vatRate.findFirst({
+    where: {
+      tenantId: integration.tenantId,
+      companyId,
+      isActive: true,
+      rate: integration.location?.company?.isVatPayer === false ? 0 : 19,
+    },
+    orderBy: { createdAt: "asc" },
+  })
+  const uom = await db.uom.findFirst({
+    where: { tenantId: integration.tenantId, companyId, isActive: true },
+    orderBy: { createdAt: "asc" },
+  })
+  if (!vatRate || !uom) {
+    throw new Error("Configurarea fiscala a companiei nu are TVA sau unitate de masura pentru serviciul de livrare.")
+  }
+
+  return db.product.create({
+    data: {
+      tenantId: integration.tenantId,
+      companyId,
+      sku: GUFO_DELIVERY_FEE_SERVICE_SKU,
+      name: "Taxa livrare",
+      class: "SERVICIU_VANDUT",
+      vatRateId: vatRate.id,
+      uomId: uom.id,
+      purchaseFactor: 1,
+      price: 0,
+      costPrice: 0,
+      trackLot: false,
+      trackExpiry: false,
+      requiresRecipe: false,
+      isActive: true,
+      isVisibleInPos: false,
+      isVisibleInDelivery: false,
+      includeInNomenclatorExport: true,
+      productionMode: "MANUAL",
+    },
+    include: { vatRate: { select: { rate: true } } },
+  })
+}
+
 async function getDeliveryReviewStats(integrationIds: string[]) {
   if (integrationIds.length === 0) return new Map<string, { rating: number; count: number }>()
   const summaries = await db.deliveryRestaurantReview.groupBy({
@@ -1337,35 +1394,9 @@ async function buildGufoDeliveryCheckoutImportPayload(
   const configuredDeliveryFee = Math.max(0, Number(deliverySettings.deliveryFee || 0))
   const freeDeliveryMinOrder = Math.max(0, Number(deliverySettings.freeDeliveryMinOrder || 0))
   const deliveryFee = isPickup ? 0 : (freeDeliveryMinOrder > 0 && merchandiseSubtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee)
-  const deliveryFeeProductId = String(deliverySettings.deliveryFeeProductId || "").trim()
   const deliveryFeeProduct = deliveryFee > 0
-    ? await db.product.findFirst({
-        where: {
-          id: deliveryFeeProductId || "__missing_delivery_fee_product__",
-          tenantId: integration.tenantId,
-          companyId: integration.location?.companyId || null,
-          class: "SERVICIU_VANDUT",
-          isActive: true,
-          isVisibleInPos: true,
-        },
-        select: {
-          id: true,
-          sku: true,
-          name: true,
-          departmentId: true,
-          categoryId: true,
-          vatRate: { select: { rate: true } },
-        },
-      })
+    ? await ensureGufoDeliveryFeeService(integration)
     : null
-
-  if (deliveryFee > 0 && !deliveryFeeProduct) {
-    throw new Error("Taxa de livrare este activa, dar produsul fiscal de tip serviciu nu este configurat pentru acest restaurant.")
-  }
-
-  if (deliveryFeeProduct && (!deliveryFeeProduct.departmentId || !deliveryFeeProduct.categoryId)) {
-    throw new Error("Produsul fiscal pentru taxa de livrare trebuie sa aiba categorie si departament, pentru a putea fi sincronizat corect la POS.")
-  }
 
   const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
@@ -4268,34 +4299,8 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
       }
     }
 
-    const configuredDeliveryFee = Math.max(0, Number(incomingSettings.deliveryFee || 0))
-    const deliveryFeeProductId = String(incomingSettings.deliveryFeeProductId || "").trim()
-    if (configuredDeliveryFee > 0) {
-      if (!deliveryFeeProductId) {
-        return res.status(400).json({ ok: false, error: "Selecteaza produsul fiscal pentru taxa de livrare." })
-      }
-
-      const deliveryFeeProduct = await db.product.findFirst({
-        where: {
-          id: deliveryFeeProductId,
-          tenantId,
-          companyId: location.companyId || null,
-          class: "SERVICIU_VANDUT",
-          isActive: true,
-          isVisibleInPos: true,
-        },
-        select: { id: true, departmentId: true, categoryId: true },
-      })
-      if (!deliveryFeeProduct) {
-        return res.status(400).json({ ok: false, error: "Produsul fiscal selectat trebuie sa fie un serviciu activ, vizibil in POS." })
-      }
-      if (!deliveryFeeProduct.departmentId || !deliveryFeeProduct.categoryId) {
-        return res.status(400).json({ ok: false, error: "Produsul fiscal pentru taxa de livrare are nevoie de categorie si departament pentru sincronizarea POS." })
-      }
-      incomingSettings.deliveryFeeProductId = deliveryFeeProduct.id
-    } else {
-      delete incomingSettings.deliveryFeeProductId
-    }
+    // Delivery fees are represented by a hidden system service when an order is fiscalized.
+    delete incomingSettings.deliveryFeeProductId
 
     incomingSettings.deliveryEnabled = incomingSettings.deliveryEnabled !== false
     incomingSettings.deliveryCatalogMode = deliveryCatalogMode
