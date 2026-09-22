@@ -57,6 +57,7 @@ import ControlPanelClients from "./pages/control/ControlPanelClients"
 import ControlPanelClientDetails from "./pages/control/ControlPanelClientDetails"
 import ControlPanelIntegrations from "./pages/control/ControlPanelIntegrations"
 import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliveryAnnouncements"
+import DeliveryLegalPublic from "./pages/DeliveryLegalPublic"
 import { firstAllowedRoute, hasModule } from "./lib/modules"
 
 function RequireModule({
@@ -84,6 +85,9 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cp/login" element={<ControlPanelLogin />} />
+      <Route path="/privacy" element={<DeliveryLegalPublic page="privacy" />} />
+      <Route path="/terms" element={<DeliveryLegalPublic page="terms" />} />
+      <Route path="/delete-account" element={<DeliveryLegalPublic page="delete-account" />} />
 
       <Route
         path="/inregistrare-document/nir/print"
