@@ -5976,7 +5976,7 @@ export async function handlePosSale(req: PosAuthRequest, res: Response) {
             note: recipeItem.notes ? recipeItem.notes.trim() : null,
           });
         }
-      } else {
+      } else if (product.class !== "SERVICIU_VANDUT") {
         await decrementStockBalanceAllowNegative(tx, {
             tenantId,
             companyId: company.id,

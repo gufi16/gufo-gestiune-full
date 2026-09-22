@@ -1337,6 +1337,36 @@ async function buildGufoDeliveryCheckoutImportPayload(
   const configuredDeliveryFee = Math.max(0, Number(deliverySettings.deliveryFee || 0))
   const freeDeliveryMinOrder = Math.max(0, Number(deliverySettings.freeDeliveryMinOrder || 0))
   const deliveryFee = isPickup ? 0 : (freeDeliveryMinOrder > 0 && merchandiseSubtotal >= freeDeliveryMinOrder ? 0 : configuredDeliveryFee)
+  const deliveryFeeProductId = String(deliverySettings.deliveryFeeProductId || "").trim()
+  const deliveryFeeProduct = deliveryFee > 0
+    ? await db.product.findFirst({
+        where: {
+          id: deliveryFeeProductId || "__missing_delivery_fee_product__",
+          tenantId: integration.tenantId,
+          companyId: integration.location?.companyId || null,
+          class: "SERVICIU_VANDUT",
+          isActive: true,
+          isVisibleInPos: true,
+        },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          departmentId: true,
+          categoryId: true,
+          vatRate: { select: { rate: true } },
+        },
+      })
+    : null
+
+  if (deliveryFee > 0 && !deliveryFeeProduct) {
+    throw new Error("Taxa de livrare este activa, dar produsul fiscal de tip serviciu nu este configurat pentru acest restaurant.")
+  }
+
+  if (deliveryFeeProduct && (!deliveryFeeProduct.departmentId || !deliveryFeeProduct.categoryId)) {
+    throw new Error("Produsul fiscal pentru taxa de livrare trebuie sa aiba categorie si departament, pentru a putea fi sincronizat corect la POS.")
+  }
+
   const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
   const externalOrderId = createGufoDeliveryOrderId()
@@ -1392,6 +1422,24 @@ async function buildGufoDeliveryCheckoutImportPayload(
           station: "GUFO_DELIVERY",
         })),
       ]),
+      ...(deliveryFeeProduct
+        ? [{
+            externalLineId: `${externalOrderId}-delivery-fee`,
+            externalProductId: deliveryFeeProduct.id,
+            name: deliveryFeeProduct.name,
+            sku: deliveryFeeProduct.sku || undefined,
+            qty: 1,
+            unitPrice: deliveryFee,
+            originalUnitPrice: deliveryFee,
+            discountPercent: 0,
+            vatRate: Number(deliveryFeeProduct.vatRate.rate || 0),
+            note: "Taxa de livrare Gufo Delivery",
+            modifiers: [],
+            erpProductId: deliveryFeeProduct.id,
+            departmentId: deliveryFeeProduct.departmentId || undefined,
+            station: "GUFO_DELIVERY",
+          }]
+        : []),
       rawPayload: {
         source: "GUFO_DELIVERY_APP",
         restaurant: menuPayload.restaurant,
@@ -1399,6 +1447,8 @@ async function buildGufoDeliveryCheckoutImportPayload(
           fulfillmentType: input.fulfillmentType,
           address: input.deliveryAddress,
           fee: deliveryFee,
+          feeProductId: deliveryFeeProduct?.id || null,
+          feeProductName: deliveryFeeProduct?.name || null,
           freeAbove: freeDeliveryMinOrder || null,
           merchandiseSubtotal,
           sgrTotal,
@@ -4216,6 +4266,35 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
       if (products.length !== includedProductIds.length) {
         return res.status(400).json({ ok: false, error: "Lista de produse Gufo Delivery contine elemente invalide." })
       }
+    }
+
+    const configuredDeliveryFee = Math.max(0, Number(incomingSettings.deliveryFee || 0))
+    const deliveryFeeProductId = String(incomingSettings.deliveryFeeProductId || "").trim()
+    if (configuredDeliveryFee > 0) {
+      if (!deliveryFeeProductId) {
+        return res.status(400).json({ ok: false, error: "Selecteaza produsul fiscal pentru taxa de livrare." })
+      }
+
+      const deliveryFeeProduct = await db.product.findFirst({
+        where: {
+          id: deliveryFeeProductId,
+          tenantId,
+          companyId: location.companyId || null,
+          class: "SERVICIU_VANDUT",
+          isActive: true,
+          isVisibleInPos: true,
+        },
+        select: { id: true, departmentId: true, categoryId: true },
+      })
+      if (!deliveryFeeProduct) {
+        return res.status(400).json({ ok: false, error: "Produsul fiscal selectat trebuie sa fie un serviciu activ, vizibil in POS." })
+      }
+      if (!deliveryFeeProduct.departmentId || !deliveryFeeProduct.categoryId) {
+        return res.status(400).json({ ok: false, error: "Produsul fiscal pentru taxa de livrare are nevoie de categorie si departament pentru sincronizarea POS." })
+      }
+      incomingSettings.deliveryFeeProductId = deliveryFeeProduct.id
+    } else {
+      delete incomingSettings.deliveryFeeProductId
     }
 
     incomingSettings.deliveryEnabled = incomingSettings.deliveryEnabled !== false

@@ -459,6 +459,15 @@ const DEFAULT_STOCK_TYPES = [
     analyticMode: "LOCATION_CODE",
     isDefault: false,
   },
+  {
+    code: "SERVICII",
+    name: "Servicii prestate",
+    inventoryAccount: "0",
+    expenseAccount: "0",
+    salesAccount: "704",
+    analyticMode: "LOCATION_CODE",
+    isDefault: false,
+  },
 ]
 
 const UpdateConfigSchema = z.object({
@@ -673,6 +682,8 @@ function mapProductClassToDefaultCode(productClass?: string | null) {
     case "AMBALAJE":
     case "AMBALAJ_SGR":
       return "AMBALAJE"
+    case "SERVICIU_VANDUT":
+      return "SERVICII"
     case "PRODUS_FIN":
     case "SEMIFABRICATE":
     case "REZIDUALE":
@@ -687,15 +698,17 @@ async function ensureDefaultStockTypes(tenantId: string, companyId: string) {
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
   })
 
-  if (existing.length) return existing
-
-  await prisma.accountingStockType.createMany({
-    data: DEFAULT_STOCK_TYPES.map((item) => ({
-      tenantId,
-      companyId,
-      ...item,
-    })),
-  })
+  const existingCodes = new Set(existing.map((item) => item.code))
+  const missingDefaults = DEFAULT_STOCK_TYPES.filter((item) => !existingCodes.has(item.code))
+  if (missingDefaults.length > 0) {
+    await prisma.accountingStockType.createMany({
+      data: missingDefaults.map((item) => ({
+        tenantId,
+        companyId,
+        ...item,
+      })),
+    })
+  }
 
   return prisma.accountingStockType.findMany({
     where: { tenantId, companyId },

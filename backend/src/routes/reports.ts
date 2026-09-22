@@ -59,6 +59,7 @@ type ReportsRecipeLike = {
 }
 
 type ReportsProductLike = {
+  class?: string | null
   isSgr?: boolean | null
   sgrValue?: unknown
   sgrPackagingType?: string | null
@@ -70,6 +71,7 @@ type ReportsProductLike = {
 type ReportsSaleItemLike = {
   unitPrice: unknown
   vatRate: unknown
+  lineTotalAfterDiscount?: unknown
   product?: ReportsProductLike | null
 }
 
@@ -672,6 +674,9 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
             ...whereTerminal,
           },
           include: {
+            externalOrder: {
+              select: { platform: true },
+            },
             items: {
               include: {
                 product: {
@@ -799,6 +804,8 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
 
     let totalSales = 0
     let estimatedProfit = 0
+    let deliveryFeeTotal = 0
+    let deliveryFeeOrders = 0
 
     const salesByLocationMap: Record<string, {
       locationId: string | null
@@ -874,6 +881,8 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
       }
       salesTrendMap[trendKey].sales += saleTotal
 
+      let hasDeliveryFee = false
+
       for (const item of sale.items) {
         if (isSyntheticSgrSaleItem(item)) continue
 
@@ -885,6 +894,11 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
         const lineRevenueNet = qty * unitPriceNet
         const lineCost = qty * productUnitCost(item.product)
         const lineProfit = lineRevenueNet - lineCost
+
+        if (sale.externalOrder?.platform === "GUFO_DELIVERY" && item.product?.class === "SERVICIU_VANDUT") {
+          deliveryFeeTotal += toNumber(item.lineTotalAfterDiscount) || qty * unitPriceGross
+          hasDeliveryFee = true
+        }
 
         estimatedProfit += lineProfit
         salesByLocationMap[locKey].profit += lineProfit
@@ -933,6 +947,8 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
         unprofitableProductsMap[key].qty += qty
         unprofitableProductsMap[key].total += lineRevenueNet
       }
+
+      if (hasDeliveryFee) deliveryFeeOrders += 1
     }
 
     const salesByLocation = Object.values(salesByLocationMap)
@@ -1138,6 +1154,10 @@ router.get("/api/v1/reports/advanced", requireAuth, async (req: AuthedRequest, r
       estimatedProfit,
       averageMargin,
       activeLocations,
+      deliveryRevenue: {
+        total: deliveryFeeTotal,
+        orders: deliveryFeeOrders,
+      },
       salesTrend,
       monthlyTrend: salesTrend,
       salesByLocation,

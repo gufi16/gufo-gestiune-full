@@ -91,6 +91,10 @@ type AdvancedReportsResponse = {
   estimatedProfit?: number
   averageMargin?: number
   activeLocations?: number
+  deliveryRevenue?: {
+    total?: number
+    orders?: number
+  }
 }
 
 function money(value: number) {
@@ -442,6 +446,10 @@ export default function RapoartePage() {
     const activeLocations = toNumber(data?.activeLocations) || salesByLocation.filter((item) => item.sales > 0).length
     return { sales, profit, margin, activeLocations }
   }, [data, salesByLocation])
+  const deliveryRevenue = {
+    total: toNumber(data?.deliveryRevenue?.total),
+    orders: toNumber(data?.deliveryRevenue?.orders),
+  }
 
   const locationLabel =
     selectedLocationId === "ALL"
@@ -662,7 +670,12 @@ export default function RapoartePage() {
       ) : null}
 
       {tab === "SALES" ? (
-        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <KPI title="Venituri taxe livrare" value={money(deliveryRevenue.total)} subtitle="doar comenzi Gufo Delivery fiscalizate" icon={CircleDollarSign} />
+            <KPI title="Comenzi cu taxa" value={String(deliveryRevenue.orders)} subtitle="in intervalul selectat" icon={ShoppingBag} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
           <SectionCard title="Evolutie vanzari si profit" subtitle="Trend pe intervalul selectat" actions={filterActions}>
             {monthlyTrend.length ? (
               <div className="h-[320px] w-full">
@@ -708,7 +721,8 @@ export default function RapoartePage() {
               <EmptyState text="Nu exista locatii cu date in intervalul ales." />
             )}
           </SectionCard>
-        </div>
+          </div>
+        </>
       ) : null}
 
       {tab === "PRODUCTS" ? (
