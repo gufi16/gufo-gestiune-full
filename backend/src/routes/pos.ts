@@ -10,6 +10,7 @@ import { getNextNumberPreview, reserveNextNumber } from "../lib/numbering";
 import { getJwtSecret, verifySecret } from "../lib/auth";
 import { createConsumptionDraft, validateConsumptionDoc } from "../lib/consumptionDocs";
 import { hasTenantModule } from "../lib/tenantModules";
+import { sendDeliveryOrderStatusPush } from "../lib/deliveryPush";
 
 console.log("POS ROUTES FILE LOADED");
 
@@ -3125,6 +3126,9 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/accept", async (req: PosAu
     "Marketplace order accepted in POS.",
     { terminalId: auth.terminalId || null }
   );
+  await notifyGufoDeliveryOrderStatus(order, nextStatus).catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about POS acceptance.", error);
+  });
 
   let glovoSync: GlovoSyncResult = { skipped: true, reason: "not-run" };
   try {
@@ -3213,6 +3217,10 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/send-to-kds", async (req: 
     });
   });
 
+  await notifyGufoDeliveryOrderStatus(order, "IN_KITCHEN").catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about kitchen preparation.", error);
+  });
+
   return res.json({ ok: true, externalOrderId: order.id, status: "IN_KITCHEN" });
 });
 
@@ -3292,6 +3300,10 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/kds-status", async (req: P
         payloadJson: { terminalId: auth.terminalId || null },
       },
     });
+  });
+
+  await notifyGufoDeliveryOrderStatus(order, normalizedStatus).catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about KDS status.", error);
   });
 
   let glovoSync: GlovoSyncResult = { skipped: true, reason: "not-run" };
@@ -3674,6 +3686,49 @@ async function resolveSaleAuthContext(
   // If a sale reaches this point without explicit terminal hints or a scoped/auth session,
   // attributing it globally can leak sales across devices and break device-specific dashboards.
   return null;
+}
+
+function gufoDeliveryStatusNotification(status: ExternalOrderStatus) {
+  switch (status) {
+    case "ACKNOWLEDGED":
+      return { title: "Comanda a fost confirmata", body: "Restaurantul a confirmat comanda ta si o pregateste." };
+    case "IN_KITCHEN":
+      return { title: "Comanda este in pregatire", body: "Bucataria pregateste acum comanda ta." };
+    case "READY_FOR_FISCAL":
+      return { title: "Comanda este gata", body: "Comanda ta este gata pentru urmatorul pas." };
+    case "FISCALIZED":
+      return { title: "Comanda este in drum spre tine", body: "Restaurantul a finalizat comanda. Urmeaza livrarea." };
+    case "CANCELLED":
+      return { title: "Comanda a fost anulata", body: "Restaurantul a anulat aceasta comanda." };
+    default:
+      return null;
+  }
+}
+
+async function notifyGufoDeliveryOrderStatus(
+  order: { id: string; platform: string; customerPhone: string | null },
+  status: ExternalOrderStatus
+) {
+  if (order.platform !== "GUFO_DELIVERY") return;
+  const message = gufoDeliveryStatusNotification(status);
+  if (!message) return;
+
+  // Cash orders are associated by the customer's phone, while online-card orders
+  // can be resolved from the payment attempt even if the profile phone later changes.
+  const paymentAttempt = await prisma.deliveryPaymentAttempt.findFirst({
+    where: { externalOrderId: order.id, customerId: { not: null } },
+    select: { customerId: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const customer = paymentAttempt?.customerId
+    ? { id: paymentAttempt.customerId }
+    : await prisma.deliveryCustomerAccount.findFirst({
+        where: { phone: String(order.customerPhone || "").trim() || "__no_delivery_phone__" },
+        select: { id: true },
+      });
+  if (!customer?.id) return;
+
+  await sendDeliveryOrderStatusPush({ customerId: customer.id, orderId: order.id, status, ...message });
 }
 
 async function requirePosSaleAuth(req: PosAuthRequest, res: Response, next: NextFunction) {
@@ -5892,6 +5947,12 @@ export async function handlePosSale(req: PosAuthRequest, res: Response) {
     return res.status(400).json({
       ok: false,
       error: error instanceof Error ? error.message : "Nu am putut procesa vanzarea POS.",
+    });
+  }
+
+  if (externalOrder) {
+    await notifyGufoDeliveryOrderStatus(externalOrder, "FISCALIZED").catch((error) => {
+      console.warn("[delivery-push] Could not notify customer about fiscalization.", error);
     });
   }
 

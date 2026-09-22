@@ -76,3 +76,48 @@ export async function sendDeliveryAnnouncementPush(input: { title: string; body:
   }
   return { configured: true, sent }
 }
+
+/** Sends a private order update only to the customer who placed that order. */
+export async function sendDeliveryOrderStatusPush(input: {
+  customerId: string
+  orderId: string
+  status: string
+  title: string
+  body: string
+}) {
+  const client = messaging()
+  if (!client) return { configured: false, sent: 0 }
+
+  const devices = await prisma.deliveryPushToken.findMany({
+    where: { customerId: input.customerId },
+    select: { id: true, token: true },
+  })
+  let sent = 0
+  const invalidTokenIds: string[] = []
+
+  for (let offset = 0; offset < devices.length; offset += 500) {
+    const batch = devices.slice(offset, offset + 500)
+    const response = await client.sendEachForMulticast({
+      tokens: batch.map((device) => device.token),
+      notification: { title: input.title, body: input.body },
+      data: { type: "delivery_order_status", orderId: input.orderId, status: input.status },
+      android: {
+        priority: "high",
+        ttl: 25 * 60 * 1000,
+        notification: { channelId: "gufo_delivery_orders", sound: "default" },
+      },
+    })
+    sent += response.successCount
+    response.responses.forEach((item, index) => {
+      const code = item.error?.code || ""
+      if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
+        invalidTokenIds.push(batch[index].id)
+      }
+    })
+  }
+
+  if (invalidTokenIds.length) {
+    await prisma.deliveryPushToken.deleteMany({ where: { id: { in: invalidTokenIds } } })
+  }
+  return { configured: true, sent }
+}
