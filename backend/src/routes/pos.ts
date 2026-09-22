@@ -2964,10 +2964,21 @@ router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Re
   }
 
   const historyOnly = String(req.query.scope || "").trim().toLowerCase() === "history";
+  const parseDateBound = (value: unknown, endOfDay: boolean) => {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+    const parsed = new Date(raw.length === 10 ? `${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}` : raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const historyFrom = historyOnly ? parseDateBound(req.query.dateFrom, false) : null;
+  const historyTo = historyOnly ? parseDateBound(req.query.dateTo, true) : null;
   const items = await prisma.externalOrder.findMany({
     where: {
       tenantId: auth.tenantId,
       status: historyOnly ? "FISCALIZED" : { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
+      ...(historyOnly && (historyFrom || historyTo)
+        ? { fiscalizedAt: { ...(historyFrom ? { gte: historyFrom } : {}), ...(historyTo ? { lte: historyTo } : {}) } }
+        : {}),
     },
     include: {
       location: {
@@ -3001,6 +3012,55 @@ router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Re
   ).filter(Boolean);
 
   return res.json({ ok: true, items: visibleItems });
+});
+
+router.post("/api/v1/pos/marketplace/:externalOrderId/reject", async (req: PosAuthRequest, res: Response) => {
+  const auth = await resolvePosAuthContext(req);
+  if (!auth?.tenantId) {
+    return res.status(401).json({ ok: false, error: "POS neautentificat. Fa pair din nou." });
+  }
+
+  const inputOrderId = String(req.params.externalOrderId || "").trim();
+  if (!inputOrderId) return res.status(400).json({ ok: false, error: "Missing externalOrderId" });
+
+  const order = await resolvePosMarketplaceOrder(auth, inputOrderId, {
+    saleDraft: true,
+    kitchenTicket: true,
+  });
+  if (!order) return res.status(404).json({ ok: false, error: "Marketplace order not found" });
+  if (order.status === "FISCALIZED") {
+    return res.status(409).json({ ok: false, error: "Comanda fiscalizata nu poate fi anulata din Apps." });
+  }
+
+  const reason = String(req.body?.reason || "OTHER").trim().slice(0, 160) || "OTHER";
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.externalOrder.update({
+      where: { id: order.id },
+      data: { status: "CANCELLED", cancelledAt: new Date() },
+    });
+    if (order.saleDraft?.id) {
+      await tx.saleDraft.update({ where: { id: order.saleDraft.id }, data: { status: "CANCELLED" } });
+    }
+    if (order.kitchenTicket?.id) {
+      await tx.kitchenTicket.update({ where: { id: order.kitchenTicket.id }, data: { status: "CANCELLED", completedAt: new Date() } });
+    }
+    await tx.externalOrderStatusHistory.create({
+      data: {
+        tenantId: auth.tenantId,
+        externalOrderId: order.id,
+        status: "CANCELLED",
+        source: "POS",
+        message: `Marketplace order cancelled from POS (${reason}).`,
+        payloadJson: { terminalId: auth.terminalId || null, reason },
+      },
+    });
+  });
+
+  await notifyGufoDeliveryOrderStatus(order, "CANCELLED").catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about cancellation.", error);
+  });
+
+  return res.json({ ok: true, externalOrderId: order.id, status: "CANCELLED" });
 });
 
 router.get("/api/v1/pos/marketplace/debug", async (req: PosAuthRequest, res: Response) => {
