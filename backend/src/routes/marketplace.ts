@@ -622,19 +622,24 @@ async function ensureGufoDeliveryFeeService(integration: GufoDeliveryIntegration
     return existing
   }
 
-  const vatRate = await db.vatRate.findFirst({
+  const vatRates = await db.vatRate.findMany({
     where: {
       tenantId: integration.tenantId,
-      companyId,
       isActive: true,
       rate: integration.location?.company?.isVatPayer === false ? 0 : 19,
+      OR: [{ companyId }, { companyId: null }],
+    },
+  })
+  const vatRate = vatRates.find((item) => item.companyId === companyId) || vatRates[0]
+  const uoms = await db.uom.findMany({
+    where: {
+      tenantId: integration.tenantId,
+      isActive: true,
+      OR: [{ companyId }, { companyId: null }],
     },
     orderBy: { createdAt: "asc" },
   })
-  const uom = await db.uom.findFirst({
-    where: { tenantId: integration.tenantId, companyId, isActive: true },
-    orderBy: { createdAt: "asc" },
-  })
+  const uom = uoms.find((item) => item.companyId === companyId) || uoms[0]
   if (!vatRate || !uom) {
     throw new Error("Configurarea fiscala a companiei nu are TVA sau unitate de masura pentru serviciul de livrare.")
   }
