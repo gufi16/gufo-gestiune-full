@@ -2307,6 +2307,57 @@ export async function handlePosDailyClosure(req: PosAuthRequest, res: Response) 
 
 router.post("/api/v1/pos/daily-closures", requirePosAuth, handlePosDailyClosure);
 
+const PosRuntimeDiagnosticSchema = z.object({
+  occurredAt: z.coerce.number().int().positive().optional(),
+  exceptionType: z.string().trim().min(1).max(180),
+  message: z.string().max(600).optional(),
+  stack: z.string().max(6000).optional(),
+  appVersion: z.string().max(120).optional(),
+  androidVersion: z.string().max(80).optional(),
+  deviceModel: z.string().max(160).optional(),
+});
+
+// Technical diagnostics are recorded only for the authenticated POS terminal.
+// The mobile app uploads them after a restart without exposing anything to the cashier.
+router.post("/api/v1/pos/runtime-diagnostics", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = PosRuntimeDiagnosticSchema.safeParse(req.body || {});
+  if (!parsed.success || !req.auth?.tenantId || !req.auth.terminalId) {
+    return res.status(400).json({ ok: false, error: "Diagnostic invalid" });
+  }
+
+  const terminal = await prisma.terminal.findFirst({
+    where: { id: req.auth.terminalId, tenantId: req.auth.tenantId },
+    select: { id: true, label: true, deviceId: true },
+  });
+  if (!terminal) return res.status(404).json({ ok: false, error: "Terminal inexistent" });
+
+  const diagnostic = parsed.data;
+  await prisma.auditLog.create({
+    data: {
+      tenantId: req.auth.tenantId,
+      actorType: "SYSTEM",
+      action: "POS_RUNTIME_CRASH_REPORTED",
+      entityType: "Terminal",
+      entityId: terminal.id,
+      payload: {
+        terminalLabel: terminal.label || terminal.deviceId,
+        deviceId: terminal.deviceId,
+        occurredAt: diagnostic.occurredAt || Date.now(),
+        exceptionType: diagnostic.exceptionType,
+        message: diagnostic.message || null,
+        stack: diagnostic.stack || null,
+        appVersion: diagnostic.appVersion || null,
+        androidVersion: diagnostic.androidVersion || null,
+        deviceModel: diagnostic.deviceModel || null,
+      },
+      ipAddress: req.ip || null,
+      userAgent: normalizeText(req.headers["user-agent"]).slice(0, 200) || null,
+    },
+  });
+
+  return res.json({ ok: true });
+});
+
 /* ======================================================
    3) POS CONFIG
 ====================================================== */

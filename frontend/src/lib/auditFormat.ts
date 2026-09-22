@@ -132,6 +132,7 @@ export function getAuditActionLabel(entry: AuditLogItem) {
     TENANT_EXPORT_CREATED: "A generat exportul clientului",
     POS_DEVICE_DELETED: named ? `A sters device-ul ${named}` : "A sters un device POS",
     POS_DEVICE_CREATED: named ? `A adaugat device-ul ${named}` : "A adaugat un device POS",
+    POS_RUNTIME_CRASH_REPORTED: named ? `Eroare tehnica raportata de ${named}` : "Eroare tehnica raportata de POS",
     LOCATION_CREATED: named ? `A adaugat locatia ${named}` : "A adaugat o locatie",
     LOCATION_DELETED: named ? `A dezactivat locatia ${named}` : "A dezactivat o locatie",
     LICENSE_UPDATED: "A actualizat licenta",

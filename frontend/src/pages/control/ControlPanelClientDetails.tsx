@@ -3016,6 +3016,18 @@ export default function ControlPanelClientDetails() {
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-[#17324D]">{getAuditActionLabel(entry)}</div>
                         <div className="mt-1 text-sm text-slate-600">{getAuditArea(entry)}</div>
+                        {entry.action === "POS_RUNTIME_CRASH_REPORTED" ? (
+                          <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                            <div className="font-semibold">{String(entry.payload?.exceptionType || "Eroare necunoscuta")}</div>
+                            {entry.payload?.message ? <div className="mt-1 break-words">{String(entry.payload.message)}</div> : null}
+                            <div className="mt-1 text-rose-700">
+                              {[entry.payload?.appVersion, entry.payload?.deviceModel, entry.payload?.androidVersion]
+                                .filter(Boolean)
+                                .map(String)
+                                .join(" · ")}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="text-sm text-slate-500 lg:text-right">{formatAuditDateTime(entry.createdAt)}</div>
