@@ -2871,7 +2871,6 @@ router.get("/api/v1/public/delivery/announcements", requireDeliveryCustomerAuth,
         isPublished: true,
         publishedAt: { lte: now },
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        integrationId: null,
       },
       include: {
         integration: { include: { location: { select: { name: true } } } },
@@ -2903,7 +2902,7 @@ router.post("/api/v1/public/delivery/announcements/:announcementId/read", requir
     const announcementId = String(req.params.announcementId || "").trim()
     if (!customerId || !announcementId) return res.status(400).json({ ok: false, error: "Lipsesc datele notificarii." })
     const announcement = await db.deliveryAnnouncement.findFirst({
-      where: { id: announcementId, isPublished: true, integrationId: null },
+      where: { id: announcementId, isPublished: true },
       select: { id: true },
     })
     if (!announcement) return res.status(404).json({ ok: false, error: "Noutatea nu mai este disponibila." })
