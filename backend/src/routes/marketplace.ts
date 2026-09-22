@@ -4044,7 +4044,18 @@ router.get("/api/v1/marketplace/mappings", async (req: AuthedRequest, res) => {
       integration: {
         include: {
           location: {
-            select: { id: true, name: true, code: true },
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  isVatPayer: true,
+                  name: true,
+                  cui: true,
+                  regNo: true,
+                  phone: true,
+                },
+              },
+            },
           },
         },
       },
@@ -4409,7 +4420,18 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
         data: integrationUpdatePayload,
         include: {
           location: {
-            select: { id: true, name: true, code: true },
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  isVatPayer: true,
+                  name: true,
+                  cui: true,
+                  regNo: true,
+                  phone: true,
+                },
+              },
+            },
           },
         },
       })
@@ -4417,10 +4439,26 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
         data: integrationCreatePayload,
         include: {
           location: {
-            select: { id: true, name: true, code: true },
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  isVatPayer: true,
+                  name: true,
+                  cui: true,
+                  regNo: true,
+                  phone: true,
+                },
+              },
+            },
           },
         },
       })
+
+  if (platformParsed.data === "GUFO_DELIVERY" && Number(incomingSettings.deliveryFee || 0) > 0) {
+    // Create the hidden fiscal service before the next POS catalog sync.
+    await ensureGufoDeliveryFeeService(integration)
+  }
 
   return res.json({
     ok: true,

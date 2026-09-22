@@ -1265,6 +1265,9 @@ export async function buildCatalogPayload(req: Request, tenantId: string) {
 
   const visibleProducts = filtersEnabled
     ? rawProducts.filter((product) => {
+        // The delivery service is never rendered as a POS tile, but it must be
+        // present locally so a marketplace order can be fiscalized in full.
+        if (product.sku === "__GUFO_DELIVERY_FEE__") return true;
         if (selectedProductIds.has(product.id)) return true;
         if (product.categoryId && effectiveCategoryIds.has(product.categoryId)) return true;
         if (product.departmentId && effectiveDepartmentIds.has(product.departmentId)) return true;
