@@ -3009,9 +3009,32 @@ router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Re
     await Promise.all(
       items.map(async (item) => ((await isMarketplaceOrderVisibleToTerminal(item, auth)) ? item : null))
     )
-  ).filter(Boolean);
+  ).filter((item): item is (typeof items)[number] => item !== null);
 
-  return res.json({ ok: true, items: visibleItems });
+  // Some older Delivery imports left a zero cached total in the POS draft.
+  // Keep the API backward compatible by filling that cache from the order
+  // header or its lines, so installed POS clients can display the real amount.
+  const responseItems = visibleItems.map((item) => {
+    const linesTotal = item.items.reduce(
+      (sum, line) => sum + Number(line.qty || 0) * Number(line.unitPrice || 0),
+      0
+    );
+    const orderTotal = Number(item.total || 0) || linesTotal;
+    const orderSubtotal = Number(item.subtotal || 0) || orderTotal;
+    const draftTotal = Number(item.saleDraft?.total || 0) || orderTotal;
+    const draftSubtotal = Number(item.saleDraft?.subtotal || 0) || orderSubtotal;
+
+    return {
+      ...item,
+      total: orderTotal,
+      subtotal: orderSubtotal,
+      saleDraft: item.saleDraft
+        ? { ...item.saleDraft, total: draftTotal, subtotal: draftSubtotal }
+        : { id: null, status: "OPEN", total: draftTotal, subtotal: draftSubtotal },
+    };
+  });
+
+  return res.json({ ok: true, items: responseItems });
 });
 
 router.post("/api/v1/pos/marketplace/:externalOrderId/reject", async (req: PosAuthRequest, res: Response) => {
