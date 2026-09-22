@@ -619,18 +619,29 @@ async function ensureGufoDeliveryFeeService(integration: GufoDeliveryIntegration
     if (existing.class !== "SERVICIU_VANDUT") {
       throw new Error("Codul rezervat pentru taxa de livrare este folosit de un produs incompatibil.")
     }
-    return existing
   }
 
+  const deliveryVatRate = integration.location?.company?.isVatPayer === false ? 0 : 21
   const vatRates = await db.vatRate.findMany({
     where: {
       tenantId: integration.tenantId,
       isActive: true,
-      rate: integration.location?.company?.isVatPayer === false ? 0 : 19,
+      rate: deliveryVatRate,
       OR: [{ companyId }, { companyId: null }],
     },
   })
-  const vatRate = vatRates.find((item) => item.companyId === companyId) || vatRates[0]
+  const vatRate = vatRates.find((item) => item.companyId === companyId)
+    || vatRates[0]
+    || await db.vatRate.create({
+      data: {
+        tenantId: integration.tenantId,
+        companyId,
+        name: `TVA ${deliveryVatRate}%`,
+        rate: deliveryVatRate,
+        fiscalCode: deliveryVatRate === 21 ? "A" : "O",
+        isActive: true,
+      },
+    })
   const uoms = await db.uom.findMany({
     where: {
       tenantId: integration.tenantId,
@@ -642,6 +653,14 @@ async function ensureGufoDeliveryFeeService(integration: GufoDeliveryIntegration
   const uom = uoms.find((item) => item.companyId === companyId) || uoms[0]
   if (!vatRate || !uom) {
     throw new Error("Configurarea fiscala a companiei nu are TVA sau unitate de masura pentru serviciul de livrare.")
+  }
+
+  if (existing) {
+    return db.product.update({
+      where: { id: existing.id },
+      data: { vatRateId: vatRate.id },
+      include: { vatRate: { select: { rate: true } } },
+    })
   }
 
   return db.product.create({
