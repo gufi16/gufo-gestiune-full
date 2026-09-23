@@ -11,7 +11,7 @@ const DELIVERY_ACCESS_TOKEN_TTL = "45d"
 const authRateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
 const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 const AUTH_RATE_LIMIT_LIMIT = 12
-const GOOGLE_DELIVERY_CLIENT_ID = process.env.GUFO_DELIVERY_GOOGLE_CLIENT_ID || "832124484184-7taihkm7lkjss55f5ric0egf3gtei5s7.apps.googleusercontent.com"
+const GOOGLE_DELIVERY_CLIENT_ID = process.env.GUFO_DELIVERY_GOOGLE_CLIENT_ID || "832124484184-tc81bev7tmo8c1d1rmhludgn1mfm9lbn.apps.googleusercontent.com"
 
 export type DeliveryCustomerAuthRequest = Request & {
   deliveryCustomer?: {
