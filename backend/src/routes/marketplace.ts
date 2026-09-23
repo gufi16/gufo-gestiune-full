@@ -1636,15 +1636,20 @@ function mapPublicGufoDeliveryOrderStatus(status: string) {
 }
 
 // Fiscalizarea din POS este ultimul eveniment cert pe care il primim de la restaurant.
-// Pentru client o prezentam ca plecare spre adresa, apoi o mutam in istoric dupa 25 minute.
-const GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS = 25 * 60 * 1000
+// Pentru client o prezentam ca plecare spre adresa, apoi o mutam in istoric dupa 30 minute.
+const GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS = 30 * 60 * 1000
 
-function resolveGufoDeliveryCustomerStatus(status: string, fiscalizedAt: Date | null | undefined) {
+function resolveGufoDeliveryCustomerStatus(
+  status: string,
+  fiscalizedAt: Date | null | undefined,
+  fallbackCompletedAt?: Date | null,
+) {
   const normalized = String(status || "").trim().toUpperCase()
   if (normalized !== "FISCALIZED" && normalized !== "DELIVERED") return normalized || "RECEIVED"
 
-  const fiscalizedAtMs = fiscalizedAt?.getTime()
-  if (fiscalizedAtMs && Date.now() - fiscalizedAtMs >= GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS) {
+  // Some legacy orders were delivered before fiscalizedAt was persisted.
+  const inTransitSinceMs = (fiscalizedAt || fallbackCompletedAt)?.getTime()
+  if (inTransitSinceMs && Date.now() - inTransitSinceMs >= GUFO_DELIVERY_IN_TRANSIT_WINDOW_MS) {
     return "COMPLETED"
   }
 
@@ -3690,7 +3695,11 @@ router.get("/api/v1/public/delivery/orders/history", requireDeliveryCustomerAuth
     return res.json({
       ok: true,
       items: orders.map((order) => {
-        const customerStatus = resolveGufoDeliveryCustomerStatus(order.status, order.fiscalizedAt)
+        const customerStatus = resolveGufoDeliveryCustomerStatus(
+          order.status,
+          order.fiscalizedAt,
+          order.readyAt || order.placedAt || order.createdAt,
+        )
         return {
         id: order.id,
         externalOrderId: order.externalOrderId,
@@ -3766,7 +3775,11 @@ router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) =>
       return res.status(404).json({ ok: false, error: "Comanda Gufo Delivery nu a fost gasita." })
     }
 
-    const customerStatus = resolveGufoDeliveryCustomerStatus(order.status, order.fiscalizedAt)
+    const customerStatus = resolveGufoDeliveryCustomerStatus(
+      order.status,
+      order.fiscalizedAt,
+      order.readyAt || order.placedAt || order.createdAt,
+    )
 
     return res.json({
       ok: true,
