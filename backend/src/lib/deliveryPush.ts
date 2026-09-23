@@ -58,13 +58,18 @@ export async function sendDeliveryAnnouncementPush(input: { title: string; body:
     const batch = devices.slice(offset, offset + 500)
     const response = await client.sendEachForMulticast({
       tokens: batch.map((device) => device.token),
-      notification: { title: input.title, body: input.body },
-      data: { type: "delivery_announcement", announcementId: input.announcementId },
+      // Data-only is deliberate: Firebase otherwise renders the notification itself
+      // while the app is backgrounded and loses our in-app announcement navigation.
+      data: {
+        type: "delivery_announcement",
+        announcementId: input.announcementId,
+        title: input.title,
+        body: input.body,
+      },
       android: {
         priority: "high",
         // Retain an announcement while the phone is offline; FCM delivers it on reconnection.
         ttl: 7 * 24 * 60 * 60 * 1000,
-        notification: { channelId: "gufo_delivery_news", sound: "default" },
       },
     })
     sent += response.successCount
