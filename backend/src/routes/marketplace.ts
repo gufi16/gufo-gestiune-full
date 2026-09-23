@@ -1591,6 +1591,14 @@ async function queueGufoDeliveryOrderReceipt(input: {
   payload: MarketplaceOrderPayload
 }) {
   if (!input.orderId || input.payload.platform !== "GUFO_DELIVERY") return
+  if (!String(input.email || "").trim()) {
+    console.warn(`[gufo-delivery] Order receipt skipped for ${input.payload.externalOrderNumber || input.orderId}: customer has no saved email.`)
+    return
+  }
+  if (!hasSmtpConfig()) {
+    console.warn(`[gufo-delivery] Order receipt skipped for ${input.payload.externalOrderNumber || input.orderId}: mail service is not configured.`)
+    return
+  }
   const raw = isRecord(input.payload.rawPayload) ? input.payload.rawPayload : {}
   const restaurant = isRecord(raw.restaurant) ? raw.restaurant : {}
   const delivery = isRecord(raw.delivery) ? raw.delivery : {}
