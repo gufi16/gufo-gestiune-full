@@ -59,6 +59,7 @@ import ControlPanelIntegrations from "./pages/control/ControlPanelIntegrations"
 import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliveryAnnouncements"
 import DeliveryLegalPublic from "./pages/DeliveryLegalPublic"
 import DeliveryOrderLink from "./pages/DeliveryOrderLink"
+import DeliveryLandingPublic from "./pages/DeliveryLandingPublic"
 import { firstAllowedRoute, hasModule } from "./lib/modules"
 
 function RequireModule({
@@ -89,6 +90,7 @@ export default function App() {
       <Route path="/privacy" element={<DeliveryLegalPublic page="privacy" />} />
       <Route path="/terms" element={<DeliveryLegalPublic page="terms" />} />
       <Route path="/delete-account" element={<DeliveryLegalPublic page="delete-account" />} />
+      <Route path="/gufo-delivery" element={<DeliveryLandingPublic />} />
       <Route path="/delivery/order/:orderId" element={<DeliveryOrderLink />} />
 
       <Route
