@@ -7,6 +7,7 @@ import { buildCompanyScopedTenantWhere } from "../lib/companyScope"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { requireDeliveryCustomerAuth, resolveOptionalDeliveryCustomer, type DeliveryCustomerAuthRequest } from "./deliveryAuth"
 import { decryptSecret, encryptSecret } from "../lib/efacturaCertificate"
+import { hasSmtpConfig, sendMail } from "../lib/mailer"
 
 const router = Router()
 const db = prisma
@@ -1523,6 +1524,96 @@ async function buildGufoDeliveryCheckoutImportPayload(
       },
     },
   }
+}
+
+function escapeDeliveryEmailHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
+function deliveryReceiptMoney(value: unknown) {
+  return `${Number(value || 0).toFixed(2).replace(".", ",")} Lei`
+}
+
+async function sendGufoDeliveryOrderReceipt(input: {
+  email: string | null | undefined
+  customerName: string
+  orderId: string
+  orderNumber: string
+  restaurantName: string
+  fulfillmentType: "DELIVERY" | "PICKUP"
+  address?: string | null
+  paymentLabel: string
+  items: Array<{ name: string; qty: number; unitPrice: number }>
+  subtotal: number
+  deliveryFee: number
+  total: number
+}) {
+  const email = String(input.email || "").trim().toLowerCase()
+  if (!email || !hasSmtpConfig()) return
+
+  const rows = input.items.map((item) => {
+    const quantity = Number(item.qty || 0)
+    const lineTotal = quantity * Number(item.unitPrice || 0)
+    return `<tr><td style="padding:10px 0;border-bottom:1px solid #e7ece9">${escapeDeliveryEmailHtml(item.name)} <span style="color:#66756f">x${quantity}</span></td><td style="padding:10px 0;border-bottom:1px solid #e7ece9;text-align:right;font-weight:600">${deliveryReceiptMoney(lineTotal)}</td></tr>`
+  }).join("")
+  const appLink = `gufo-delivery://order/${encodeURIComponent(input.orderId)}`
+  const deliveryLabel = input.fulfillmentType === "PICKUP" ? "Ridicare personală" : "Livrare"
+  const addressLine = input.address ? `<p style="margin:6px 0;color:#51615a"><strong>${deliveryLabel}:</strong> ${escapeDeliveryEmailHtml(input.address)}</p>` : ""
+  const textLines = input.items.map((item) => `- ${item.name} x${item.qty}: ${deliveryReceiptMoney(Number(item.qty || 0) * Number(item.unitPrice || 0))}`)
+
+  await sendMail({
+    to: email,
+    fromName: "Gufo Delivery",
+    subject: `Mulțumim pentru comandă · #${input.orderNumber}`,
+    text: [
+      `Mulțumim, ${input.customerName}!`,
+      `Am înregistrat comanda #${input.orderNumber} la ${input.restaurantName}.`,
+      ...textLines,
+      `Subtotal: ${deliveryReceiptMoney(input.subtotal)}`,
+      `Livrare: ${deliveryReceiptMoney(input.deliveryFee)}`,
+      `Total: ${deliveryReceiptMoney(input.total)}`,
+      `Plată: ${input.paymentLabel}`,
+      "După livrare poți acorda o notă restaurantului din aplicația Gufo Delivery.",
+      `Deschide comanda: ${appLink}`,
+    ].join("\n"),
+    html: `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:20px;overflow:hidden"><div style="background:#087a59;padding:30px;color:#ffffff"><div style="font-size:24px;font-weight:700">Gufo Delivery</div><div style="margin-top:8px;font-size:17px">Mulțumim pentru comandă, ${escapeDeliveryEmailHtml(input.customerName)}!</div></div><div style="padding:28px"><p style="margin-top:0">Am înregistrat comanda <strong>#${escapeDeliveryEmailHtml(input.orderNumber)}</strong> la <strong>${escapeDeliveryEmailHtml(input.restaurantName)}</strong>.</p>${addressLine}<p style="margin:6px 0 20px;color:#51615a"><strong>Plată:</strong> ${escapeDeliveryEmailHtml(input.paymentLabel)}</p><table width="100%" cellspacing="0" cellpadding="0">${rows}</table><div style="margin-top:20px;padding-top:14px;border-top:1px solid #dbe5df"><div style="display:flex;justify-content:space-between;margin:7px 0"><span>Produse</span><strong>${deliveryReceiptMoney(input.subtotal)}</strong></div>${input.deliveryFee > 0 ? `<div style="display:flex;justify-content:space-between;margin:7px 0"><span>Livrare</span><strong>${deliveryReceiptMoney(input.deliveryFee)}</strong></div>` : ""}<div style="display:flex;justify-content:space-between;margin-top:14px;font-size:20px"><strong>Total</strong><strong style="color:#087a59">${deliveryReceiptMoney(input.total)}</strong></div></div><p style="margin:26px 0 16px;color:#51615a">După livrare poți acorda o notă restaurantului direct din aplicație.</p><a href="${appLink}" style="display:block;background:#087a59;color:#ffffff;text-decoration:none;text-align:center;padding:15px;border-radius:12px;font-weight:700">Deschide comanda în aplicație</a></div></div></body></html>`,
+  })
+}
+
+async function queueGufoDeliveryOrderReceipt(input: {
+  email: string | null | undefined
+  orderId: string | null | undefined
+  payload: MarketplaceOrderPayload
+}) {
+  if (!input.orderId || input.payload.platform !== "GUFO_DELIVERY") return
+  const raw = isRecord(input.payload.rawPayload) ? input.payload.rawPayload : {}
+  const restaurant = isRecord(raw.restaurant) ? raw.restaurant : {}
+  const delivery = isRecord(raw.delivery) ? raw.delivery : {}
+  const address = isRecord(delivery.address) ? delivery.address : {}
+  const addressLine = [address.addressLine, address.city].map((value) => String(value || "").trim()).filter(Boolean).join(", ")
+  const deliveryFee = Number(delivery.fee || 0)
+
+  await sendGufoDeliveryOrderReceipt({
+    email: input.email,
+    customerName: input.payload.customerName || "client Gufo",
+    orderId: input.orderId,
+    orderNumber: input.payload.externalOrderNumber || input.payload.externalOrderId,
+    restaurantName: String(restaurant.name || "restaurantul ales"),
+    fulfillmentType: String(delivery.fulfillmentType || "DELIVERY").toUpperCase() === "PICKUP" ? "PICKUP" : "DELIVERY",
+    address: addressLine || null,
+    paymentLabel: input.payload.paymentLabel || "Plată la livrare",
+    items: input.payload.items
+      .filter((item) => !String(item.externalLineId || "").endsWith("-delivery-fee"))
+      .map((item) => ({ name: item.name, qty: Number(item.qty || 0), unitPrice: Number(item.unitPrice || 0) })),
+    subtotal: Number(input.payload.subtotal || 0),
+    deliveryFee,
+    total: Number(input.payload.total || 0),
+  })
 }
 
 function mapPublicGufoDeliveryOrderStatus(status: string) {
@@ -3382,6 +3473,15 @@ router.post("/api/v1/public/delivery/payments/attempts/:attemptId/complete", req
       },
     })
 
+    // Send the same receipt for online payments after Viva confirms the amount.
+    void queueGufoDeliveryOrderReceipt({
+      email: req.deliveryCustomer?.email,
+      orderId: externalOrder.id,
+      payload: importPayload,
+    }).catch((error: unknown) => {
+      console.warn("[gufo-delivery] Could not send online order receipt email:", getErrorMessage(error, "unknown email error"))
+    })
+
     await saveDeliveryCustomerCardFromTransaction(attempt.customerId, attempt.integrationId, vivaConfig, transactionId, transaction).catch((error: unknown) => {
       console.warn("Could not save Gufo Delivery payment card:", getErrorMessage(error, "Unknown card tokenization error"))
     })
@@ -3501,6 +3601,18 @@ router.post("/api/v1/public/delivery/payments/viva/webhook", async (req, res) =>
       },
     })
 
+    const customer = attempt.customerId
+      ? await db.deliveryCustomerAccount.findUnique({ where: { id: attempt.customerId }, select: { email: true } })
+      : null
+    // A webhook has no authenticated app session, so resolve the saved account email.
+    void queueGufoDeliveryOrderReceipt({
+      email: customer?.email,
+      orderId: externalOrder.id,
+      payload: importPayload,
+    }).catch((error: unknown) => {
+      console.warn("[gufo-delivery] Could not send online order receipt email:", getErrorMessage(error, "unknown email error"))
+    })
+
     await saveDeliveryCustomerCardFromTransaction(attempt.customerId, attempt.integrationId, vivaConfig, transactionId, transaction).catch((error: unknown) => {
       console.warn("Could not save Gufo Delivery payment card:", getErrorMessage(error, "Unknown card tokenization error"))
     })
@@ -3520,6 +3632,14 @@ router.post("/api/v1/public/delivery/checkout", async (req, res) => {
   try {
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, parsed.data)
     const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload)
+    const customer = await resolveOptionalDeliveryCustomer(req)
+    void queueGufoDeliveryOrderReceipt({
+      email: customer?.email,
+      orderId: externalOrder?.id,
+      payload: importPayload,
+    }).catch((error: unknown) => {
+      console.warn("[gufo-delivery] Could not send order receipt email:", getErrorMessage(error, "unknown email error"))
+    })
 
     return res.status(201).json({
       ok: true,
