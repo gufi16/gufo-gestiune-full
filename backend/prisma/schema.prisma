@@ -117,6 +117,7 @@ enum DeliveryCustomerAuthProvider {
   PASSWORD
   GOOGLE
   FACEBOOK
+  PHONE
 }
 
 enum DeliveryPaymentAttemptStatus {

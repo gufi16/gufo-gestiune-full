@@ -29,16 +29,21 @@ function firebaseCredentials(): FirebaseCredentials | null {
   }
 }
 
-function messaging() {
+/** Shared Firebase Admin instance for delivery push and verified phone sign-in. */
+export function getDeliveryFirebaseApp() {
   const credentials = firebaseCredentials()
   if (!credentials) return null
   try {
-    if (!getApps().length) initializeApp({ credential: cert(credentials as ServiceAccount) })
-    return getMessaging()
+    return getApps()[0] || initializeApp({ credential: cert(credentials as ServiceAccount) })
   } catch (error) {
     console.warn("[delivery-push] Firebase could not be initialized.", error)
     return null
   }
+}
+
+function messaging() {
+  const app = getDeliveryFirebaseApp()
+  return app ? getMessaging(app) : null
 }
 
 export async function sendDeliveryAnnouncementPush(input: { title: string; body: string; announcementId: string }) {
