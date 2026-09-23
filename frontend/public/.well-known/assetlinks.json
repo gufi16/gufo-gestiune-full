@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ro.poshard.gufodelivery",
+      "sha256_cert_fingerprints": ["07:23:00:BC:D1:E3:76:33:EC:22:01:74:6D:58:D5:84:BA:09:D0:5C:2E:BB:52:C6:CE:11:9F:68:DA:15:7D:18"]
+    }
+  }
+]

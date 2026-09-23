@@ -1,0 +1,5 @@
+ALTER TABLE "DeliveryAnnouncement"
+  ADD COLUMN "sendEmail" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "emailSentAt" TIMESTAMP(3),
+  ADD COLUMN "emailRecipientCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "emailFailureCount" INTEGER NOT NULL DEFAULT 0;

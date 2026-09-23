@@ -58,6 +58,7 @@ import ControlPanelClientDetails from "./pages/control/ControlPanelClientDetails
 import ControlPanelIntegrations from "./pages/control/ControlPanelIntegrations"
 import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliveryAnnouncements"
 import DeliveryLegalPublic from "./pages/DeliveryLegalPublic"
+import DeliveryOrderLink from "./pages/DeliveryOrderLink"
 import { firstAllowedRoute, hasModule } from "./lib/modules"
 
 function RequireModule({
@@ -88,6 +89,7 @@ export default function App() {
       <Route path="/privacy" element={<DeliveryLegalPublic page="privacy" />} />
       <Route path="/terms" element={<DeliveryLegalPublic page="terms" />} />
       <Route path="/delete-account" element={<DeliveryLegalPublic page="delete-account" />} />
+      <Route path="/delivery/order/:orderId" element={<DeliveryOrderLink />} />
 
       <Route
         path="/inregistrare-document/nir/print"

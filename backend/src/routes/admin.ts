@@ -49,6 +49,7 @@ import {
 } from "../lib/moduleCatalog"
 import { hasTenantModule } from "../lib/tenantModules"
 import { sendDeliveryAnnouncementPush } from "../lib/deliveryPush"
+import { hasSmtpConfig, sendMail } from "../lib/mailer"
 
 const router = Router()
 
@@ -56,8 +57,66 @@ const DeliveryAnnouncementSchema = z.object({
   title: z.string().trim().min(3).max(120),
   body: z.string().trim().min(3).max(1200),
   isPublished: z.boolean().default(true),
+  sendEmail: z.boolean().default(false),
   expiresAt: z.coerce.date().nullable().optional(),
 })
+
+function escapeAnnouncementEmail(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
+async function sendDeliveryAnnouncementEmail(input: { id: string; title: string; body: string }) {
+  const recipients = await prisma.deliveryCustomerAccount.findMany({
+    where: { isActive: true, email: { not: null } },
+    select: { email: true },
+  })
+  const emails = [...new Set(recipients
+    .map((recipient) => String(recipient.email || "").trim().toLowerCase())
+    .filter(Boolean))]
+
+  if (!emails.length) {
+    await prisma.deliveryAnnouncement.update({
+      where: { id: input.id },
+      data: { emailSentAt: new Date(), emailRecipientCount: 0, emailFailureCount: 0 },
+    })
+    return { recipients: 0, failed: 0 }
+  }
+
+  if (!hasSmtpConfig()) {
+    await prisma.deliveryAnnouncement.update({
+      where: { id: input.id },
+      data: { emailRecipientCount: emails.length, emailFailureCount: emails.length },
+    })
+    throw new Error("SMTP is not configured")
+  }
+
+  const html = `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:600px;margin:24px auto;background:#fff;border-radius:20px;overflow:hidden"><div style="background:#087a59;padding:28px;color:#fff"><div style="font-size:24px;font-weight:700">Gufo Delivery</div><div style="margin-top:8px;font-size:16px">Noutate pentru clienți</div></div><div style="padding:28px"><h1 style="margin:0 0 14px;font-size:23px">${escapeAnnouncementEmail(input.title)}</h1><p style="margin:0;white-space:pre-wrap;line-height:1.65;color:#51615a">${escapeAnnouncementEmail(input.body)}</p><p style="margin:26px 0 0;color:#51615a">Vezi și noutățile în aplicația Gufo Delivery.</p></div></div></body></html>`
+  let failed = 0
+  for (const email of emails) {
+    try {
+      await sendMail({
+        to: email,
+        fromName: "Gufo Delivery",
+        subject: input.title,
+        text: `${input.title}\n\n${input.body}\n\nVezi și noutățile în aplicația Gufo Delivery.`,
+        html,
+      })
+    } catch (error) {
+      failed += 1
+      console.error("[delivery-email] announcement recipient failed", { announcementId: input.id, email, error })
+    }
+  }
+  await prisma.deliveryAnnouncement.update({
+    where: { id: input.id },
+    data: { emailSentAt: new Date(), emailRecipientCount: emails.length, emailFailureCount: failed },
+  })
+  return { recipients: emails.length, failed }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -310,13 +369,16 @@ function cleanupTenantBackupArtifacts(filePaths: string[]) {
 }
 
 router.get("/api/v1/admin/platform/delivery-announcements", requireAuth, requireOwner, async (_req, res) => {
-  const items = await prisma.deliveryAnnouncement.findMany({
+  const [items, emailAudience] = await Promise.all([
+    prisma.deliveryAnnouncement.findMany({
     where: { integrationId: null },
     include: { _count: { select: { reads: true } } },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 100,
-  })
-  return res.json({ ok: true, items })
+    }),
+    prisma.deliveryCustomerAccount.count({ where: { isActive: true, email: { not: null } } }),
+  ])
+  return res.json({ ok: true, items, emailAudience })
 })
 
 router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
@@ -327,6 +389,7 @@ router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requir
       title: parsed.data.title,
       body: parsed.data.body,
       isPublished: parsed.data.isPublished,
+      sendEmail: parsed.data.sendEmail,
       expiresAt: parsed.data.expiresAt || null,
     },
   })
@@ -334,6 +397,11 @@ router.post("/api/v1/admin/platform/delivery-announcements", requireAuth, requir
     void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
       .then((result) => console.info("[delivery-push] announcement sent", { announcementId: item.id, ...result }))
       .catch((error) => console.error("[delivery-push] announcement failed", { announcementId: item.id, error }))
+    if (item.sendEmail) {
+      void sendDeliveryAnnouncementEmail(item)
+        .then((result) => console.info("[delivery-email] announcement sent", { announcementId: item.id, ...result }))
+        .catch((error) => console.error("[delivery-email] announcement failed", { announcementId: item.id, error }))
+    }
   }
   return res.json({ ok: true, item })
 })
@@ -342,7 +410,7 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
   const parsed = DeliveryAnnouncementSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
   const id = String(req.params.id || "").trim()
-  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true, isPublished: true } })
+  const existing = await prisma.deliveryAnnouncement.findFirst({ where: { id, integrationId: null }, select: { id: true, isPublished: true, sendEmail: true } })
   if (!existing) return res.status(404).json({ ok: false, error: "Noutatea nu a fost gasita." })
   const item = await prisma.deliveryAnnouncement.update({
     where: { id: existing.id },
@@ -350,6 +418,7 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
       title: parsed.data.title,
       body: parsed.data.body,
       isPublished: parsed.data.isPublished,
+      sendEmail: parsed.data.sendEmail,
       expiresAt: parsed.data.expiresAt || null,
     },
   })
@@ -357,6 +426,11 @@ router.patch("/api/v1/admin/platform/delivery-announcements/:id", requireAuth, r
     void sendDeliveryAnnouncementPush({ title: item.title, body: item.body, announcementId: item.id })
       .then((result) => console.info("[delivery-push] announcement sent", { announcementId: item.id, ...result }))
       .catch((error) => console.error("[delivery-push] announcement failed", { announcementId: item.id, error }))
+    if (item.sendEmail) {
+      void sendDeliveryAnnouncementEmail(item)
+        .then((result) => console.info("[delivery-email] announcement sent", { announcementId: item.id, ...result }))
+        .catch((error) => console.error("[delivery-email] announcement failed", { announcementId: item.id, error }))
+    }
   }
   return res.json({ ok: true, item })
 })

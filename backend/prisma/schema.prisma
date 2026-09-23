@@ -718,6 +718,10 @@ model DeliveryAnnouncement {
   title         String
   body          String
   isPublished   Boolean  @default(true)
+  sendEmail     Boolean  @default(false)
+  emailSentAt   DateTime?
+  emailRecipientCount Int @default(0)
+  emailFailureCount   Int @default(0)
   publishedAt   DateTime @default(now())
   expiresAt     DateTime?
   createdAt     DateTime @default(now())

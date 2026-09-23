@@ -215,6 +215,8 @@ const DeliveryAnnouncementSchema = z.object({
 })
 
 const PublicGufoDeliveryCheckoutSchema = z.object({
+  // A retry from the mobile app must resolve to the same ERP order.
+  clientOrderId: z.string().uuid().optional(),
   restaurantId: z.string().min(1),
   fulfillmentType: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
   customer: z.object({
@@ -1425,7 +1427,9 @@ async function buildGufoDeliveryCheckoutImportPayload(
 
   const total = toMoneyValue(subtotal + deliveryFee)
   const paymentType = String(input.payment?.type || "CARD").trim().toUpperCase()
-  const externalOrderId = createGufoDeliveryOrderId()
+  const externalOrderId = input.clientOrderId
+    ? `GD-APP-${input.clientOrderId}`
+    : createGufoDeliveryOrderId()
   const externalOrderNumber = buildGufoDeliveryDisplayNumber()
 
   return {
@@ -1561,7 +1565,9 @@ async function sendGufoDeliveryOrderReceipt(input: {
     const lineTotal = quantity * Number(item.unitPrice || 0)
     return `<tr><td style="padding:10px 0;border-bottom:1px solid #e7ece9">${escapeDeliveryEmailHtml(item.name)} <span style="color:#66756f">x${quantity}</span></td><td style="padding:10px 0;border-bottom:1px solid #e7ece9;text-align:right;font-weight:600">${deliveryReceiptMoney(lineTotal)}</td></tr>`
   }).join("")
-  const appLink = `gufo-delivery://order/${encodeURIComponent(input.orderId)}`
+  // HTTPS links work in every email client. Android App Links open the installed app,
+  // while browsers show the safe fallback page instead of failing on a custom scheme.
+  const appLink = `https://app.gufo.ink/delivery/order/${encodeURIComponent(input.orderId)}`
   const deliveryLabel = input.fulfillmentType === "PICKUP" ? "Ridicare personală" : "Livrare"
   const addressLine = input.address ? `<p style="margin:6px 0;color:#51615a"><strong>${deliveryLabel}:</strong> ${escapeDeliveryEmailHtml(input.address)}</p>` : ""
   const textLines = input.items.map((item) => `- ${item.name} x${item.qty}: ${deliveryReceiptMoney(Number(item.qty || 0) * Number(item.unitPrice || 0))}`)
@@ -2370,7 +2376,11 @@ async function verifyGlovoCatalogUpdateStatus(tenantId: string, integrationId: s
   }
 }
 
-async function importMarketplaceOrderForTenant(tenantId: string, rawPayload: MarketplaceOrderPayload) {
+async function importMarketplaceOrderForTenant(
+  tenantId: string,
+  rawPayload: MarketplaceOrderPayload,
+  options: { preserveExisting?: boolean } = {}
+) {
   const location = await ensureLocationForTenant(tenantId, rawPayload.locationId)
   if (!location) {
     throw new Error("Location not found")
@@ -2395,6 +2405,19 @@ async function importMarketplaceOrderForTenant(tenantId: string, rawPayload: Mar
   }
 
   return db.$transaction(async (tx: TransactionClient) => {
+    if (options.preserveExisting) {
+      const existing = await tx.externalOrder.findUnique({
+        where: {
+          tenantId_platform_externalOrderId: {
+            tenantId,
+            platform: payload.platform,
+            externalOrderId: payload.externalOrderId,
+          },
+        },
+        include: { items: true, kitchenTicket: true, saleDraft: true },
+      })
+      if (existing) return existing
+    }
     const order = await tx.externalOrder.upsert({
       where: {
         tenantId_platform_externalOrderId: {
@@ -3470,7 +3493,7 @@ router.post("/api/v1/public/delivery/payments/attempts/:attemptId/complete", req
     }
 
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayloadParsed.data)
-    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload)
+    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload, { preserveExisting: true })
     if (!externalOrder?.id) {
       throw new Error("Nu am putut crea comanda ERP dupa confirmarea platii Viva.")
     }
@@ -3598,7 +3621,7 @@ router.post("/api/v1/public/delivery/payments/viva/webhook", async (req, res) =>
     }
 
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayloadParsed.data)
-    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload)
+    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload, { preserveExisting: true })
     if (!externalOrder?.id) {
       throw new Error("Nu am putut crea comanda ERP dupa confirmarea platii Viva.")
     }
@@ -3644,15 +3667,27 @@ router.post("/api/v1/public/delivery/checkout", async (req, res) => {
 
   try {
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, parsed.data)
-    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload)
-    const customer = await resolveOptionalDeliveryCustomer(req)
-    void queueGufoDeliveryOrderReceipt({
-      email: customer?.email,
-      orderId: externalOrder?.id,
-      payload: importPayload,
-    }).catch((error: unknown) => {
-      console.warn("[gufo-delivery] Could not send order receipt email:", getErrorMessage(error, "unknown email error"))
+    const existingOrder = await db.externalOrder.findUnique({
+      where: {
+        tenantId_platform_externalOrderId: {
+          tenantId,
+          platform: "GUFO_DELIVERY",
+          externalOrderId: importPayload.externalOrderId,
+        },
+      },
+      select: { id: true },
     })
+    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload, { preserveExisting: true })
+    const customer = await resolveOptionalDeliveryCustomer(req)
+    if (!existingOrder) {
+      void queueGufoDeliveryOrderReceipt({
+        email: customer?.email,
+        orderId: externalOrder?.id,
+        payload: importPayload,
+      }).catch((error: unknown) => {
+        console.warn("[gufo-delivery] Could not send order receipt email:", getErrorMessage(error, "unknown email error"))
+      })
+    }
 
     return res.status(201).json({
       ok: true,
