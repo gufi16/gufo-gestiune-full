@@ -29,7 +29,7 @@ function firebaseCredentials(): FirebaseCredentials | null {
   }
 }
 
-/** Shared Firebase Admin instance for delivery push and verified phone sign-in. */
+/** Shared Firebase Admin instance used for Gufo Delivery push notifications. */
 export function getDeliveryFirebaseApp() {
   const credentials = firebaseCredentials()
   if (!credentials) return null

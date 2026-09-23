@@ -4,8 +4,6 @@ import { DeliveryCustomerAuthProvider } from "@prisma/client"
 import { z } from "zod"
 import { prisma } from "../lib/prisma"
 import { hashSecret, signAccessToken, verifyAccessToken, verifySecret } from "../lib/auth"
-import { getAuth } from "firebase-admin/auth"
-import { getDeliveryFirebaseApp } from "../lib/deliveryPush"
 
 const router = Router()
 const DELIVERY_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 45
@@ -28,24 +26,16 @@ export type DeliveryCustomerIdentity = NonNullable<DeliveryCustomerAuthRequest["
 
 const RegisterSchema = z.object({
   fullName: z.string().trim().min(2),
-  email: z.string().trim().email().optional(),
-  phone: z.string().trim().min(6).optional(),
+  email: z.string().trim().email(),
   password: z.string().min(6),
-}).refine((value) => Boolean(String(value.email || "").trim() || String(value.phone || "").trim()), {
-  message: "Email sau telefon este obligatoriu.",
-  path: ["email"],
 })
 
 const LoginSchema = z.object({
-  identifier: z.string().trim().min(3),
+  email: z.string().trim().email(),
   password: z.string().min(6),
 })
 
 const GoogleLoginSchema = z.object({
-  idToken: z.string().trim().min(20),
-})
-
-const FirebasePhoneLoginSchema = z.object({
   idToken: z.string().trim().min(20),
 })
 
@@ -373,23 +363,17 @@ router.post("/api/v1/public/delivery/auth/register", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() })
   }
-  if (!checkSimpleRateLimit(req, res, "delivery-register", parsed.data.email || parsed.data.phone)) return
+  if (!checkSimpleRateLimit(req, res, "delivery-register", parsed.data.email)) return
 
   const email = normalizeEmail(parsed.data.email)
-  const phone = normalizePhone(parsed.data.phone)
 
   const existing = await prisma.deliveryCustomerAccount.findFirst({
-    where: {
-      OR: [
-        ...(email ? [{ email }] : []),
-        ...(phone ? [{ phone }] : []),
-      ],
-    },
+    where: { email },
     select: { id: true },
   })
 
   if (existing) {
-    return res.status(409).json({ ok: false, error: "Exista deja un cont cu acest email sau telefon." })
+    return res.status(409).json({ ok: false, error: "Există deja un cont cu acest email." })
   }
 
   const passwordHash = await hashSecret(parsed.data.password)
@@ -397,7 +381,6 @@ router.post("/api/v1/public/delivery/auth/register", async (req, res) => {
     data: {
       fullName: parsed.data.fullName.trim(),
       email,
-      phone,
       passwordHash,
       authProvider: "PASSWORD",
       lastLoginAt: new Date(),
@@ -426,19 +409,14 @@ router.post("/api/v1/public/delivery/auth/login", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() })
   }
-  if (!checkSimpleRateLimit(req, res, "delivery-login", parsed.data.identifier)) return
+  if (!checkSimpleRateLimit(req, res, "delivery-login", parsed.data.email)) return
 
-  const identifier = parsed.data.identifier.trim()
-  const email = normalizeEmail(identifier)
-  const phone = normalizePhone(identifier)
+  const email = normalizeEmail(parsed.data.email)
 
   const customer = await prisma.deliveryCustomerAccount.findFirst({
     where: {
       authProvider: "PASSWORD",
-      OR: [
-        ...(email ? [{ email }] : []),
-        ...(phone ? [{ phone }] : []),
-      ],
+      email,
     },
     include: {
       addresses: {
@@ -511,59 +489,6 @@ router.post("/api/v1/public/delivery/auth/google", async (req, res) => {
     })
   } catch (error: unknown) {
     return res.status(401).json({ ok: false, error: error instanceof Error ? error.message : "Autentificarea Google nu a reușit." })
-  }
-})
-
-// Firebase owns OTP creation and SMS delivery. The app sends us only the
-// verified Firebase ID token, which we verify again with the Admin SDK.
-router.post("/api/v1/public/delivery/auth/phone/firebase", async (req, res) => {
-  const parsed = FirebasePhoneLoginSchema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ ok: false, error: "Codul de telefon nu a putut fi verificat." })
-  if (!checkSimpleRateLimit(req, res, "delivery-phone-login")) return
-
-  const firebaseApp = getDeliveryFirebaseApp()
-  if (!firebaseApp) {
-    return res.status(503).json({ ok: false, error: "Autentificarea prin SMS nu este configurată încă." })
-  }
-
-  try {
-    const identity = await getAuth(firebaseApp).verifyIdToken(parsed.data.idToken)
-    const phone = normalizePhone(identity.phone_number)
-    const providerUserId = String(identity.uid || "").trim()
-    if (!phone || !providerUserId) {
-      return res.status(401).json({ ok: false, error: "Numărul de telefon nu a putut fi verificat." })
-    }
-
-    const existing = await prisma.deliveryCustomerAccount.findFirst({
-      where: { OR: [{ phone }, { authProvider: "PHONE", providerUserId }] },
-      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
-    })
-    const customer = existing || await prisma.deliveryCustomerAccount.create({
-      data: {
-        fullName: "Client Gufo",
-        phone,
-        authProvider: "PHONE",
-        providerUserId,
-        lastLoginAt: new Date(),
-      },
-      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
-    })
-    if (!customer.isActive) return res.status(401).json({ ok: false, error: "Contul este dezactivat." })
-
-    await prisma.deliveryCustomerAccount.update({
-      where: { id: customer.id },
-      data: { phone, lastLoginAt: new Date() },
-    })
-    const { session, token } = await createDeliveryCustomerSession(customer.id, customer.email)
-    return res.json({
-      ok: true,
-      token,
-      session: { id: session.id, expiresAt: session.expiresAt.toISOString() },
-      customer: mapDeliveryCustomerResponse({ ...customer, phone }),
-    })
-  } catch (error: unknown) {
-    console.warn("[delivery-auth] Firebase phone token rejected", error instanceof Error ? error.message : "unknown")
-    return res.status(401).json({ ok: false, error: "Codul SMS este invalid sau a expirat. Încearcă din nou." })
   }
 })
 
