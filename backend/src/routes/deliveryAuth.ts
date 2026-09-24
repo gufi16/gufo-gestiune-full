@@ -84,12 +84,25 @@ async function sendDeliveryWelcomeEmail(input: { email: string | null; fullName:
   if (!email || !hasSmtpConfig()) return
 
   const name = input.fullName.trim() || "client Gufo"
+  const appLink = "https://app.gufo.ink/gufo-delivery"
   await sendMail({
     to: email,
     fromName: "Gufo Delivery",
-    subject: "Bun venit la Gufo Delivery",
-    text: `Bun venit, ${name}!\n\nContul tău Gufo Delivery este gata. Alege restaurantul preferat, setează adresa de livrare și comandă simplu din aplicație.\n\nEchipa Gufo Delivery`,
-    html: `<p>Bun venit, <strong>${escapeHtml(name)}</strong>!</p><p>Contul tău <strong>Gufo Delivery</strong> este gata.</p><p>Alege restaurantul preferat, setează adresa de livrare și comandă simplu din aplicație.</p><p>Cu drag,<br><strong>Echipa Gufo Delivery</strong></p>`,
+    subject: "Bun venit la Gufo Delivery · Contul tău este gata",
+    text: [
+      `Bun venit, ${name}!`,
+      "Contul tău Gufo Delivery este gata.",
+      "",
+      "Pentru prima comandă:",
+      "1. Permite locația sau adaugă adresa de livrare.",
+      "2. Alege restaurantul preferat.",
+      "3. Completează numărul de telefon pentru confirmarea comenzii.",
+      "",
+      `Deschide Gufo Delivery: ${appLink}`,
+      "",
+      "Echipa Gufo Delivery",
+    ].join("\n"),
+    html: `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:20px;overflow:hidden"><div style="background:#087a59;padding:30px;color:#ffffff"><div style="font-size:24px;font-weight:700">Gufo Delivery</div><div style="margin-top:8px;font-size:17px">Bun venit, ${escapeHtml(name)}!</div></div><div style="padding:28px"><p style="margin-top:0;font-size:17px;line-height:1.55">Contul tău este gata. De acum poți comanda simplu de la restaurantele disponibile în zona ta.</p><div style="margin:24px 0;padding:18px 20px;background:#f1f8f4;border-radius:14px"><div style="font-size:16px;font-weight:700;color:#087a59">Prima ta comandă, în câțiva pași</div><ol style="margin:14px 0 0;padding-left:20px;line-height:1.75;color:#51615a"><li>Permite locația sau adaugă adresa de livrare.</li><li>Alege restaurantul preferat.</li><li>Completează numărul de telefon pentru confirmarea comenzii.</li></ol></div><p style="margin:0 0 22px;color:#51615a;line-height:1.55">Îți mulțumim că ai ales Gufo Delivery. Poftă bună!</p><a href="${appLink}" style="display:block;background:#087a59;color:#ffffff;text-decoration:none;text-align:center;padding:15px;border-radius:12px;font-weight:700">Deschide Gufo Delivery</a><p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#7b8983">Acesta este un mesaj de confirmare a creării contului tău Gufo Delivery.</p></div></div></body></html>`,
   })
 }
 
