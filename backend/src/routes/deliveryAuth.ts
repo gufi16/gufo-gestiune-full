@@ -4,6 +4,7 @@ import { DeliveryCustomerAuthProvider } from "@prisma/client"
 import { z } from "zod"
 import { prisma } from "../lib/prisma"
 import { hashSecret, signAccessToken, verifyAccessToken, verifySecret } from "../lib/auth"
+import { hasSmtpConfig, sendMail } from "../lib/mailer"
 
 const router = Router()
 const DELIVERY_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 45
@@ -66,6 +67,30 @@ function normalizeEmail(value: unknown) {
 function normalizePhone(value: unknown) {
   const text = String(value || "").trim().replace(/\s+/g, "")
   return text || null
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  })[character] || character)
+}
+
+async function sendDeliveryWelcomeEmail(input: { email: string | null; fullName: string }) {
+  const email = normalizeEmail(input.email)
+  if (!email || !hasSmtpConfig()) return
+
+  const name = input.fullName.trim() || "client Gufo"
+  await sendMail({
+    to: email,
+    fromName: "Gufo Delivery",
+    subject: "Bun venit la Gufo Delivery",
+    text: `Bun venit, ${name}!\n\nContul tău Gufo Delivery este gata. Alege restaurantul preferat, setează adresa de livrare și comandă simplu din aplicație.\n\nEchipa Gufo Delivery`,
+    html: `<p>Bun venit, <strong>${escapeHtml(name)}</strong>!</p><p>Contul tău <strong>Gufo Delivery</strong> este gata.</p><p>Alege restaurantul preferat, setează adresa de livrare și comandă simplu din aplicație.</p><p>Cu drag,<br><strong>Echipa Gufo Delivery</strong></p>`,
+  })
 }
 
 type GoogleTokenIdentity = {
@@ -394,6 +419,8 @@ router.post("/api/v1/public/delivery/auth/register", async (req, res) => {
   })
 
   const { session, token } = await createDeliveryCustomerSession(customer.id, customer.email)
+  void sendDeliveryWelcomeEmail({ email: customer.email, fullName: customer.fullName })
+    .catch((error) => console.warn("[gufo-delivery] Could not send welcome email:", error))
   return res.status(201).json({
     ok: true,
     token,
@@ -469,19 +496,27 @@ router.post("/api/v1/public/delivery/auth/google", async (req, res) => {
           where: { email: identity.email },
           include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
         })
-    const customer = existingGoogleAccount || existingEmailAccount || await prisma.deliveryCustomerAccount.create({
-      data: {
-        fullName: identity.fullName,
-        email: identity.email,
-        authProvider: "GOOGLE",
-        providerUserId: identity.subject,
-        lastLoginAt: new Date(),
-      },
-      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
-    })
+    let customer = existingGoogleAccount || existingEmailAccount
+    const isNewCustomer = !customer
+    if (!customer) {
+      customer = await prisma.deliveryCustomerAccount.create({
+        data: {
+          fullName: identity.fullName,
+          email: identity.email,
+          authProvider: "GOOGLE",
+          providerUserId: identity.subject,
+          lastLoginAt: new Date(),
+        },
+        include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+      })
+    }
     if (!customer.isActive) return res.status(401).json({ ok: false, error: "Contul este dezactivat." })
     await prisma.deliveryCustomerAccount.update({ where: { id: customer.id }, data: { lastLoginAt: new Date() } })
     const { session, token } = await createDeliveryCustomerSession(customer.id, customer.email)
+    if (isNewCustomer) {
+      void sendDeliveryWelcomeEmail({ email: customer.email, fullName: customer.fullName })
+        .catch((error) => console.warn("[gufo-delivery] Could not send welcome email:", error))
+    }
     return res.json({
       ok: true,
       token,
