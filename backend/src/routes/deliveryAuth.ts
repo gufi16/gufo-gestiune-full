@@ -41,7 +41,8 @@ const GoogleLoginSchema = z.object({
 
 const UpdateProfileSchema = z.object({
   fullName: z.string().trim().min(2),
-  phone: z.string().trim().min(6).optional(),
+  // A saved phone can be cleared; checkout still requires a valid number.
+  phone: z.string().trim().refine((value) => value.length === 0 || value.length >= 6).optional(),
   email: z.string().trim().email().optional(),
 })
 
@@ -531,7 +532,7 @@ router.put("/api/v1/public/delivery/account/profile", requireDeliveryCustomerAut
       where: { id: customerId },
       data: {
         fullName: parsed.data.fullName,
-        ...(parsed.data.phone ? { phone: normalizePhone(parsed.data.phone) } : {}),
+        ...(Object.prototype.hasOwnProperty.call(parsed.data, "phone") ? { phone: normalizePhone(parsed.data.phone) } : {}),
         ...(parsed.data.email ? { email: normalizeEmail(parsed.data.email) } : {}),
       },
       include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
