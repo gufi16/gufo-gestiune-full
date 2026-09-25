@@ -853,7 +853,7 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
       id: targetTerminalId,
       tenantId: integration.tenantId,
       locationId: location.id,
-      deviceType: TerminalDeviceType.POS,
+      deviceType: settings.dispatchMode === "GO_CONFIRM" ? TerminalDeviceType.GO : TerminalDeviceType.POS,
     },
     select: {
       id: true,
@@ -866,7 +866,7 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
   })
 
   if (!terminal) {
-    throw new Error("POS-ul tinta configurat pentru Gufo Delivery nu este valid.")
+    throw new Error(settings.dispatchMode === "GO_CONFIRM" ? "Device-ul Gufo Go configurat pentru Gufo Delivery nu este valid." : "POS-ul tinta configurat pentru Gufo Delivery nu este valid.")
   }
 
   const deliveryCatalogMode = normalizeDeliveryCatalogMode(settings.deliveryCatalogMode)
@@ -4437,8 +4437,15 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
 
   if (platformParsed.data === "GUFO_DELIVERY") {
     const targetTerminalId = String(incomingSettings.targetTerminalId || "").trim()
+    const dispatchMode = String(incomingSettings.dispatchMode || "POS_CONFIRM").trim().toUpperCase() === "GO_CONFIRM"
+      ? "GO_CONFIRM"
+      : "POS_CONFIRM"
+    const targetDeviceType = dispatchMode === "GO_CONFIRM" ? TerminalDeviceType.GO : TerminalDeviceType.POS
     if (!targetTerminalId) {
-      return res.status(400).json({ ok: false, error: "Selecteaza POS-ul care va primi comenzile Gufo Delivery." })
+      return res.status(400).json({
+        ok: false,
+        error: dispatchMode === "GO_CONFIRM" ? "Selecteaza device-ul Gufo Go care va primi comenzile Gufo Delivery." : "Selecteaza POS-ul care va primi comenzile Gufo Delivery.",
+      })
     }
 
     const targetTerminal = await db.terminal.findFirst({
@@ -4446,7 +4453,7 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
         id: targetTerminalId,
         tenantId,
         locationId: location.id,
-        deviceType: TerminalDeviceType.POS,
+        deviceType: targetDeviceType,
       },
       select: {
         id: true,
@@ -4456,7 +4463,10 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     })
 
     if (!targetTerminal) {
-      return res.status(400).json({ ok: false, error: "POS-ul selectat nu apartine locatiei curente." })
+      return res.status(400).json({
+        ok: false,
+        error: dispatchMode === "GO_CONFIRM" ? "Device-ul Gufo Go selectat nu apartine locatiei curente." : "POS-ul selectat nu apartine locatiei curente.",
+      })
     }
 
     const deliveryCatalogMode = normalizeDeliveryCatalogMode(incomingSettings.deliveryCatalogMode)
@@ -4525,7 +4535,7 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     incomingSettings.targetTerminalId = targetTerminal.id
     incomingSettings.targetTerminalDeviceId = targetTerminal.deviceId || null
     incomingSettings.targetTerminalLabel = targetTerminal.label || null
-    incomingSettings.dispatchMode = "POS_CONFIRM"
+    incomingSettings.dispatchMode = dispatchMode
     incomingSettings.includedCategoryIds =
       deliveryCatalogMode === "CATEGORY_SELECTION" ? includedCategoryIds : []
     incomingSettings.includedProductIds =

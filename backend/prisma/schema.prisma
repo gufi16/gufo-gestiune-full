@@ -22,6 +22,7 @@ enum TerminalDeviceType {
   POS
   KDS
   DEPOZIT
+  GO
 }
 
 enum ProductClass {
@@ -214,6 +215,7 @@ enum ExternalOrderHistorySource {
   BACKEND
   KDS
   POS
+  GO
   ERP
 }
 

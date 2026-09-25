@@ -2239,6 +2239,7 @@ router.post("/api/v1/admin/locations/:id/devices", requireAuth, requireOwner, as
   const deviceType = parsed.data.deviceType || TerminalDeviceType.POS
   const isKds = deviceType === TerminalDeviceType.KDS
   const isDepot = deviceType === TerminalDeviceType.DEPOZIT
+  const isGo = deviceType === TerminalDeviceType.GO
 
   if (isDepot) {
     const warehouseMobileEnabled = await hasTenantModule(location.tenantId, "warehouse_mobile")
@@ -2248,7 +2249,7 @@ router.post("/api/v1/admin/locations/:id/devices", requireAuth, requireOwner, as
         error: "Gufo Depozit nu este activ pe licenta clientului",
       })
     }
-  } else if (isKds ? !license.modKds : !license.modPos) {
+  } else if (!isGo && (isKds ? !license.modKds : !license.modPos)) {
     return res.status(400).json({
       ok: false,
       error: isKds ? "KDS nu este activ pe licenta clientului" : "POS nu este activ pe licenta clientului",
@@ -2289,7 +2290,7 @@ router.post("/api/v1/admin/locations/:id/devices", requireAuth, requireOwner, as
           tenantId: location.tenantId,
           actorType: "OWNER",
           actorId: req.auth?.userId,
-          action: isKds ? "KDS_DEVICE_CREATED" : isDepot ? "DEPOT_DEVICE_CREATED" : "POS_DEVICE_CREATED",
+          action: isKds ? "KDS_DEVICE_CREATED" : isDepot ? "DEPOT_DEVICE_CREATED" : isGo ? "GO_DEVICE_CREATED" : "POS_DEVICE_CREATED",
           entityType: "Terminal",
           entityId: created.id,
           payload: {
@@ -2316,7 +2317,7 @@ router.post("/api/v1/admin/locations/:id/devices", requireAuth, requireOwner, as
       ok: false,
       error: getErrorMessage(
         error,
-        isKds ? "Nu am putut crea device-ul KDS" : isDepot ? "Nu am putut crea device-ul Gufo Depozit" : "Nu am putut crea device-ul POS",
+        isKds ? "Nu am putut crea device-ul KDS" : isDepot ? "Nu am putut crea device-ul Gufo Depozit" : isGo ? "Nu am putut crea device-ul Gufo Go" : "Nu am putut crea device-ul POS",
       ),
     })
   }
@@ -2680,6 +2681,7 @@ async function updateTerminalHandler(req: AuthedRequest, res: Response) {
     if (switchingType) {
       const isKds = nextDeviceType === TerminalDeviceType.KDS
       const isDepot = nextDeviceType === TerminalDeviceType.DEPOZIT
+      const isGo = nextDeviceType === TerminalDeviceType.GO
       if (isDepot) {
         const warehouseMobileEnabled = await hasTenantModule(terminal.tenantId, "warehouse_mobile")
         if (!warehouseMobileEnabled) {
@@ -2688,7 +2690,7 @@ async function updateTerminalHandler(req: AuthedRequest, res: Response) {
             error: "Gufo Depozit nu este activ pe licenta clientului",
           })
         }
-      } else if (isKds ? !license.modKds : !license.modPos) {
+      } else if (!isGo && (isKds ? !license.modKds : !license.modPos)) {
         return res.status(400).json({
           ok: false,
           error: isKds ? "KDS nu este activ pe licenta clientului" : "POS nu este activ pe licenta clientului",

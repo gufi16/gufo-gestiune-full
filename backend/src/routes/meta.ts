@@ -501,7 +501,9 @@ router.get("/api/v1/meta/terminals", async (req: AuthedRequest, res) => {
       ? TerminalDeviceType.KDS
       : requestedDeviceType === "POS"
         ? TerminalDeviceType.POS
-        : TerminalDeviceType.POS
+        : requestedDeviceType === "GO"
+          ? TerminalDeviceType.GO
+          : TerminalDeviceType.POS
 
   const terminals = await prisma.terminal.findMany({
     where: {
@@ -534,7 +536,7 @@ router.get("/api/v1/meta/terminals", async (req: AuthedRequest, res) => {
           tenantId,
           entityType: "Terminal",
           entityId: { in: terminalIds },
-          action: { in: ["POS_DEVICE_CREATED", "KDS_DEVICE_CREATED", "DEVICE_UPDATED"] },
+          action: { in: ["POS_DEVICE_CREATED", "KDS_DEVICE_CREATED", "GO_DEVICE_CREATED", "DEVICE_UPDATED"] },
         },
         select: {
           entityId: true,
@@ -561,7 +563,8 @@ router.get("/api/v1/meta/terminals", async (req: AuthedRequest, res) => {
     const genericLabel =
       currentLabel === "Android POS" ||
       currentLabel === "GuFo POS" ||
-      currentLabel === "GuFo KDS"
+      currentLabel === "GuFo KDS" ||
+      currentLabel === "Gufo Go"
     const restoredLabel = createdLabelByTerminalId.get(terminal.id) || ""
     return {
       ...terminal,

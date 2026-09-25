@@ -1,0 +1,2 @@
+ALTER TYPE "TerminalDeviceType" ADD VALUE IF NOT EXISTS 'GO';
+ALTER TYPE "ExternalOrderHistorySource" ADD VALUE IF NOT EXISTS 'GO';

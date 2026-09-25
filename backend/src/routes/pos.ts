@@ -187,6 +187,7 @@ type MarketplaceSettings = JsonRecord & {
   glovoClientSecret?: unknown;
   targetTerminalId?: unknown;
   targetTerminalDeviceId?: unknown;
+  dispatchMode?: unknown;
   merchantName?: unknown;
   partnerName?: unknown;
 };
@@ -336,6 +337,8 @@ async function findActiveTerminalCandidates(params: {
       ? Boolean(license.modKds)
       : terminal.deviceType === "DEPOZIT"
         ? true
+        : terminal.deviceType === "GO"
+          ? true
         : Boolean(license.modPos);
   });
 }
@@ -1467,7 +1470,7 @@ async function resolveTerminalFromPublicLicense(input: {
   req?: Request;
   licenseKey: string;
   deviceId?: string | null;
-  requestedDeviceType?: "POS" | "KDS" | "DEPOZIT";
+  requestedDeviceType?: "POS" | "KDS" | "DEPOZIT" | "GO";
   terminalLabel?: string | null;
 }) {
   const normalizedLicenseKey = normalizeText(input.licenseKey);
@@ -1527,7 +1530,7 @@ async function resolveTerminalFromPublicLicense(input: {
         locationId: null,
         deviceId: normalizedDeviceId,
         deviceType: requestedDeviceType,
-        label: terminalLabel || (requestedDeviceType === "KDS" ? "GuFo KDS" : "Android POS"),
+        label: terminalLabel || (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "GO" ? "Gufo Go" : "Android POS"),
         isLockedToLocation: true,
       },
       include: {
@@ -1968,13 +1971,15 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
       normalizeText(body.deviceType ?? body.device_type)?.toUpperCase() === "DEPOZIT" || isWarehouseMobilePair
         ? "DEPOZIT"
         : normalizeText(body.deviceType ?? body.device_type)?.toUpperCase() === "KDS" || normalizedSource === "gufo-kds"
-        ? "KDS"
-        : "POS";
+          ? "KDS"
+          : normalizeText(body.deviceType ?? body.device_type)?.toUpperCase() === "GO" || normalizedSource === "gufo-go"
+            ? "GO"
+            : "POS";
     const licenseKey = normalizeText(body.licenseKey ?? body.license_key);
     const incomingDeviceId = normalizeText(body.deviceId ?? body.device_id);
     const terminalLabel =
       normalizeText(body.terminalLabel ?? body.terminal_label) ||
-      (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "DEPOZIT" ? "Gufo Depozit" : "Android POS");
+      (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "DEPOZIT" ? "Gufo Depozit" : requestedDeviceType === "GO" ? "Gufo Go" : "Android POS");
 
     if (!licenseKey || licenseKey.length < 3) {
       return res.status(400).json({
@@ -2033,6 +2038,8 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
             ? "Licenta KDS invalida"
             : requestedDeviceType === "DEPOZIT"
               ? "Licenta Gufo Depozit invalida"
+              : requestedDeviceType === "GO"
+                ? "Licenta Gufo Go invalida"
               : "Licenta POS invalida",
       });
     }
@@ -2042,6 +2049,8 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
         ? license.modKds
         : terminal.deviceType === "DEPOZIT"
           ? await hasTenantModule(terminal.tenantId, "warehouse_mobile")
+          : terminal.deviceType === "GO"
+            ? true
           : license.modPos;
     if (!terminalModuleEnabled) {
       return res.status(403).json({
@@ -2051,6 +2060,8 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
             ? "KDS nu este activ"
             : terminal.deviceType === "DEPOZIT"
               ? "Gufo Depozit nu este activ"
+              : terminal.deviceType === "GO"
+                ? "Gufo Go nu este activ"
               : "POS nu este activ",
       });
     }
@@ -2860,7 +2871,7 @@ async function isMarketplaceOrderVisibleToTerminal(order: MarketplaceOrderLike |
     // Gufo Delivery must not become invisible after the restaurant re-pairs its POS.
     // Keep the configured terminal as the first choice, then allow the active POS
     // from the same restaurant location to receive the pending order.
-    if (String(order?.platform || "").trim().toUpperCase() === "GUFO_DELIVERY") {
+    if (String(order?.platform || "").trim().toUpperCase() === "GUFO_DELIVERY" && getIntegrationSettingsObject(order?.integration).dispatchMode !== "GO_CONFIRM") {
       const terminal = await resolvePosMarketplaceTerminalLocation(auth);
       return Boolean(terminal?.locationId && terminal.locationId === order?.locationId);
     }
@@ -2886,7 +2897,7 @@ async function getMarketplaceVisibilityDebug(order: MarketplaceOrderLike | null 
   const isGufoDelivery = String(order?.platform || "").trim().toUpperCase() === "GUFO_DELIVERY";
   const currentTerminal = isGufoDelivery ? await resolvePosMarketplaceTerminalLocation(auth) : null;
   const matchesGufoDeliveryLocation = Boolean(
-    isGufoDelivery && currentTerminal?.locationId && currentTerminal.locationId === order?.locationId
+    isGufoDelivery && getIntegrationSettingsObject(order?.integration).dispatchMode !== "GO_CONFIRM" && currentTerminal?.locationId && currentTerminal.locationId === order?.locationId
   );
   const visible = !targetTerminal || matchesTerminalId || matchesDeviceId || matchesGufoDeliveryLocation;
 
@@ -2959,7 +2970,7 @@ export async function createPosMarketplaceHistory(
 ) {
   const normalizedSource = (() => {
     const value = String(source || "").trim().toUpperCase();
-    if (["POS", "KDS", "ERP", "BACKEND", "PLATFORM"].includes(value)) {
+    if (["POS", "KDS", "GO", "ERP", "BACKEND", "PLATFORM"].includes(value)) {
       return value;
     }
     if (["GLOVO", "WOLT", "BOLT", "BOLT_FOOD", "GUFO_DELIVERY"].includes(value)) {
@@ -2973,7 +2984,7 @@ export async function createPosMarketplaceHistory(
       ? {
           ...asObject(payloadJson),
           historyPlatformSource:
-            normalizedSource === "PLATFORM" && !["PLATFORM", "POS", "KDS", "ERP", "BACKEND"].includes(String(source || "").trim().toUpperCase())
+            normalizedSource === "PLATFORM" && !["PLATFORM", "POS", "KDS", "GO", "ERP", "BACKEND"].includes(String(source || "").trim().toUpperCase())
               ? String(source || "").trim().toUpperCase()
               : undefined,
         }
@@ -3013,6 +3024,201 @@ export function normalizePosMarketplaceKdsStatus(rawStatus: string) {
   }
   return null;
 }
+
+async function resolveGufoGoTerminal(req: PosAuthRequest) {
+  const auth = await resolvePosAuthContext(req);
+  if (!auth?.tenantId || !auth.terminalId) return null;
+
+  const terminal = await prisma.terminal.findFirst({
+    where: {
+      id: auth.terminalId,
+      tenantId: auth.tenantId,
+      deviceType: "GO",
+    },
+    select: {
+      id: true,
+      deviceId: true,
+      label: true,
+      locationId: true,
+    },
+  });
+
+  return terminal ? { auth, terminal } : null;
+}
+
+async function resolveGufoGoOrder(auth: NonNullable<PosAuthRequest["auth"]>, terminalId: string, inputOrderId: string) {
+  const order = await resolvePosMarketplaceOrder(auth, inputOrderId, {
+    items: true,
+    kitchenTicket: true,
+    saleDraft: true,
+    integration: {
+      select: {
+        id: true,
+        settingsJson: true,
+        locationId: true,
+      },
+    },
+  });
+  if (!order) return null;
+
+  const settings = getIntegrationSettingsObject(order.integration);
+  return settings.dispatchMode === "GO_CONFIRM" && getMarketplaceTargetTerminalId(order.integration) === terminalId ? order : null;
+}
+
+function serializeGufoGoOrder(order: {
+  id: string;
+  externalOrderId: string;
+  externalOrderNumber: string | null;
+  status: ExternalOrderStatus;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerNote: string | null;
+  paymentLabel: string | null;
+  subtotal: unknown;
+  total: unknown;
+  placedAt: Date | null;
+  rawPayloadJson: unknown;
+  items: Array<{ id: string; name: string; qty: unknown; unitPrice: unknown; note: string | null; modifiersJson: unknown }>;
+}) {
+  return {
+    id: order.id,
+    externalOrderId: order.externalOrderId,
+    externalOrderNumber: order.externalOrderNumber,
+    status: order.status,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    customerNote: order.customerNote,
+    paymentLabel: order.paymentLabel,
+    deliveryAddress: formatMarketplaceDeliveryAddress(order.rawPayloadJson),
+    subtotal: Number(order.subtotal || 0),
+    total: Number(order.total || 0),
+    placedAt: order.placedAt?.toISOString() || null,
+    items: order.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      qty: Number(item.qty || 0),
+      unitPrice: Number(item.unitPrice || 0),
+      note: item.note,
+      modifiers: Array.isArray(asObject(item.modifiersJson).items)
+        ? (asObject(item.modifiersJson).items as unknown[]).map((value) => String(value)).filter(Boolean)
+        : [],
+    })),
+  };
+}
+
+router.get("/api/v1/gufo-go/orders", async (req: PosAuthRequest, res: Response) => {
+  const resolved = await resolveGufoGoTerminal(req);
+  if (!resolved?.terminal.locationId) {
+    return res.status(401).json({ ok: false, error: "Gufo Go nu este imperecheat cu o locatie." });
+  }
+
+  const orders = await prisma.externalOrder.findMany({
+    where: {
+      tenantId: resolved.auth.tenantId,
+      locationId: resolved.terminal.locationId,
+      platform: "GUFO_DELIVERY",
+      status: { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
+    },
+    include: {
+      integration: { select: { id: true, settingsJson: true, locationId: true } },
+      items: true,
+    },
+    orderBy: [{ placedAt: "asc" }, { createdAt: "asc" }],
+  });
+
+  const items = orders
+    .filter((order) => {
+      const settings = getIntegrationSettingsObject(order.integration);
+      return settings.dispatchMode === "GO_CONFIRM" && getMarketplaceTargetTerminalId(order.integration) === resolved.terminal.id;
+    })
+    .map(serializeGufoGoOrder);
+
+  return res.json({
+    ok: true,
+    terminal: {
+      id: resolved.terminal.id,
+      label: resolved.terminal.label || "Gufo Go",
+      deviceId: resolved.terminal.deviceId,
+    },
+    items,
+  });
+});
+
+router.post("/api/v1/gufo-go/orders/:externalOrderId/accept", async (req: PosAuthRequest, res: Response) => {
+  const resolved = await resolveGufoGoTerminal(req);
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Go neautentificat. Fa pairing din nou." });
+
+  const inputOrderId = String(req.params.externalOrderId || "").trim();
+  if (!inputOrderId) return res.status(400).json({ ok: false, error: "Lipseste identificatorul comenzii." });
+
+  const order = await resolveGufoGoOrder(resolved.auth, resolved.terminal.id, inputOrderId);
+  if (!order) return res.status(404).json({ ok: false, error: "Comanda nu este alocata acestui device Gufo Go." });
+  if (order.status === "CANCELLED" || order.status === "FISCALIZED") {
+    return res.status(409).json({ ok: false, error: "Comanda nu mai poate fi acceptata." });
+  }
+
+  const now = new Date();
+  const nextStatus: ExternalOrderStatus = order.status === "RECEIVED" ? "ACKNOWLEDGED" : order.status;
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    if (nextStatus !== order.status || order.cancelledAt) {
+      await tx.externalOrder.update({
+        where: { id: order.id },
+        data: { status: nextStatus, acknowledgedAt: nextStatus === "ACKNOWLEDGED" ? now : order.acknowledgedAt, cancelledAt: null },
+      });
+    }
+    if (order.saleDraft?.id && order.saleDraft.status === "CANCELLED") {
+      await tx.saleDraft.update({ where: { id: order.saleDraft.id }, data: { status: "OPEN" } });
+    }
+    if (order.kitchenTicket?.id && order.kitchenTicket.status === "CANCELLED") {
+      await tx.kitchenTicket.update({ where: { id: order.kitchenTicket.id }, data: { status: "NEW", completedAt: null, readyAt: null } });
+    }
+  });
+
+  await createPosMarketplaceHistory(
+    resolved.auth,
+    order.id,
+    nextStatus,
+    "GO",
+    "Comanda Gufo Delivery a fost acceptata din Gufo Go.",
+    { terminalId: resolved.terminal.id, deviceId: resolved.terminal.deviceId }
+  );
+  await notifyGufoDeliveryOrderStatus(order, nextStatus).catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about Gufo Go acceptance.", error);
+  });
+
+  const updated = await resolveGufoGoOrder(resolved.auth, resolved.terminal.id, order.id);
+  return res.json({ ok: true, status: nextStatus, order: updated ? serializeGufoGoOrder(updated) : serializeGufoGoOrder(order) });
+});
+
+router.post("/api/v1/gufo-go/orders/:externalOrderId/reject", async (req: PosAuthRequest, res: Response) => {
+  const resolved = await resolveGufoGoTerminal(req);
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Go neautentificat. Fa pairing din nou." });
+
+  const inputOrderId = String(req.params.externalOrderId || "").trim();
+  const order = await resolveGufoGoOrder(resolved.auth, resolved.terminal.id, inputOrderId);
+  if (!order) return res.status(404).json({ ok: false, error: "Comanda nu este alocata acestui device Gufo Go." });
+  if (order.status === "FISCALIZED") return res.status(409).json({ ok: false, error: "Comanda fiscalizata nu poate fi anulata." });
+
+  const reason = String(req.body?.reason || "OTHER").trim().slice(0, 160) || "OTHER";
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.externalOrder.update({ where: { id: order.id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+    if (order.saleDraft?.id) await tx.saleDraft.update({ where: { id: order.saleDraft.id }, data: { status: "CANCELLED" } });
+    if (order.kitchenTicket?.id) await tx.kitchenTicket.update({ where: { id: order.kitchenTicket.id }, data: { status: "CANCELLED", completedAt: new Date() } });
+  });
+  await createPosMarketplaceHistory(
+    resolved.auth,
+    order.id,
+    "CANCELLED",
+    "GO",
+    "Comanda Gufo Delivery a fost refuzata din Gufo Go.",
+    { terminalId: resolved.terminal.id, deviceId: resolved.terminal.deviceId, reason }
+  );
+  await notifyGufoDeliveryOrderStatus(order, "CANCELLED").catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about Gufo Go rejection.", error);
+  });
+
+  return res.json({ ok: true, status: "CANCELLED" });
+});
 
 router.get("/api/v1/pos/marketplace/orders", async (req: PosAuthRequest, res: Response) => {
   const auth = await resolvePosAuthContext(req);

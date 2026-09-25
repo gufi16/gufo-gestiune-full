@@ -314,6 +314,8 @@ export async function generateUniqueDeviceId(
       ? "KDS"
       : deviceType === TerminalDeviceType.DEPOZIT
         ? "DEP"
+        : deviceType === TerminalDeviceType.GO
+          ? "GO"
         : "POS"
   let deviceId = `${prefix}-${randomChunk(4)}-${randomChunk(4)}`
 
@@ -375,6 +377,7 @@ export function inferTerminalDeviceType(terminal: {
   const explicit = String(terminal.deviceType || "").trim().toUpperCase()
   if (explicit === "KDS") return TerminalDeviceType.KDS
   if (explicit === "DEPOZIT") return TerminalDeviceType.DEPOZIT
+  if (explicit === "GO") return TerminalDeviceType.GO
   if (explicit === "POS") return TerminalDeviceType.POS
 
   const label = normalizeTerminalLabel(terminal.label).toUpperCase()
@@ -384,6 +387,9 @@ export function inferTerminalDeviceType(terminal: {
   }
   if (label.includes("DEPOZIT") || deviceId.startsWith("DEP-")) {
     return TerminalDeviceType.DEPOZIT
+  }
+  if (label.includes("GUFO GO") || deviceId.startsWith("GO-")) {
+    return TerminalDeviceType.GO
   }
 
   return TerminalDeviceType.POS

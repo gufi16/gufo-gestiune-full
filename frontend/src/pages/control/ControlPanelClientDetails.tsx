@@ -246,7 +246,7 @@ type DynamicModuleItem = {
 
 type ClientTab = "overview" | "license" | "locations" | "users"
 type OverviewPanel = "profile" | "companies" | null
-type DeviceType = "POS" | "KDS" | "DEPOZIT"
+type DeviceType = "POS" | "KDS" | "DEPOZIT" | "GO"
 
 const defaultModules: LicenseModules = {
   dashboard: false,
@@ -1071,7 +1071,9 @@ export default function ControlPanelClientDetails() {
             ? "KDS"
             : String(device.deviceType || "POS").toUpperCase() === "DEPOZIT"
               ? "DEPOZIT"
-              : "POS",
+              : String(device.deviceType || "POS").toUpperCase() === "GO"
+                ? "GO"
+                : "POS",
       },
     }))
   }
@@ -1785,6 +1787,7 @@ export default function ControlPanelClientDetails() {
                     >
                       <option value="POS">POS</option>
                       <option value="KDS">KDS</option>
+                      <option value="GO">Gufo Go</option>
                       {warehouseMobileModule?.enabled ? <option value="DEPOZIT">DEPOZIT</option> : null}
                     </select>
                     <button
@@ -1829,7 +1832,9 @@ export default function ControlPanelClientDetails() {
                                                 ? "KDS"
                                                 : String(device.deviceType || "POS").toUpperCase() === "DEPOZIT"
                                                   ? "DEPOZIT"
-                                                  : "POS",
+                                                  : String(device.deviceType || "POS").toUpperCase() === "GO"
+                                                    ? "GO"
+                                                    : "POS",
                                           }),
                                           label: e.target.value,
                                         },
@@ -1867,6 +1872,7 @@ export default function ControlPanelClientDetails() {
                                 >
                                   <option value="POS">POS</option>
                                   <option value="KDS">KDS</option>
+                                  <option value="GO">Gufo Go</option>
                                   {warehouseMobileModule?.enabled || deviceForms[device.id]?.deviceType === "DEPOZIT" ? (
                                     <option value="DEPOZIT">DEPOZIT</option>
                                   ) : null}
