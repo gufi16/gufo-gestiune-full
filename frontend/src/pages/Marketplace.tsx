@@ -2118,7 +2118,7 @@ export default function MarketplacePage() {
                                 [selectedPlatform]: {
                                   ...prev[selectedPlatform],
                                   targetTerminalId: e.target.value,
-                                  targetTerminalDeviceId: terminals.find((terminal) => terminal.id === e.target.value)?.deviceId || "",
+                                  targetTerminalDeviceId: targetTerminals.find((terminal) => terminal.id === e.target.value)?.deviceId || "",
                                 },
                               }))
                             }

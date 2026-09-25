@@ -505,12 +505,27 @@ router.get("/api/v1/meta/terminals", async (req: AuthedRequest, res) => {
           ? TerminalDeviceType.GO
           : TerminalDeviceType.POS
 
+  // A delivery destination is scoped to its selected restaurant location. Terminal.companyId
+  // may be null on devices created before company scoping, so do not hide valid devices here.
+  if (locationId) {
+    const location = await prisma.location.findFirst({
+      where: {
+        id: locationId,
+        tenantId,
+        OR: buildCompanyScope(companyId),
+      },
+      select: { id: true },
+    })
+    if (!location) {
+      return res.status(404).json({ ok: false, error: "Locatia selectata nu este disponibila." })
+    }
+  }
+
   const terminals = await prisma.terminal.findMany({
     where: {
       tenantId,
-      companyId,
       deviceType,
-      ...(locationId ? { locationId } : {}),
+      ...(locationId ? { locationId } : { companyId }),
     },
     select: {
       id: true,
