@@ -3112,18 +3112,32 @@ router.get("/api/v1/gufo-go/orders", async (req: PosAuthRequest, res: Response) 
     return res.status(401).json({ ok: false, error: "Gufo Go nu este imperecheat cu o locatie." });
   }
 
+  const historyOnly = String(req.query.scope || "").trim().toLowerCase() === "history";
+  const parseDateBound = (value: unknown, endOfDay: boolean) => {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+    const parsed = new Date(raw.length === 10 ? `${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}` : raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const historyFrom = historyOnly ? parseDateBound(req.query.dateFrom, false) : null;
+  const historyTo = historyOnly ? parseDateBound(req.query.dateTo, true) : null;
+
   const orders = await prisma.externalOrder.findMany({
     where: {
       tenantId: resolved.auth.tenantId,
       locationId: resolved.terminal.locationId,
       platform: "GUFO_DELIVERY",
-      status: { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
+      status: historyOnly ? "DELIVERED" : { in: [...ACTIVE_MARKETPLACE_ORDER_STATUSES] },
+      ...(historyOnly && (historyFrom || historyTo)
+        ? { updatedAt: { ...(historyFrom ? { gte: historyFrom } : {}), ...(historyTo ? { lte: historyTo } : {}) } }
+        : {}),
     },
     include: {
       integration: { select: { id: true, settingsJson: true, locationId: true } },
       items: true,
     },
-    orderBy: [{ placedAt: "asc" }, { createdAt: "asc" }],
+    orderBy: historyOnly ? [{ updatedAt: "desc" }] : [{ placedAt: "asc" }, { createdAt: "asc" }],
+    take: historyOnly ? 100 : undefined,
   });
 
   const items = orders
@@ -3142,6 +3156,40 @@ router.get("/api/v1/gufo-go/orders", async (req: PosAuthRequest, res: Response) 
     },
     items,
   });
+});
+
+router.post("/api/v1/gufo-go/orders/:externalOrderId/complete", async (req: PosAuthRequest, res: Response) => {
+  const resolved = await resolveGufoGoTerminal(req);
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Go neautentificat. Fa pairing din nou." });
+
+  const inputOrderId = String(req.params.externalOrderId || "").trim();
+  const order = await resolveGufoGoOrder(resolved.auth, resolved.terminal.id, inputOrderId);
+  if (!order) return res.status(404).json({ ok: false, error: "Comanda nu este alocata acestui device Gufo Go." });
+  if (order.status === "RECEIVED") return res.status(409).json({ ok: false, error: "Accepta comanda inainte sa o finalizezi." });
+  if (order.status === "CANCELLED" || order.status === "FISCALIZED" || order.status === "DELIVERED") {
+    return res.status(409).json({ ok: false, error: "Comanda este deja inchisa." });
+  }
+
+  const now = new Date();
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.externalOrder.update({ where: { id: order.id }, data: { status: "DELIVERED", readyAt: order.readyAt || now } });
+    if (order.kitchenTicket?.id) {
+      await tx.kitchenTicket.update({ where: { id: order.kitchenTicket.id }, data: { status: "COMPLETED", completedAt: now } });
+    }
+  });
+  await createPosMarketplaceHistory(
+    resolved.auth,
+    order.id,
+    "DELIVERED",
+    "GO",
+    "Comanda Gufo Delivery a fost finalizata din Gufo Go.",
+    { terminalId: resolved.terminal.id, deviceId: resolved.terminal.deviceId }
+  );
+  await notifyGufoDeliveryOrderStatus(order, "DELIVERED").catch((error) => {
+    console.warn("[delivery-push] Could not notify customer about Gufo Go completion.", error);
+  });
+
+  return res.json({ ok: true, externalOrderId: order.id, status: "DELIVERED" });
 });
 
 router.post("/api/v1/gufo-go/orders/:externalOrderId/accept", async (req: PosAuthRequest, res: Response) => {
@@ -4047,6 +4095,8 @@ function gufoDeliveryStatusNotification(status: ExternalOrderStatus) {
       return { title: "Comanda este gata", body: "Comanda ta este gata pentru urmatorul pas." };
     case "FISCALIZED":
       return { title: "Comanda este in drum spre tine", body: "Restaurantul a finalizat comanda. Urmeaza livrarea." };
+    case "DELIVERED":
+      return { title: "Comanda a fost finalizata", body: "Restaurantul a finalizat comanda ta." };
     case "CANCELLED":
       return { title: "Comanda a fost anulata", body: "Restaurantul a anulat aceasta comanda." };
     default:
