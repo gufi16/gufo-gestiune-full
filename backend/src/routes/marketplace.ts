@@ -276,10 +276,60 @@ const KioskVivaPrepareSchema = PublicGufoDeliveryVivaPrepareSchema.omit({ restau
   customer: z.object({
     name: z.string().trim().min(1),
     phone: z.string().trim().min(1),
-    email: z.string().trim().email().optional(),
+    // A kiosk profile and payment confirmation cannot be recovered safely
+    // without a verified email address and a reachable phone number.
+    email: z.string().trim().email(),
     note: z.string().trim().nullish().transform((value) => value || undefined),
   }),
 })
+
+async function ensureKioskCustomerProfile(input: { name: string; email: string; phone: string }) {
+  const email = input.email.trim().toLowerCase()
+  const phone = input.phone.trim()
+  const byEmail = await db.deliveryCustomerAccount.findUnique({ where: { email } })
+  if (byEmail) {
+    // Email ownership is checked before profile data is disclosed. Do not replace
+    // a phone number that belongs to another customer record.
+    const phoneOwner = await db.deliveryCustomerAccount.findUnique({ where: { phone } })
+    if (phoneOwner && phoneOwner.id !== byEmail.id) return byEmail
+    return db.deliveryCustomerAccount.update({
+      where: { id: byEmail.id },
+      data: { fullName: input.name.trim(), phone, isActive: true },
+    })
+  }
+  const byPhone = await db.deliveryCustomerAccount.findUnique({ where: { phone } })
+  // Never attach a new email to a profile that belongs to somebody else.
+  if (byPhone) return null
+  return db.deliveryCustomerAccount.create({
+    data: { fullName: input.name.trim(), email, phone, authProvider: "PASSWORD", isActive: true },
+  })
+}
+
+async function issueKioskProfileCode(input: { terminalId: string; customerId: string; email: string; welcome?: boolean }) {
+  if (!hasSmtpConfig()) return false
+  const code = String(crypto.randomInt(1000, 10_000))
+  await db.deliveryKioskAccessCode.deleteMany({
+    where: { terminalId: input.terminalId, email: input.email.toLowerCase(), consumedAt: null },
+  })
+  await db.deliveryKioskAccessCode.create({
+    data: {
+      terminalId: input.terminalId,
+      customerId: input.customerId,
+      email: input.email.toLowerCase(),
+      codeHash: await bcrypt.hash(code, 10),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  })
+  const intro = input.welcome ? "Mulțumim pentru prima ta comandă." : "Folosește codul de mai jos pentru a prelua datele tale la kiosk."
+  await sendMail({
+    to: input.email,
+    fromName: "Gufo Kiosk",
+    subject: input.welcome ? "Bun venit la Gufo Kiosk" : "Codul tău Gufo Kiosk",
+    text: `${intro}\n\nCodul tău: ${code}\nExpiră în 10 minute. Nu îl comunica nimănui.`,
+    html: `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:520px;margin:24px auto;background:#fff;border-radius:18px;padding:30px"><div style="font-size:22px;font-weight:700">Gufo Kiosk</div><p>${escapeDeliveryEmailHtml(intro)}</p><p>La următoarea comandă apasă <strong>„Preia datele din cont”</strong> și introdu acest cod:</p><div style="margin:24px 0;padding:18px;text-align:center;background:#eef7f2;border-radius:12px;font-size:30px;font-weight:700;letter-spacing:8px">${code}</div><p style="color:#66756f">Codul expiră în 10 minute. Nu îl comunica nimănui.</p></div></body></html>`,
+  })
+  return true
+}
 
 const DeliveryRestaurantReviewSchema = z.object({
   rating: z.coerce.number().int().min(1).max(5),
@@ -1162,8 +1212,14 @@ export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Respons
     const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload, { skipDeliveryAreaValidation: true })
     const vivaConfig = getRequiredVivaConfig(settings)
+    const customer = await ensureKioskCustomerProfile({
+      name: parsed.data.customer.name,
+      email: parsed.data.customer.email,
+      phone: parsed.data.customer.phone,
+    })
     const attempt = await db.deliveryPaymentAttempt.create({
       data: {
+        customerId: customer?.id || null,
         tenantId,
         locationId: String(resolved.integration.locationId || "").trim(),
         integrationId: resolved.integration.id,
@@ -1218,9 +1274,20 @@ export async function handleKioskVivaPaymentStatus(req: KioskAuthRequest, res: R
     if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
     const attempt = await db.deliveryPaymentAttempt.findFirst({
       where: { id: String(req.params.attemptId || ""), integrationId: resolved.integration.id },
-      select: { id: true, status: true, amount: true, currency: true, externalOrderId: true, paidAt: true, failedAt: true, expiresAt: true },
+      select: { id: true, customerId: true, status: true, amount: true, currency: true, externalOrderId: true, paidAt: true, failedAt: true, expiresAt: true },
     })
     if (!attempt) return res.status(404).json({ ok: false, error: "Plata kiosk-ului nu a fost gasita." })
+    if (attempt.status === "PAID" && attempt.customerId) {
+      // A first completed kiosk order receives a one-time welcome code. Future
+      // codes are explicitly requested by the customer from the kiosk checkout.
+      void db.deliveryKioskAccessCode.findFirst({ where: { terminalId: resolved.terminal.id, customerId: attempt.customerId } })
+        .then(async (existingCode) => {
+          if (existingCode) return
+          const customer = await db.deliveryCustomerAccount.findUnique({ where: { id: attempt.customerId! }, select: { email: true } })
+          if (customer?.email) await issueKioskProfileCode({ terminalId: resolved.terminal.id, customerId: attempt.customerId!, email: customer.email, welcome: true })
+        })
+        .catch((error: unknown) => console.warn("[gufo-kiosk] Could not send welcome profile code:", getErrorMessage(error, "unknown email error")))
+    }
     return res.json({
       ok: true,
       payment: {
@@ -1249,32 +1316,10 @@ router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, 
   const email = parsed.data.email.toLowerCase()
   const customer = await db.deliveryCustomerAccount.findFirst({
     where: { email, isActive: true },
-    select: { id: true },
+    select: { id: true, isActive: true },
   })
   // Keep the response identical when no profile exists so the kiosk cannot probe customer emails.
-  if (!customer || !hasSmtpConfig()) return res.json({ ok: true })
-
-  const code = String(crypto.randomInt(1000, 10_000))
-  await db.deliveryKioskAccessCode.deleteMany({
-    where: { terminalId: resolved.terminal.id, email, consumedAt: null },
-  })
-  await db.deliveryKioskAccessCode.create({
-    data: {
-      terminalId: resolved.terminal.id,
-      customerId: customer.id,
-      email,
-      codeHash: await bcrypt.hash(code, 10),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  })
-
-  await sendMail({
-    to: email,
-    fromName: "Gufo Kiosk",
-    subject: "Codul tău Gufo Kiosk",
-    text: `Codul pentru preluarea datelor tale este ${code}. Expiră în 10 minute. Nu îl comunica nimănui.`,
-    html: `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:520px;margin:24px auto;background:#fff;border-radius:18px;padding:30px"><div style="font-size:22px;font-weight:700">Gufo Kiosk</div><p>Folosește codul de mai jos pentru a prelua datele de livrare la kiosk.</p><div style="margin:24px 0;padding:18px;text-align:center;background:#eef7f2;border-radius:12px;font-size:30px;font-weight:700;letter-spacing:8px">${code}</div><p style="color:#66756f">Codul expiră în 10 minute. Nu îl comunica nimănui.</p></div></body></html>`,
-  })
+  if (customer?.isActive && hasSmtpConfig()) await issueKioskProfileCode({ terminalId: resolved.terminal.id, customerId: customer.id, email })
   return res.json({ ok: true })
 })
 
