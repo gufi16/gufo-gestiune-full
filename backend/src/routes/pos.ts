@@ -1753,7 +1753,7 @@ router.post("/api/v1/pos/validate", async (req: Request, res: Response) => {
       licenseKey,
       deviceId: incomingDeviceId,
     });
-    const terminal = resolved.terminal;
+    let terminal = resolved.terminal;
 
     if (!terminal) {
       return res.status(404).json({
@@ -1996,7 +1996,7 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
       requestedDeviceType,
       terminalLabel,
     });
-    const terminal = resolved.terminal;
+    let terminal = resolved.terminal;
 
     if (!terminal) {
       return res.status(404).json({
@@ -2043,6 +2043,29 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
                 ? "Licenta Gufo Go invalida"
               : "Licenta POS invalida",
       });
+    }
+
+    // A Gufo Go key is a single-device license. The first successful pairing claims it.
+    if (requestedDeviceType === "GO") {
+      if (!incomingDeviceId) {
+        return res.status(400).json({ ok: false, error: "Nu am putut identifica device-ul Gufo Go." });
+      }
+      if (terminal.pairedDeviceId && terminal.pairedDeviceId !== incomingDeviceId) {
+        return res.status(409).json({
+          ok: false,
+          error: "Aceasta licenta Gufo Go este deja activa pe alt device. Dezactiveaza device-ul curent si genereaza o licenta noua.",
+        });
+      }
+      if (!terminal.pairedDeviceId) {
+        terminal = await prisma.terminal.update({
+          where: { id: terminal.id },
+          data: { pairedDeviceId: incomingDeviceId },
+          include: {
+            location: true,
+            tenant: { include: { licenses: { orderBy: { createdAt: "desc" }, take: 1 } } },
+          },
+        });
+      }
     }
 
     const terminalModuleEnabled =
@@ -3029,6 +3052,8 @@ export function normalizePosMarketplaceKdsStatus(rawStatus: string) {
 async function resolveGufoGoTerminal(req: PosAuthRequest) {
   const auth = await resolvePosAuthContext(req);
   if (!auth?.tenantId || !auth.terminalId) return null;
+  const incomingDeviceId = normalizeText(req.header("x-gufo-go-device"));
+  if (!incomingDeviceId) return null;
 
   const terminal = await prisma.terminal.findFirst({
     where: {
@@ -3042,8 +3067,19 @@ async function resolveGufoGoTerminal(req: PosAuthRequest) {
       deviceId: true,
       label: true,
       locationId: true,
+      pairedDeviceId: true,
     },
   });
+
+  if (!terminal || (terminal.pairedDeviceId && terminal.pairedDeviceId !== incomingDeviceId)) return null;
+  if (!terminal.pairedDeviceId) {
+    // Licenses created before this rule are claimed by the first updated Gufo Go device that contacts the API.
+    const claim = await prisma.terminal.updateMany({
+      where: { id: terminal.id, isActive: true, pairedDeviceId: null },
+      data: { pairedDeviceId: incomingDeviceId },
+    });
+    if (claim.count !== 1) return null;
+  }
 
   return terminal ? { auth, terminal } : null;
 }
@@ -3054,7 +3090,8 @@ router.post("/api/v1/gufo-go/deactivate", async (req: PosAuthRequest, res: Respo
 
   await prisma.terminal.update({
     where: { id: resolved.terminal.id },
-    data: { isActive: false },
+    // Disconnect releases this hardware device. It must not disable the license for another Gufo Go device.
+    data: { pairedDeviceId: null },
   });
 
   return res.json({ ok: true });
