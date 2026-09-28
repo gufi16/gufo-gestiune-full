@@ -4023,7 +4023,12 @@ router.get("/api/v1/public/delivery/orders/:orderId/status", async (req, res) =>
   }
 })
 
-router.use(requireAuth)
+// Kiosk terminals are not ERP user sessions. Their public endpoints validate the
+// paired terminal token and physical device themselves, before this user-only gate.
+router.use((req, res, next) => {
+  if (req.path.startsWith("/api/v1/kiosk/")) return next()
+  return requireAuth(req, res, next)
+})
 
 router.get("/api/v1/marketplace/gufo-delivery/announcements", async (req: AuthedRequest, res) => {
   const tenantId = req.auth?.tenantId
