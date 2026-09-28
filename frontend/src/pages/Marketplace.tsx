@@ -352,6 +352,9 @@ type IntegrationForm = {
   deliveryOrderDestination: "POS" | "GO"
   targetTerminalId: string
   targetTerminalDeviceId: string
+  kioskEnabled: boolean
+  kioskTerminalId: string
+  kioskTerminalDeviceId: string
   deliveryEnabled: boolean
   deliveryCatalogMode: DeliveryCatalogMode
   deliveryShowCategories: boolean
@@ -523,6 +526,9 @@ function emptyForm(): IntegrationForm {
     deliveryOrderDestination: "POS",
     targetTerminalId: "",
     targetTerminalDeviceId: "",
+    kioskEnabled: false,
+    kioskTerminalId: "",
+    kioskTerminalDeviceId: "",
     deliveryEnabled: true,
     deliveryCatalogMode: "ALL_VISIBLE",
     deliveryShowCategories: true,
@@ -932,6 +938,7 @@ export default function MarketplacePage() {
   const [products, setProducts] = useState<ProductItem[]>([])
   const [terminals, setTerminals] = useState<TerminalItem[]>([])
   const [goTerminals, setGoTerminals] = useState<TerminalItem[]>([])
+  const [kioskTerminals, setKioskTerminals] = useState<TerminalItem[]>([])
   const [integrations, setIntegrations] = useState<IntegrationItem[]>([])
   const [orders, setOrders] = useState<MarketplaceOrder[]>([])
   const [mappings, setMappings] = useState<MappingItem[]>([])
@@ -1072,6 +1079,7 @@ export default function MarketplacePage() {
     if (!locationId) {
       setTerminals([])
       setGoTerminals([])
+      setKioskTerminals([])
       return
     }
     void loadTerminals(locationId)
@@ -1086,16 +1094,19 @@ export default function MarketplacePage() {
 
   async function loadTerminals(locationId: string) {
     try {
-      const [posData, goData] = await Promise.all([
+      const [posData, goData, kioskData] = await Promise.all([
         api<{ ok: boolean; terminals: TerminalItem[] }>(`/api/v1/meta/terminals?locationId=${encodeURIComponent(locationId)}&deviceType=POS`),
         api<{ ok: boolean; terminals: TerminalItem[] }>(`/api/v1/meta/terminals?locationId=${encodeURIComponent(locationId)}&deviceType=GO`),
+        api<{ ok: boolean; terminals: TerminalItem[] }>(`/api/v1/meta/terminals?locationId=${encodeURIComponent(locationId)}&deviceType=KIOSK`),
       ])
       setTerminals(Array.isArray(posData?.terminals) ? posData.terminals : [])
       setGoTerminals(Array.isArray(goData?.terminals) ? goData.terminals : [])
+      setKioskTerminals(Array.isArray(kioskData?.terminals) ? kioskData.terminals : [])
     } catch (e: any) {
       setError(e?.message || "Nu am putut incarca device-urile de preluare a comenzilor.")
       setTerminals([])
       setGoTerminals([])
+      setKioskTerminals([])
     }
   }
 
@@ -1210,6 +1221,9 @@ export default function MarketplacePage() {
           ? {
               locationId: integration.locationId || "",
               deliveryOrderDestination: integration.settingsJson?.dispatchMode === "GO_CONFIRM" ? "GO" : "POS",
+              kioskEnabled: integration.settingsJson?.kioskEnabled === true,
+              kioskTerminalId: typeof integration.settingsJson?.kioskTerminalId === "string" ? integration.settingsJson.kioskTerminalId : "",
+              kioskTerminalDeviceId: typeof integration.settingsJson?.kioskTerminalDeviceId === "string" ? integration.settingsJson.kioskTerminalDeviceId : "",
               deliveryEnabled: integration.settingsJson?.deliveryEnabled !== false,
               deliveryCatalogMode:
                 integration.settingsJson?.deliveryCatalogMode === "CATEGORY_SELECTION" ||
@@ -1532,6 +1546,16 @@ export default function MarketplacePage() {
         setSaving(false)
         return
       }
+      if (platform === "GUFO_DELIVERY" && form.kioskEnabled && form.deliveryOrderDestination !== "GO") {
+        setError("Gufo Kiosk poate trimite comenzile numai catre Gufo Go.")
+        setSaving(false)
+        return
+      }
+      if (platform === "GUFO_DELIVERY" && form.kioskEnabled && !form.kioskTerminalId) {
+        setError("Alege licenta Gufo Kiosk instalata pentru acest restaurant.")
+        setSaving(false)
+        return
+      }
       if (platform === "GUFO_DELIVERY" && form.deliveryPaymentMethods.length === 0) {
         setError("Selecteaza cel putin o metoda de plata pentru Gufo Delivery.")
         setSaving(false)
@@ -1573,6 +1597,11 @@ export default function MarketplacePage() {
             targetTerminalDeviceId: selectedTerminal?.deviceId || form.targetTerminalDeviceId || undefined,
             targetTerminalLabel: selectedTerminal?.label || undefined,
             dispatchMode: form.deliveryOrderDestination === "GO" ? "GO_CONFIRM" : "POS_CONFIRM",
+            kioskEnabled: form.kioskEnabled,
+            kioskTerminalId: form.kioskEnabled ? form.kioskTerminalId : undefined,
+            kioskTerminalDeviceId: form.kioskEnabled
+              ? kioskTerminals.find((terminal) => terminal.id === form.kioskTerminalId)?.deviceId || form.kioskTerminalDeviceId || undefined
+              : undefined,
             deliveryEnabled: form.deliveryEnabled,
             deliveryCatalogMode: form.deliveryCatalogMode,
             deliveryShowCategories: form.deliveryShowCategories,
@@ -1774,6 +1803,7 @@ export default function MarketplacePage() {
   const selectedIntegration = integrations.find((item) => item.platform === selectedPlatform) || null
   const targetTerminals = currentForm.deliveryOrderDestination === "GO" ? goTerminals : terminals
   const selectedTerminal = targetTerminals.find((item) => item.id === currentForm.targetTerminalId) || null
+  const selectedKioskTerminal = kioskTerminals.find((item) => item.id === currentForm.kioskTerminalId) || null
   const visibleCategories = useMemo(
     () => categories.filter((item) => item.isVisibleInPos !== false),
     [categories],
@@ -2149,6 +2179,63 @@ export default function MarketplacePage() {
                           {currentForm.deliveryOrderDestination === "GO"
                             ? "Pentru locatia selectata nu exista inca un device Gufo Go. Creeaza-l din Control Panel > Locatii > Device, apoi revino aici."
                             : "Pentru locatia selectata nu exista inca niciun POS Android configurat in ERP."}
+                        </div>
+                      ) : null}
+                      {selectedPlatform === "GUFO_DELIVERY" ? (
+                        <div className="mt-4 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-800">Gufo Kiosk</div>
+                              <div className="mt-0.5 text-xs text-slate-500">Terminalul kiosk foloseste catalogul acestui restaurant si trimite comenzile platite catre Gufo Go.</div>
+                            </div>
+                            <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={currentForm.kioskEnabled}
+                                onChange={(event) => setForms((prev) => ({
+                                  ...prev,
+                                  [selectedPlatform]: {
+                                    ...prev[selectedPlatform],
+                                    kioskEnabled: event.target.checked,
+                                    kioskTerminalId: event.target.checked ? prev[selectedPlatform].kioskTerminalId : "",
+                                    kioskTerminalDeviceId: event.target.checked ? prev[selectedPlatform].kioskTerminalDeviceId : "",
+                                  },
+                                }))}
+                                className="h-4 w-4 rounded border-slate-300 text-[#17324D]"
+                              />
+                              Activ
+                            </label>
+                          </div>
+                          {currentForm.kioskEnabled ? (
+                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                              <DocumentField label="Licenta Gufo Kiosk">
+                                <select
+                                  value={currentForm.kioskTerminalId}
+                                  onChange={(event) => setForms((prev) => ({
+                                    ...prev,
+                                    [selectedPlatform]: {
+                                      ...prev[selectedPlatform],
+                                      kioskTerminalId: event.target.value,
+                                      kioskTerminalDeviceId: kioskTerminals.find((terminal) => terminal.id === event.target.value)?.deviceId || "",
+                                    },
+                                  }))}
+                                  className={documentInputClass}
+                                >
+                                  <option value="">Alege licenta Gufo Kiosk</option>
+                                  {kioskTerminals.map((terminal) => (
+                                    <option key={terminal.id} value={terminal.id}>{terminal.label || terminal.deviceId} {terminal.deviceId ? `(${terminal.deviceId})` : ""}</option>
+                                  ))}
+                                </select>
+                              </DocumentField>
+                              <div className="rounded-[12px] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                                {currentForm.deliveryOrderDestination !== "GO"
+                                  ? "Alege Gufo Go ca destinatie a comenzilor pentru a activa kiosk-ul."
+                                  : selectedKioskTerminal
+                                    ? `Kiosk activ: ${selectedKioskTerminal.label || selectedKioskTerminal.deviceId}. Comenzile vor intra in ${selectedTerminal?.label || "Gufo Go selectat"}.`
+                                    : "Creeaza mai intai un device Gufo Kiosk in Control Panel > Locatii > Device."}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                       {selectedPlatform === "GUFO_DELIVERY" ? (

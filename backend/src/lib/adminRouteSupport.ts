@@ -316,7 +316,9 @@ export async function generateUniqueDeviceId(
         ? "DEP"
         : deviceType === TerminalDeviceType.GO
           ? "GO"
-        : "POS"
+          : deviceType === TerminalDeviceType.KIOSK
+            ? "KSK"
+            : "POS"
   let deviceId = `${prefix}-${randomChunk(4)}-${randomChunk(4)}`
 
   while (await prisma.terminal.findFirst({ where: { tenantId, companyId: companyId ?? null, deviceId } })) {
@@ -378,6 +380,7 @@ export function inferTerminalDeviceType(terminal: {
   if (explicit === "KDS") return TerminalDeviceType.KDS
   if (explicit === "DEPOZIT") return TerminalDeviceType.DEPOZIT
   if (explicit === "GO") return TerminalDeviceType.GO
+  if (explicit === "KIOSK") return TerminalDeviceType.KIOSK
   if (explicit === "POS") return TerminalDeviceType.POS
 
   const label = normalizeTerminalLabel(terminal.label).toUpperCase()
@@ -390,6 +393,9 @@ export function inferTerminalDeviceType(terminal: {
   }
   if (label.includes("GUFO GO") || deviceId.startsWith("GO-")) {
     return TerminalDeviceType.GO
+  }
+  if (label.includes("GUFO KIOSK") || deviceId.startsWith("KSK-")) {
+    return TerminalDeviceType.KIOSK
   }
 
   return TerminalDeviceType.POS

@@ -1,0 +1,1 @@
+ALTER TYPE "TerminalDeviceType" ADD VALUE IF NOT EXISTS 'KIOSK';

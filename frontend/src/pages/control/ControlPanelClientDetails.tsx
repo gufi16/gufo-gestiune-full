@@ -246,7 +246,7 @@ type DynamicModuleItem = {
 
 type ClientTab = "overview" | "license" | "locations" | "users"
 type OverviewPanel = "profile" | "companies" | null
-type DeviceType = "POS" | "KDS" | "DEPOZIT" | "GO"
+type DeviceType = "POS" | "KDS" | "DEPOZIT" | "GO" | "KIOSK"
 
 const defaultModules: LicenseModules = {
   dashboard: false,
@@ -1788,6 +1788,7 @@ export default function ControlPanelClientDetails() {
                       <option value="POS">POS</option>
                       <option value="KDS">KDS</option>
                       <option value="GO">Gufo Go</option>
+                      <option value="KIOSK">Gufo Kiosk</option>
                       {warehouseMobileModule?.enabled ? <option value="DEPOZIT">DEPOZIT</option> : null}
                     </select>
                     <button
@@ -1873,6 +1874,7 @@ export default function ControlPanelClientDetails() {
                                   <option value="POS">POS</option>
                                   <option value="KDS">KDS</option>
                                   <option value="GO">Gufo Go</option>
+                                  <option value="KIOSK">Gufo Kiosk</option>
                                   {warehouseMobileModule?.enabled || deviceForms[device.id]?.deviceType === "DEPOZIT" ? (
                                     <option value="DEPOZIT">DEPOZIT</option>
                                   ) : null}

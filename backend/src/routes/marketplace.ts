@@ -4469,6 +4469,30 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
       })
     }
 
+    const kioskEnabled = incomingSettings.kioskEnabled === true
+    const kioskTerminalId = String(incomingSettings.kioskTerminalId || "").trim()
+    if (kioskEnabled && dispatchMode !== "GO_CONFIRM") {
+      return res.status(400).json({ ok: false, error: "Gufo Kiosk poate trimite comenzile numai catre Gufo Go." })
+    }
+    if (kioskEnabled && !kioskTerminalId) {
+      return res.status(400).json({ ok: false, error: "Selecteaza licenta Gufo Kiosk pentru acest restaurant." })
+    }
+    const kioskTerminal = kioskEnabled
+      ? await db.terminal.findFirst({
+          where: {
+            id: kioskTerminalId,
+            tenantId,
+            locationId: location.id,
+            deviceType: TerminalDeviceType.KIOSK,
+            isActive: true,
+          },
+          select: { id: true, deviceId: true, label: true },
+        })
+      : null
+    if (kioskEnabled && !kioskTerminal) {
+      return res.status(400).json({ ok: false, error: "Licenta Gufo Kiosk selectata nu apartine locatiei curente." })
+    }
+
     const deliveryCatalogMode = normalizeDeliveryCatalogMode(incomingSettings.deliveryCatalogMode)
     const includedCategoryIds = normalizeUniqueStringArray(incomingSettings.includedCategoryIds)
     const includedProductIds = normalizeUniqueStringArray(incomingSettings.includedProductIds)
@@ -4536,6 +4560,10 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
     incomingSettings.targetTerminalDeviceId = targetTerminal.deviceId || null
     incomingSettings.targetTerminalLabel = targetTerminal.label || null
     incomingSettings.dispatchMode = dispatchMode
+    incomingSettings.kioskEnabled = kioskEnabled
+    incomingSettings.kioskTerminalId = kioskTerminal?.id || undefined
+    incomingSettings.kioskTerminalDeviceId = kioskTerminal?.deviceId || undefined
+    incomingSettings.kioskTerminalLabel = kioskTerminal?.label || undefined
     incomingSettings.includedCategoryIds =
       deliveryCatalogMode === "CATEGORY_SELECTION" ? includedCategoryIds : []
     incomingSettings.includedProductIds =

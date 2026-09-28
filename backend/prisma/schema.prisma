@@ -23,6 +23,7 @@ enum TerminalDeviceType {
   KDS
   DEPOZIT
   GO
+  KIOSK
 }
 
 enum ProductClass {

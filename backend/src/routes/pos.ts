@@ -1471,7 +1471,7 @@ async function resolveTerminalFromPublicLicense(input: {
   req?: Request;
   licenseKey: string;
   deviceId?: string | null;
-  requestedDeviceType?: "POS" | "KDS" | "DEPOZIT" | "GO";
+  requestedDeviceType?: "POS" | "KDS" | "DEPOZIT" | "GO" | "KIOSK";
   terminalLabel?: string | null;
 }) {
   const normalizedLicenseKey = normalizeText(input.licenseKey);
@@ -1531,7 +1531,7 @@ async function resolveTerminalFromPublicLicense(input: {
         locationId: null,
         deviceId: normalizedDeviceId,
         deviceType: requestedDeviceType,
-        label: terminalLabel || (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "GO" ? "Gufo Go" : "Android POS"),
+        label: terminalLabel || (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "GO" ? "Gufo Go" : requestedDeviceType === "KIOSK" ? "Gufo Kiosk" : "Android POS"),
         isLockedToLocation: true,
       },
       include: {
@@ -1975,12 +1975,14 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
           ? "KDS"
           : normalizeText(body.deviceType ?? body.device_type)?.toUpperCase() === "GO" || normalizedSource === "gufo-go"
             ? "GO"
-            : "POS";
+            : normalizeText(body.deviceType ?? body.device_type)?.toUpperCase() === "KIOSK" || normalizedSource === "gufo-kiosk"
+              ? "KIOSK"
+              : "POS";
     const licenseKey = normalizeText(body.licenseKey ?? body.license_key);
     const incomingDeviceId = normalizeText(body.deviceId ?? body.device_id);
     const terminalLabel =
       normalizeText(body.terminalLabel ?? body.terminal_label) ||
-      (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "DEPOZIT" ? "Gufo Depozit" : requestedDeviceType === "GO" ? "Gufo Go" : "Android POS");
+      (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "DEPOZIT" ? "Gufo Depozit" : requestedDeviceType === "GO" ? "Gufo Go" : requestedDeviceType === "KIOSK" ? "Gufo Kiosk" : "Android POS");
 
     if (!licenseKey || licenseKey.length < 3) {
       return res.status(400).json({
@@ -2041,19 +2043,21 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
               ? "Licenta Gufo Depozit invalida"
               : requestedDeviceType === "GO"
                 ? "Licenta Gufo Go invalida"
-              : "Licenta POS invalida",
+                : requestedDeviceType === "KIOSK"
+                  ? "Licenta Gufo Kiosk invalida"
+                : "Licenta POS invalida",
       });
     }
 
     // A Gufo Go key is a single-device license. The first successful pairing claims it.
-    if (requestedDeviceType === "GO") {
+    if (requestedDeviceType === "GO" || requestedDeviceType === "KIOSK") {
       if (!incomingDeviceId) {
-        return res.status(400).json({ ok: false, error: "Nu am putut identifica device-ul Gufo Go." });
+        return res.status(400).json({ ok: false, error: `Nu am putut identifica device-ul ${requestedDeviceType === "KIOSK" ? "Gufo Kiosk" : "Gufo Go"}.` });
       }
       if (terminal.pairedDeviceId && terminal.pairedDeviceId !== incomingDeviceId) {
         return res.status(409).json({
           ok: false,
-          error: "Aceasta licenta Gufo Go este deja activa pe alt device. Dezactiveaza device-ul curent si genereaza o licenta noua.",
+          error: `Aceasta licenta ${requestedDeviceType === "KIOSK" ? "Gufo Kiosk" : "Gufo Go"} este deja activa pe alt device. Dezactiveaza device-ul curent si genereaza o licenta noua.`,
         });
       }
       if (!terminal.pairedDeviceId) {
@@ -2075,7 +2079,9 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
           ? await hasTenantModule(terminal.tenantId, "warehouse_mobile")
           : terminal.deviceType === "GO"
             ? true
-          : license.modPos;
+            : terminal.deviceType === "KIOSK"
+              ? true
+            : license.modPos;
     if (!terminalModuleEnabled) {
       return res.status(403).json({
         ok: false,
