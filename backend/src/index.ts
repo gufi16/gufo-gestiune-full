@@ -66,7 +66,7 @@ import inventoryDocsPdf from "./routes/inventoryDocsPdf"
 import reportsRouter from "./routes/reports"
 import accountingExportRouter from "./routes/accountingExport"
 import adminRouter from "./routes/admin"
-import marketplaceRouter, { handleKioskBootstrap, handleKioskVivaPaymentStatus, handleKioskVivaPrepare } from "./routes/marketplace"
+import marketplaceRouter, { handleKioskBootstrap, handleKioskProfileCodeRequest, handleKioskProfileCodeVerify, handleKioskVivaPaymentStatus, handleKioskVivaPrepare } from "./routes/marketplace"
 import salesInvoicesRouter from "./routes/salesInvoices"
 import customersRouter from "./routes/customers"
 import minutesDocsRouter from "./routes/minutesDocs"
@@ -271,6 +271,8 @@ app.use(posRouter)
 app.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
 app.post("/api/v1/kiosk/payments/viva/prepare", handleKioskVivaPrepare)
 app.get("/api/v1/kiosk/payments/attempts/:attemptId", handleKioskVivaPaymentStatus)
+app.post("/api/v1/kiosk/profile-code/request", handleKioskProfileCodeRequest)
+app.post("/api/v1/kiosk/profile-code/verify", handleKioskProfileCodeVerify)
 app.use(companyRouter)
 app.use(marketplaceRouter)
 app.use(productsRouter)

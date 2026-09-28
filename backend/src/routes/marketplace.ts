@@ -1306,7 +1306,7 @@ export async function handleKioskVivaPaymentStatus(req: KioskAuthRequest, res: R
   }
 }
 
-router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, res) => {
+export async function handleKioskProfileCodeRequest(req: KioskAuthRequest, res: Response) {
   const parsed = KioskProfileCodeRequestSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: "Adresa de email nu este valida." })
 
@@ -1321,9 +1321,9 @@ router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, 
   // Keep the response identical when no profile exists so the kiosk cannot probe customer emails.
   if (customer?.isActive && hasSmtpConfig()) await issueKioskProfileCode({ terminalId: resolved.terminal.id, customerId: customer.id, email })
   return res.json({ ok: true })
-})
+}
 
-router.post("/api/v1/kiosk/profile-code/verify", async (req: KioskAuthRequest, res) => {
+export async function handleKioskProfileCodeVerify(req: KioskAuthRequest, res: Response) {
   const parsed = KioskProfileCodeVerifySchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: "Codul trebuie sa aiba 4 cifre." })
 
@@ -1366,7 +1366,7 @@ router.post("/api/v1/kiosk/profile-code/verify", async (req: KioskAuthRequest, r
       } : null,
     },
   })
-})
+}
 
 function toMoneyValue(value: unknown) {
   const amount = Number(value || 0)
