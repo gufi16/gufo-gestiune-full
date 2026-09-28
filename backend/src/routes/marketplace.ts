@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma"
 import { buildCompanyScopedTenantWhere } from "../lib/companyScope"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { requireDeliveryCustomerAuth, resolveOptionalDeliveryCustomer, type DeliveryCustomerAuthRequest } from "./deliveryAuth"
+import { resolvePosAuthContext } from "./pos"
 import { decryptSecret, encryptSecret } from "../lib/efacturaCertificate"
 import { hasSmtpConfig, sendMail } from "../lib/mailer"
 
@@ -145,6 +146,9 @@ type GufoDeliveryIntegrationPublic = Prisma.ExternalIntegrationGetPayload<{
   }
 }>
 type GufoDeliveryMenuPayload = Awaited<ReturnType<typeof buildGufoDeliveryMenuPayload>>
+type KioskAuthRequest = Request & {
+  auth?: { tenantId: string; terminalId?: string; deviceId?: string }
+}
 
 const ConnectIntegrationSchema = z.object({
   locationId: z.string().min(1),
@@ -610,6 +614,40 @@ async function resolvePublicGufoDeliveryIntegration(restaurantId: string) {
   return items.find((item) => item.id === restaurantId) || null
 }
 
+async function resolveGufoKioskIntegration(req: KioskAuthRequest) {
+  const auth = await resolvePosAuthContext(req)
+  if (!auth?.tenantId || !auth.terminalId) return null
+
+  const incomingDeviceId = String(req.header("x-gufo-kiosk-device") || "").trim()
+  if (!incomingDeviceId) return null
+
+  const terminal = await db.terminal.findFirst({
+    where: {
+      id: auth.terminalId,
+      tenantId: auth.tenantId,
+      deviceType: TerminalDeviceType.KIOSK,
+      isActive: true,
+    },
+    select: { id: true, deviceId: true, label: true, locationId: true, pairedDeviceId: true },
+  })
+  if (!terminal || (terminal.pairedDeviceId && terminal.pairedDeviceId !== incomingDeviceId)) return null
+
+  if (!terminal.pairedDeviceId) {
+    const claim = await db.terminal.updateMany({
+      where: { id: terminal.id, pairedDeviceId: null, isActive: true },
+      data: { pairedDeviceId: incomingDeviceId },
+    })
+    if (claim.count !== 1) return null
+  }
+
+  const integrations = await getPublicGufoDeliveryIntegrations()
+  const integration = integrations.find((candidate) => {
+    const settings = integrationSettings(candidate.settingsJson)
+    return settings.kioskEnabled === true && String(settings.kioskTerminalId || "").trim() === terminal.id
+  })
+  return integration ? { terminal, integration } : null
+}
+
 const GUFO_DELIVERY_FEE_SERVICE_SKU = "__GUFO_DELIVERY_FEE__"
 
 async function ensureGufoDeliveryFeeService(integration: GufoDeliveryIntegrationPublic) {
@@ -1048,6 +1086,43 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
     updatedAt: integration.updatedAt.toISOString(),
   }
 }
+
+// The kiosk is paired to one restaurant from the ERP. It never accepts a restaurant
+// identifier from the device, so a public terminal cannot browse another tenant's menu.
+router.get("/api/v1/kiosk/bootstrap", async (req: KioskAuthRequest, res) => {
+  try {
+    const resolved = await resolveGufoKioskIntegration(req)
+    if (!resolved) {
+      return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat. Fa pairing si selecteaza kiosk-ul in Gufo Delivery." })
+    }
+
+    const menu = await buildGufoDeliveryMenuPayload(req, resolved.integration)
+    const settings = integrationSettings(resolved.integration.settingsJson)
+    if (String(settings.dispatchMode || "").toUpperCase() !== "GO_CONFIRM") {
+      return res.status(409).json({ ok: false, error: "Kiosk-ul necesita un Gufo Go selectat pentru preluarea comenzilor." })
+    }
+
+    return res.json({
+      ok: true,
+      terminal: {
+        id: resolved.terminal.id,
+        deviceId: resolved.terminal.deviceId,
+        label: resolved.terminal.label || "Gufo Kiosk",
+      },
+      restaurant: menu.restaurant,
+      catalog: menu.catalog,
+      checkout: {
+        paymentProvider: "VIVA",
+        paymentMethods: [{ code: "CARD", label: "Card online" }],
+        fulfillmentTypes: ["DELIVERY", "PICKUP"],
+        schedule: "NEXT_DAY_ONLY",
+      },
+      updatedAt: menu.updatedAt,
+    })
+  } catch (error: unknown) {
+    return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca kiosk-ul.") })
+  }
+})
 
 function toMoneyValue(value: unknown) {
   const amount = Number(value || 0)
