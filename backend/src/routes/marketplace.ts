@@ -1146,7 +1146,7 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
 
 router.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
 
-router.post("/api/v1/kiosk/payments/viva/prepare", async (req: KioskAuthRequest, res) => {
+export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Response) {
   const parsed = KioskVivaPrepareSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
 
@@ -1210,9 +1210,9 @@ router.post("/api/v1/kiosk/payments/viva/prepare", async (req: KioskAuthRequest,
   } catch (error: unknown) {
     return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut initializa plata Viva pentru kiosk.") })
   }
-})
+}
 
-router.get("/api/v1/kiosk/payments/attempts/:attemptId", async (req: KioskAuthRequest, res) => {
+export async function handleKioskVivaPaymentStatus(req: KioskAuthRequest, res: Response) {
   try {
     const resolved = await resolveGufoKioskIntegration(req)
     if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
@@ -1237,7 +1237,7 @@ router.get("/api/v1/kiosk/payments/attempts/:attemptId", async (req: KioskAuthRe
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut verifica plata kiosk-ului.") })
   }
-})
+}
 
 router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, res) => {
   const parsed = KioskProfileCodeRequestSchema.safeParse(req.body)
