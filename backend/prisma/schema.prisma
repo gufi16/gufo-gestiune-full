@@ -906,6 +906,7 @@ model Terminal {
   deviceId           String
   deviceType         TerminalDeviceType @default(POS)
   label              String?
+  isActive           Boolean @default(true)
   isLockedToLocation Boolean @default(true)
 
   createdAt DateTime @default(now())

@@ -309,6 +309,7 @@ async function findActiveTerminalCandidates(params: {
         ...(deviceIds.length ? [{ deviceId: { in: deviceIds } }] : []),
       ],
       ...(requestedDeviceType ? { deviceType: requestedDeviceType as never } : {}),
+      isActive: true,
       ...(params.tenantSubdomain
         ? {
             tenant: {
@@ -3034,6 +3035,7 @@ async function resolveGufoGoTerminal(req: PosAuthRequest) {
       id: auth.terminalId,
       tenantId: auth.tenantId,
       deviceType: "GO",
+      isActive: true,
     },
     select: {
       id: true,
@@ -3045,6 +3047,18 @@ async function resolveGufoGoTerminal(req: PosAuthRequest) {
 
   return terminal ? { auth, terminal } : null;
 }
+
+router.post("/api/v1/gufo-go/deactivate", async (req: PosAuthRequest, res: Response) => {
+  const resolved = await resolveGufoGoTerminal(req);
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Go neautentificat. Fa pairing din nou." });
+
+  await prisma.terminal.update({
+    where: { id: resolved.terminal.id },
+    data: { isActive: false },
+  });
+
+  return res.json({ ok: true });
+});
 
 async function resolveGufoGoOrder(auth: NonNullable<PosAuthRequest["auth"]>, terminalId: string, inputOrderId: string) {
   const order = await resolvePosMarketplaceOrder(auth, inputOrderId, {
