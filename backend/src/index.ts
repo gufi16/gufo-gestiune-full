@@ -66,7 +66,7 @@ import inventoryDocsPdf from "./routes/inventoryDocsPdf"
 import reportsRouter from "./routes/reports"
 import accountingExportRouter from "./routes/accountingExport"
 import adminRouter from "./routes/admin"
-import marketplaceRouter from "./routes/marketplace"
+import marketplaceRouter, { handleKioskBootstrap } from "./routes/marketplace"
 import salesInvoicesRouter from "./routes/salesInvoices"
 import customersRouter from "./routes/customers"
 import minutesDocsRouter from "./routes/minutesDocs"
@@ -268,6 +268,8 @@ app.use(deliveryAuthRouter)
 app.use(deliveryOptionsRouter)
 app.use(posRouter)
 app.use(companyRouter)
+// Public kiosk devices authenticate with their paired terminal token, not an ERP user session.
+app.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
 app.use(marketplaceRouter)
 app.use(productsRouter)
 app.use(metaRouter)

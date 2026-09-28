@@ -1098,7 +1098,7 @@ async function buildGufoDeliveryMenuPayload(req: Request, integration: GufoDeliv
 
 // The kiosk is paired to one restaurant from the ERP. It never accepts a restaurant
 // identifier from the device, so a public terminal cannot browse another tenant's menu.
-router.get("/api/v1/kiosk/bootstrap", async (req: KioskAuthRequest, res) => {
+export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response) {
   try {
     const resolved = await resolveGufoKioskIntegration(req)
     if (!resolved) {
@@ -1131,7 +1131,9 @@ router.get("/api/v1/kiosk/bootstrap", async (req: KioskAuthRequest, res) => {
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca kiosk-ul.") })
   }
-})
+}
+
+router.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
 
 router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, res) => {
   const parsed = KioskProfileCodeRequestSchema.safeParse(req.body)
