@@ -501,8 +501,10 @@ router.get("/api/v1/meta/terminals", async (req: AuthedRequest, res) => {
       ? TerminalDeviceType.KDS
       : requestedDeviceType === "POS"
         ? TerminalDeviceType.POS
-        : requestedDeviceType === "GO"
+      : requestedDeviceType === "GO"
           ? TerminalDeviceType.GO
+          : requestedDeviceType === "KIOSK"
+            ? TerminalDeviceType.KIOSK
           : TerminalDeviceType.POS
 
   // A delivery destination is scoped to its selected restaurant location. Terminal.companyId
