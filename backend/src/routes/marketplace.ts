@@ -270,6 +270,17 @@ const PublicGufoDeliveryVivaPrepareSchema = PublicGufoDeliveryCheckoutSchema.ext
   }),
 })
 
+// The kiosk is a trusted terminal, not a signed-in delivery customer. The
+// restaurant is resolved from its paired terminal and is never accepted from it.
+const KioskVivaPrepareSchema = PublicGufoDeliveryVivaPrepareSchema.omit({ restaurantId: true }).extend({
+  customer: z.object({
+    name: z.string().trim().min(1),
+    phone: z.string().trim().min(1),
+    email: z.string().trim().email().optional(),
+    note: z.string().trim().nullish().transform((value) => value || undefined),
+  }),
+})
+
 const DeliveryRestaurantReviewSchema = z.object({
   rating: z.coerce.number().int().min(1).max(5),
   comment: z.string().trim().max(800).optional(),
@@ -1134,6 +1145,99 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
 }
 
 router.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
+
+router.post("/api/v1/kiosk/payments/viva/prepare", async (req: KioskAuthRequest, res) => {
+  const parsed = KioskVivaPrepareSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+
+  try {
+    const resolved = await resolveGufoKioskIntegration(req)
+    if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
+
+    const settings = integrationSettings(resolved.integration.settingsJson)
+    if (String(settings.dispatchMode || "").toUpperCase() !== "GO_CONFIRM") {
+      return res.status(409).json({ ok: false, error: "Kiosk-ul necesita un Gufo Go selectat pentru preluarea comenzilor." })
+    }
+
+    const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
+    const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload)
+    const vivaConfig = getRequiredVivaConfig(settings)
+    const attempt = await db.deliveryPaymentAttempt.create({
+      data: {
+        tenantId,
+        locationId: String(resolved.integration.locationId || "").trim(),
+        integrationId: resolved.integration.id,
+        provider: "VIVA",
+        methodCode: parsed.data.payment.type,
+        status: "PENDING",
+        currency: "RON",
+        amount: new Prisma.Decimal(importPayload.total),
+        checkoutPayloadJson: checkoutPayload as Prisma.InputJsonValue,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    })
+    const vivaOrder = await createVivaPaymentOrder({
+      vivaConfig,
+      amount: importPayload.total,
+      customerName: parsed.data.customer.name,
+      customerEmail: parsed.data.customer.email,
+      customerPhone: parsed.data.customer.phone,
+      merchantTrns: `Gufo Kiosk ${importPayload.externalOrderNumber}`,
+      customerTrns: `Comanda Gufo Kiosk ${importPayload.externalOrderNumber}`,
+      methodCode: parsed.data.payment.type,
+    })
+    const updated = await db.deliveryPaymentAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: "REDIRECTED",
+        vivaOrderCode: vivaOrder.orderCode,
+        checkoutUrl: vivaOrder.checkoutUrl,
+        requestPayloadJson: vivaOrder.requestPayload as Prisma.InputJsonValue,
+        responsePayloadJson: vivaOrder.responsePayload as Prisma.InputJsonValue,
+      },
+    })
+    return res.status(201).json({
+      ok: true,
+      payment: {
+        attemptId: updated.id,
+        status: updated.status,
+        amount: Number(updated.amount),
+        currency: updated.currency,
+        checkoutUrl: updated.checkoutUrl,
+        expiresAt: updated.expiresAt?.toISOString() || null,
+      },
+    })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut initializa plata Viva pentru kiosk.") })
+  }
+})
+
+router.get("/api/v1/kiosk/payments/attempts/:attemptId", async (req: KioskAuthRequest, res) => {
+  try {
+    const resolved = await resolveGufoKioskIntegration(req)
+    if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
+    const attempt = await db.deliveryPaymentAttempt.findFirst({
+      where: { id: String(req.params.attemptId || ""), integrationId: resolved.integration.id },
+      select: { id: true, status: true, amount: true, currency: true, externalOrderId: true, paidAt: true, failedAt: true, expiresAt: true },
+    })
+    if (!attempt) return res.status(404).json({ ok: false, error: "Plata kiosk-ului nu a fost gasita." })
+    return res.json({
+      ok: true,
+      payment: {
+        attemptId: attempt.id,
+        status: attempt.status,
+        amount: Number(attempt.amount),
+        currency: attempt.currency,
+        externalOrderId: attempt.externalOrderId,
+        paidAt: attempt.paidAt?.toISOString() || null,
+        failedAt: attempt.failedAt?.toISOString() || null,
+        expiresAt: attempt.expiresAt?.toISOString() || null,
+      },
+    })
+  } catch (error: unknown) {
+    return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut verifica plata kiosk-ului.") })
+  }
+})
 
 router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, res) => {
   const parsed = KioskProfileCodeRequestSchema.safeParse(req.body)
@@ -3810,9 +3914,12 @@ router.post("/api/v1/public/delivery/payments/viva/webhook", async (req, res) =>
     const customer = attempt.customerId
       ? await db.deliveryCustomerAccount.findUnique({ where: { id: attempt.customerId }, select: { email: true } })
       : null
+    const kioskEmail = isRecord(attempt.checkoutPayloadJson) && isRecord(attempt.checkoutPayloadJson.customer)
+      ? String(attempt.checkoutPayloadJson.customer.email || "").trim() || null
+      : null
     // A webhook has no authenticated app session, so resolve the saved account email.
     void queueGufoDeliveryOrderReceipt({
-      email: customer?.email,
+      email: customer?.email || kioskEmail,
       orderId: externalOrder.id,
       payload: importPayload,
     }).catch((error: unknown) => {
