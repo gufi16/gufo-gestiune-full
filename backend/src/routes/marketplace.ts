@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express"
 import crypto from "crypto"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { Prisma, TerminalDeviceType } from "@prisma/client"
 import { prisma } from "../lib/prisma"
@@ -216,6 +217,14 @@ const DeliveryAnnouncementSchema = z.object({
   body: z.string().trim().min(3).max(1200),
   isPublished: z.boolean().default(true),
   expiresAt: z.coerce.date().nullable().optional(),
+})
+
+const KioskProfileCodeRequestSchema = z.object({
+  email: z.string().trim().email(),
+})
+
+const KioskProfileCodeVerifySchema = KioskProfileCodeRequestSchema.extend({
+  code: z.string().trim().regex(/^\d{4}$/),
 })
 
 const PublicGufoDeliveryCheckoutSchema = z.object({
@@ -1122,6 +1131,90 @@ router.get("/api/v1/kiosk/bootstrap", async (req: KioskAuthRequest, res) => {
   } catch (error: unknown) {
     return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut incarca kiosk-ul.") })
   }
+})
+
+router.post("/api/v1/kiosk/profile-code/request", async (req: KioskAuthRequest, res) => {
+  const parsed = KioskProfileCodeRequestSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Adresa de email nu este valida." })
+
+  const resolved = await resolveGufoKioskIntegration(req)
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat." })
+
+  const email = parsed.data.email.toLowerCase()
+  const customer = await db.deliveryCustomerAccount.findFirst({
+    where: { email, isActive: true },
+    select: { id: true },
+  })
+  // Keep the response identical when no profile exists so the kiosk cannot probe customer emails.
+  if (!customer || !hasSmtpConfig()) return res.json({ ok: true })
+
+  const code = String(crypto.randomInt(1000, 10_000))
+  await db.deliveryKioskAccessCode.deleteMany({
+    where: { terminalId: resolved.terminal.id, email, consumedAt: null },
+  })
+  await db.deliveryKioskAccessCode.create({
+    data: {
+      terminalId: resolved.terminal.id,
+      customerId: customer.id,
+      email,
+      codeHash: await bcrypt.hash(code, 10),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  })
+
+  await sendMail({
+    to: email,
+    fromName: "Gufo Kiosk",
+    subject: "Codul tău Gufo Kiosk",
+    text: `Codul pentru preluarea datelor tale este ${code}. Expiră în 10 minute. Nu îl comunica nimănui.`,
+    html: `<!doctype html><html><body style="margin:0;background:#f4f7f5;font-family:Arial,sans-serif;color:#19352b"><div style="max-width:520px;margin:24px auto;background:#fff;border-radius:18px;padding:30px"><div style="font-size:22px;font-weight:700">Gufo Kiosk</div><p>Folosește codul de mai jos pentru a prelua datele de livrare la kiosk.</p><div style="margin:24px 0;padding:18px;text-align:center;background:#eef7f2;border-radius:12px;font-size:30px;font-weight:700;letter-spacing:8px">${code}</div><p style="color:#66756f">Codul expiră în 10 minute. Nu îl comunica nimănui.</p></div></body></html>`,
+  })
+  return res.json({ ok: true })
+})
+
+router.post("/api/v1/kiosk/profile-code/verify", async (req: KioskAuthRequest, res) => {
+  const parsed = KioskProfileCodeVerifySchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Codul trebuie sa aiba 4 cifre." })
+
+  const resolved = await resolveGufoKioskIntegration(req)
+  if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat." })
+
+  const email = parsed.data.email.toLowerCase()
+  const accessCode = await db.deliveryKioskAccessCode.findFirst({
+    where: { terminalId: resolved.terminal.id, email, consumedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  })
+  if (!accessCode || !(await bcrypt.compare(parsed.data.code, accessCode.codeHash))) {
+    return res.status(400).json({ ok: false, error: "Codul este invalid sau a expirat." })
+  }
+
+  const customer = accessCode.customerId
+    ? await db.deliveryCustomerAccount.findUnique({
+        where: { id: accessCode.customerId },
+        include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], take: 1 } },
+      })
+    : null
+  if (!customer || !customer.isActive) return res.status(404).json({ ok: false, error: "Profilul nu mai este disponibil." })
+
+  await db.deliveryKioskAccessCode.update({ where: { id: accessCode.id }, data: { consumedAt: new Date() } })
+  const address = customer.addresses[0] || null
+  return res.json({
+    ok: true,
+    profile: {
+      fullName: customer.fullName,
+      email: customer.email,
+      phone: customer.phone,
+      address: address ? {
+        label: address.label,
+        addressLine: address.addressLine,
+        details: address.details,
+        city: address.city,
+        county: address.county,
+        country: address.country,
+        postalCode: address.postalCode,
+      } : null,
+    },
+  })
 })
 
 function toMoneyValue(value: unknown) {

@@ -623,6 +623,20 @@ model DeliveryCustomerAddress {
   @@index([customerId, isDefault])
 }
 
+model DeliveryKioskAccessCode {
+  id                String    @id @default(cuid())
+  terminalId        String
+  customerId        String?
+  email             String
+  codeHash          String
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([terminalId, email, createdAt])
+  @@index([email, expiresAt])
+}
+
 model DeliveryCustomerPaymentMethod {
   id                  String   @id @default(cuid())
   customerId          String
