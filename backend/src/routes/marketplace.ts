@@ -1160,7 +1160,7 @@ export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Respons
     }
 
     const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
-    const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload)
+    const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload, { skipDeliveryAreaValidation: true })
     const vivaConfig = getRequiredVivaConfig(settings)
     const attempt = await db.deliveryPaymentAttempt.create({
       data: {
@@ -1588,7 +1588,8 @@ async function getVivaConfigForIntegrationId(integrationId: string) {
 
 async function buildGufoDeliveryCheckoutImportPayload(
   req: Request,
-  input: z.infer<typeof PublicGufoDeliveryCheckoutSchema>
+  input: z.infer<typeof PublicGufoDeliveryCheckoutSchema>,
+  options: { skipDeliveryAreaValidation?: boolean } = {},
 ) {
   const integration = await resolvePublicGufoDeliveryIntegration(input.restaurantId)
   if (!integration) {
@@ -1600,20 +1601,22 @@ async function buildGufoDeliveryCheckoutImportPayload(
   if (!deliveryAvailability.isOpen) throw new Error(`Restaurantul este momentan indisponibil. ${deliveryAvailability.label}.`)
   const isPickup = input.fulfillmentType === "PICKUP"
   if (!isPickup) {
-    const deliveryArea = normalizeDeliveryServiceArea(deliverySettings.deliveryServiceArea)
-    if (!deliveryArea) {
-      throw new Error("Restaurantul nu are o zona de livrare configurata.")
-    }
     const deliveryAddress = input.deliveryAddress
     if (!deliveryAddress) {
       throw new Error("Alege adresa de livrare inainte de plasarea comenzii.")
     }
-    const deliveryPoint = parseDeliveryGeoPoint(deliveryAddress.lat, deliveryAddress.lng)
-    if (!deliveryPoint) {
-      throw new Error("Adresa de livrare trebuie pozitionata pe harta inainte de plasarea comenzii.")
-    }
-    if (!deliveryServiceAreaContainsPoint(deliveryArea, deliveryPoint)) {
-      throw new Error("Restaurantul selectat nu livreaza la aceasta adresa.")
+    if (!options.skipDeliveryAreaValidation) {
+      const deliveryArea = normalizeDeliveryServiceArea(deliverySettings.deliveryServiceArea)
+      if (!deliveryArea) {
+        throw new Error("Restaurantul nu are o zona de livrare configurata.")
+      }
+      const deliveryPoint = parseDeliveryGeoPoint(deliveryAddress.lat, deliveryAddress.lng)
+      if (!deliveryPoint) {
+        throw new Error("Adresa de livrare trebuie pozitionata pe harta inainte de plasarea comenzii.")
+      }
+      if (!deliveryServiceAreaContainsPoint(deliveryArea, deliveryPoint)) {
+        throw new Error("Restaurantul selectat nu livreaza la aceasta adresa.")
+      }
     }
   }
 
