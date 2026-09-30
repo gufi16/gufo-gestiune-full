@@ -1328,7 +1328,7 @@ export default function ControlPanelClientDetails() {
   const isOverview = activeTab === "overview"
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 lg:h-[calc(100vh-104px)] lg:overflow-y-auto lg:pr-1">
       <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
