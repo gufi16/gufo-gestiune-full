@@ -245,7 +245,7 @@ type DynamicModuleItem = {
   inheritedFrom?: string[]
 }
 
-type ClientTab = "overview" | "license" | "locations" | "users"
+type ClientTab = "overview" | "subscription" | "license" | "locations" | "users"
 type OverviewPanel = "profile" | "companies" | null
 type DeviceType = "POS" | "KDS" | "DEPOZIT" | "GO" | "KIOSK"
 
@@ -538,8 +538,8 @@ export default function ControlPanelClientDetails() {
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [licenseModalOpen, setLicenseModalOpen] = useState(false)
-  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
   const [subscriptionBusy, setSubscriptionBusy] = useState(false)
+  const [selectedSubscriptionLicenseId, setSelectedSubscriptionLicenseId] = useState("")
   const [subscriptionForm, setSubscriptionForm] = useState({ planName: "Licenta personalizata", billingCycle: "YEARLY", price: "0", currency: "RON", billingStatus: "OK", nextBillingDate: "", notes: "" })
   const [licenseEditorSection, setLicenseEditorSection] = useState<"core" | "marketplace" | "modules">("core")
   const [overviewPanelOpen, setOverviewPanelOpen] = useState<OverviewPanel>(null)
@@ -608,26 +608,30 @@ export default function ControlPanelClientDetails() {
     }
   }
 
-  function openSubscriptionEditor() {
-    const subscription = client?.subscription
+  function openSubscriptionEditor(licenseId?: string) {
+    const resolvedLicenseId = licenseId || selectedSubscriptionLicenseId || client?.license?.id || client?.licenses?.[0]?.id || ""
+    const subscription = (Array.isArray(client?.subscriptions) ? client.subscriptions : []).find((item: any) => item.licenseId === resolvedLicenseId)
+      || (client?.licenses?.length === 1 ? client?.subscription : null)
+    setSelectedSubscriptionLicenseId(resolvedLicenseId)
     setSubscriptionForm({
       planName: subscription?.plan?.name || "Licenta personalizata",
       billingCycle: subscription?.billingCycle === "MONTHLY" ? "MONTHLY" : "YEARLY",
       price: String(subscription?.price ?? 0),
       currency: subscription?.currency || "RON",
       billingStatus: subscription?.billingStatus || "OK",
-      nextBillingDate: toInputDate(subscription?.nextBillingDate),
+      nextBillingDate: toInputDate((Array.isArray(client?.licenses) ? client.licenses : []).find((item: any) => item.id === resolvedLicenseId)?.expiresAt),
       notes: subscription?.notes || "",
     })
-    setSubscriptionModalOpen(true)
+    setActiveTab("subscription")
   }
 
   async function handleSaveSubscription() {
     try {
       setSubscriptionBusy(true)
-      await api(`/api/v1/admin/clients/${id}/subscription`, { method: "PUT", body: JSON.stringify({ ...subscriptionForm, price: Number(subscriptionForm.price || 0), nextBillingDate: subscriptionForm.nextBillingDate || null, notes: subscriptionForm.notes || null }) })
+      const licenseId = selectedSubscriptionLicenseId || client?.license?.id || client?.licenses?.[0]?.id
+      if (!licenseId) throw new Error("Selecteaza licenta pentru care salvezi abonamentul.")
+      await api(`/api/v1/admin/clients/${id}/subscription`, { method: "PUT", body: JSON.stringify({ ...subscriptionForm, licenseId, price: Number(subscriptionForm.price || 0), notes: subscriptionForm.notes || null }) })
       setMessage("Abonamentul comercial a fost salvat.")
-      setSubscriptionModalOpen(false)
       await load()
     } catch (err: any) {
       setError(err?.message || "Nu am putut salva abonamentul.")
@@ -649,6 +653,11 @@ export default function ControlPanelClientDetails() {
   }, [searchParams])
 
   const users = Array.isArray(client?.users) ? (client.users as User[]) : []
+  const licenses = Array.isArray(client?.licenses) ? client.licenses : client?.license ? [client.license] : []
+  const subscriptions = Array.isArray(client?.subscriptions) ? client.subscriptions : client?.subscription ? [client.subscription] : []
+  const selectedSubscriptionLicense = licenses.find((license: any) => license.id === selectedSubscriptionLicenseId) || licenses[0] || null
+  const selectedSubscription = subscriptions.find((subscription: any) => subscription.licenseId === selectedSubscriptionLicense?.id)
+    || (licenses.length === 1 ? subscriptions[0] : null)
   const locations = Array.isArray(client?.locations) ? (client.locations as LocationItem[]) : []
   const auditLogs = Array.isArray(client?.auditLogs) ? (client.auditLogs as AuditLogItem[]) : []
   const companies = Array.isArray(client?.companies) ? client.companies : []
@@ -1382,7 +1391,7 @@ export default function ControlPanelClientDetails() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={openSubscriptionEditor}
+            onClick={() => openSubscriptionEditor()}
             className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
           >
             Abonament comercial
@@ -1439,6 +1448,7 @@ export default function ControlPanelClientDetails() {
           <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Administrare client</div>
           <div className="mt-2 flex flex-wrap gap-2 lg:flex-col lg:[&>button]:w-full lg:[&>button]:justify-between">
             {tabButton("Prezentare", isOverview, () => setActiveTab("overview"))}
+            {tabButton("Abonament", activeTab === "subscription", () => openSubscriptionEditor(), licenses.length)}
             {tabButton("Licenta", activeTab === "license", () => setActiveTab("license"), totalEnabledModules)}
             {tabButton("Locatii si device-uri", activeTab === "locations", () => setActiveTab("locations"), locations.length)}
             {tabButton("Echipa", activeTab === "users", () => setActiveTab("users"), users.length)}
@@ -1454,7 +1464,7 @@ export default function ControlPanelClientDetails() {
               <div className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Administrare client</div>
               <div className="mt-2 grid gap-1">
                 <button type="button" onClick={() => setOverviewPanelOpen("profile")} className="flex items-center justify-between bg-[#17324D] px-3 py-3 text-left text-sm font-semibold text-white"><span>Date firmă</span><Pencil size={14} /></button>
-                <button type="button" onClick={openSubscriptionEditor} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Abonament comercial</span><span className="text-xs text-slate-400">{client?.subscription?.billingCycle === "MONTHLY" ? "Lunar" : client?.subscription?.billingCycle === "YEARLY" ? "Anual" : "Setează"}</span></button>
+                <button type="button" onClick={() => openSubscriptionEditor()} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Abonament comercial</span><span className="text-xs text-slate-400">{licenses.length} licențe</span></button>
                 <button type="button" onClick={() => setActiveTab("license")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Licență și module</span><span className="text-xs text-slate-400">{enabledDynamicModules}</span></button>
                 <button type="button" onClick={() => setActiveTab("locations")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Locații și device-uri</span><span className="text-xs text-slate-400">{locations.length}</span></button>
                 <button type="button" onClick={() => setActiveTab("users")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Echipă și acces</span><span className="text-xs text-slate-400">{users.length}</span></button>
@@ -1469,7 +1479,7 @@ export default function ControlPanelClientDetails() {
             <div className="p-4">
               <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                 <div><div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Prezentare</div><div className="mt-1 text-lg font-semibold text-[#17324D]">Date operaționale și acces rapid</div></div>
-                <div className="flex flex-wrap gap-2"><button type="button" onClick={openSubscriptionEditor} className="inline-flex items-center justify-center gap-2 border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#17324D]"><span>Abonament comercial</span></button><button type="button" onClick={() => setLicenseModalOpen(true)} className="inline-flex items-center justify-center gap-2 bg-[#17324D] px-3 py-2 text-sm font-semibold text-white"><Pencil size={14} /> Configurează licența</button></div>
+                <div className="flex flex-wrap gap-2"><button type="button" onClick={() => openSubscriptionEditor()} className="inline-flex items-center justify-center gap-2 border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#17324D]"><span>Abonament comercial</span></button><button type="button" onClick={() => setLicenseModalOpen(true)} className="inline-flex items-center justify-center gap-2 bg-[#17324D] px-3 py-2 text-sm font-semibold text-white"><Pencil size={14} /> Configurează licența</button></div>
               </div>
 
               <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1559,7 +1569,7 @@ export default function ControlPanelClientDetails() {
             </section>
 
             <section className="border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Contract si contact</div><button type="button" onClick={openSubscriptionEditor} className="border border-slate-200 px-2 py-1 text-xs font-semibold text-[#17324D]">Editeaza abonamentul</button></div>
+              <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Contract si contact</div><button type="button" onClick={() => openSubscriptionEditor()} className="border border-slate-200 px-2 py-1 text-xs font-semibold text-[#17324D]">Editeaza abonamentul</button></div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm xl:grid-cols-3"><div><div className="text-xs text-slate-400">Pachet</div><div className="mt-1 font-semibold text-slate-800">{client?.subscription?.plan?.name || "-"}</div></div><div><div className="text-xs text-slate-400">Valoare</div><div className="mt-1 font-semibold text-slate-800">{currencyFormat(Number(client?.subscription?.price), client?.subscription?.currency)}</div></div><div><div className="text-xs text-slate-400">Perioada</div><div className="mt-1 font-semibold text-slate-800">{client?.subscription?.billingCycle === "MONTHLY" ? "Lunar" : client?.subscription?.billingCycle === "YEARLY" ? "Anual" : "-"}</div></div><div><div className="text-xs text-slate-400">Facturare</div><div className="mt-1 font-semibold text-slate-800">{client?.subscription?.billingStatus || "-"}</div></div><div><div className="text-xs text-slate-400">Urmatoarea plata</div><div className="mt-1 font-semibold text-slate-800">{formatDate(client?.subscription?.nextBillingDate)}</div></div><div><div className="text-xs text-slate-400">Email principal</div><div className="mt-1 truncate font-semibold text-slate-800">{principalUser?.email || client?.company?.email || "-"}</div></div></div>
             </section>
           </div>
@@ -1763,6 +1773,40 @@ export default function ControlPanelClientDetails() {
           </div>
         </div>
       ) : null}
+      {activeTab === "subscription" ? (
+        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Licențele clientului</div>
+            <div className="mt-1 text-sm font-semibold text-[#17324D]">Alege licența vândută</div>
+            <div className="mt-3 grid gap-2">
+              {licenses.map((license: any) => {
+                const subscription = subscriptions.find((item: any) => item.licenseId === license.id) || (licenses.length === 1 ? subscriptions[0] : null)
+                const selected = selectedSubscriptionLicense?.id === license.id
+                return <button key={license.id} type="button" onClick={() => openSubscriptionEditor(license.id)} className={`border px-3 py-3 text-left transition ${selected ? "border-[#17324D] bg-[#17324D] text-white" : "border-slate-200 bg-white text-slate-700 hover:border-[#17324D]"}`}><div className="font-mono text-xs font-semibold">{license.keyPrefix || "LICENȚĂ"}</div><div className={`mt-1 text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>Expiră {formatDate(license.expiresAt)}</div><div className={`mt-2 text-xs font-semibold ${selected ? "text-white" : "text-[#17324D]"}`}>{subscription ? `${currencyFormat(Number(subscription.price), subscription.currency)} · ${subscription.billingCycle === "MONTHLY" ? "lunar" : "anual"}` : "Fără abonament setat"}</div></button>
+              })}
+              {!licenses.length ? <div className="border border-dashed border-slate-300 p-3 text-sm text-slate-500">Clientul nu are încă o licență creată.</div> : null}
+            </div>
+          </aside>
+
+          <section className="border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Abonament comercial</div><div className="mt-1 text-lg font-semibold text-[#17324D]">{selectedSubscriptionLicense?.keyPrefix || "Selectează o licență"}</div><div className="mt-1 text-sm text-slate-500">Scadența se preia automat din data de expirare a licenței.</div></div>
+              <div className="border border-slate-200 bg-slate-50 px-3 py-2 text-right"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Scadență licență</div><div className="mt-1 text-sm font-semibold text-[#17324D]">{formatDate(selectedSubscriptionLicense?.expiresAt)}</div></div>
+            </div>
+
+            {selectedSubscriptionLicense ? <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <label className="block lg:col-span-2"><span className="text-xs font-semibold text-slate-600">Denumire pachet</span><input value={subscriptionForm.planName} onChange={(event) => setSubscriptionForm((current) => ({ ...current, planName: event.target.value }))} className="mt-1 w-full border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. Gufo ERP Pro" /></label>
+              <label className="block"><span className="text-xs font-semibold text-slate-600">Facturare</span><select value={subscriptionForm.billingCycle} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingCycle: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="MONTHLY">Lunar</option><option value="YEARLY">Anual</option></select></label>
+              <label className="block"><span className="text-xs font-semibold text-slate-600">Preț</span><div className="mt-1 flex"><input type="number" min="0" step="0.01" value={subscriptionForm.price} onChange={(event) => setSubscriptionForm((current) => ({ ...current, price: event.target.value }))} className="min-w-0 flex-1 border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" /><select value={subscriptionForm.currency} onChange={(event) => setSubscriptionForm((current) => ({ ...current, currency: event.target.value }))} className="border border-l-0 border-slate-200 bg-slate-50 px-2 text-sm outline-none"><option value="RON">RON</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></div></label>
+              <label className="block"><span className="text-xs font-semibold text-slate-600">Stare plată</span><select value={subscriptionForm.billingStatus} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingStatus: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="OK">La zi</option><option value="UNPAID">Neplătit</option><option value="FAILED">Eșuat</option></select></label>
+              <label className="block"><span className="text-xs font-semibold text-slate-600">Scadență</span><input value={formatDate(selectedSubscriptionLicense.expiresAt)} readOnly className="mt-1 w-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none" /></label>
+              <label className="block lg:col-span-2"><span className="text-xs font-semibold text-slate-600">Notițe interne</span><textarea value={subscriptionForm.notes} onChange={(event) => setSubscriptionForm((current) => ({ ...current, notes: event.target.value }))} rows={3} className="mt-1 w-full resize-none border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. contract semnat, condiții negociate" /></label>
+              <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 lg:col-span-2"><div className="text-sm text-slate-500">{selectedSubscription ? "Condițiile existente vor fi actualizate." : "Prima salvare creează abonamentul acestei licențe."}</div><button type="button" onClick={handleSaveSubscription} disabled={subscriptionBusy || !subscriptionForm.planName.trim()} className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"><Save size={15} />{subscriptionBusy ? "Se salvează..." : "Salvează abonamentul"}</button></div>
+            </div> : null}
+          </section>
+        </section>
+      ) : null}
+
       {activeTab === "license" ? (
         <section className="grid gap-4">
           <div className="border border-slate-200 bg-white p-4 shadow-sm">
@@ -2769,32 +2813,6 @@ export default function ControlPanelClientDetails() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      ) : null}
-
-      {subscriptionModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl border border-slate-200 bg-white p-5 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Abonament comercial</div>
-                <div className="mt-1 text-xl font-semibold text-[#17324D]">Prețul și perioada licenței</div>
-                <div className="mt-1 text-sm text-slate-500">Date interne pentru urmărirea contractului clientului.</div>
-              </div>
-              <button type="button" onClick={() => setSubscriptionModalOpen(false)} disabled={subscriptionBusy} className="border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Închide</button>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <label className="block sm:col-span-2"><span className="text-xs font-semibold text-slate-600">Denumire pachet</span><input value={subscriptionForm.planName} onChange={(event) => setSubscriptionForm((current) => ({ ...current, planName: event.target.value }))} className="mt-1 w-full border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. Gufo ERP Pro" /></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Facturare</span><select value={subscriptionForm.billingCycle} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingCycle: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="MONTHLY">Lunar</option><option value="YEARLY">Anual</option></select></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Preț</span><div className="mt-1 flex"><input type="number" min="0" step="0.01" value={subscriptionForm.price} onChange={(event) => setSubscriptionForm((current) => ({ ...current, price: event.target.value }))} className="min-w-0 flex-1 border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" /><select value={subscriptionForm.currency} onChange={(event) => setSubscriptionForm((current) => ({ ...current, currency: event.target.value }))} className="border border-l-0 border-slate-200 bg-slate-50 px-2 text-sm outline-none"><option value="RON">RON</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></div></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Stare plată</span><select value={subscriptionForm.billingStatus} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingStatus: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="OK">La zi</option><option value="UNPAID">Neplătit</option><option value="FAILED">Eșuat</option></select></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Următoarea scadență</span><input type="date" value={subscriptionForm.nextBillingDate} onChange={(event) => setSubscriptionForm((current) => ({ ...current, nextBillingDate: event.target.value }))} className="mt-1 w-full border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" /></label>
-              <label className="block sm:col-span-2"><span className="text-xs font-semibold text-slate-600">Notițe interne</span><textarea value={subscriptionForm.notes} onChange={(event) => setSubscriptionForm((current) => ({ ...current, notes: event.target.value }))} rows={2} className="mt-1 w-full resize-none border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. contract semnat, condiții negociate" /></label>
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4"><button type="button" onClick={() => setSubscriptionModalOpen(false)} disabled={subscriptionBusy} className="border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">Renunță</button><button type="button" onClick={handleSaveSubscription} disabled={subscriptionBusy || !subscriptionForm.planName.trim()} className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"><Save size={15} />{subscriptionBusy ? "Se salvează..." : "Salvează abonamentul"}</button></div>
           </div>
         </div>
       ) : null}

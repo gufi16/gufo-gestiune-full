@@ -833,6 +833,7 @@ model License {
   updatedAt DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  subscriptions Subscription[]
 
   @@index([tenantId])
 }
@@ -2630,6 +2631,7 @@ model TenantModule {
 model Subscription {
   id                 String             @id @default(cuid())
   tenantId           String
+  licenseId          String?            @unique
   planId             String
   vivaSubscriptionId String?
   vivaOrderCode      String?
@@ -2649,6 +2651,7 @@ model Subscription {
   updatedAt          DateTime           @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  license  License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
   plan     Plan      @relation(fields: [planId], references: [id])
   invoices Invoice[]
 
