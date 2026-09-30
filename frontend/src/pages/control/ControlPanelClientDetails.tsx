@@ -538,6 +538,7 @@ export default function ControlPanelClientDetails() {
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [licenseModalOpen, setLicenseModalOpen] = useState(false)
+  const [licenseEditorSection, setLicenseEditorSection] = useState<"core" | "marketplace" | "modules">("core")
   const [overviewPanelOpen, setOverviewPanelOpen] = useState<OverviewPanel>(null)
   const [activeTab, setActiveTab] = useState<ClientTab>("overview")
   const [subdomainDraft, setSubdomainDraft] = useState("")
@@ -2519,12 +2520,12 @@ export default function ControlPanelClientDetails() {
 
       {licenseModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="max-h-[calc(100vh-24px)] w-full max-w-5xl overflow-hidden border border-slate-200 bg-white p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Licenta si module</div>
-                <div className="mt-1 text-xl font-semibold text-[#17324D]">Configurezi pachetul de baza si modulele fine ale clientului</div>
-                <div className="mt-1 text-sm text-slate-500">Intai stabilesti pachetul mare, apoi activezi sau opresti modulele concrete pe care le vinzi clientului.</div>
+                <div className="mt-1 text-xl font-semibold text-[#17324D]">Configurezi accesul clientului</div>
+                <div className="mt-1 text-sm text-slate-500">Pachet, marketplace și module avansate, organizate separat.</div>
               </div>
               <button
                 type="button"
@@ -2535,14 +2536,14 @@ export default function ControlPanelClientDetails() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <div className="mt-4 grid gap-2 md:grid-cols-4">
               <label className="block">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Expirare</div>
                 <input
                   type="date"
                   value={licenseForm.expiresAt}
                   onChange={(e) => setLicenseForm((prev) => ({ ...prev, expiresAt: e.target.value }))}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
+                  className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
                 />
               </label>
               <label className="block">
@@ -2552,7 +2553,7 @@ export default function ControlPanelClientDetails() {
                   min={1}
                   value={licenseForm.limitLocations}
                   onChange={(e) => setLicenseForm((prev) => ({ ...prev, limitLocations: Number(e.target.value || 1) }))}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
+                  className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
                 />
               </label>
               <label className="block">
@@ -2562,7 +2563,7 @@ export default function ControlPanelClientDetails() {
                   min={1}
                   value={licenseForm.limitTerminals}
                   onChange={(e) => setLicenseForm((prev) => ({ ...prev, limitTerminals: Number(e.target.value || 1) }))}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
+                  className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
                 />
               </label>
               <label className="block">
@@ -2572,12 +2573,19 @@ export default function ControlPanelClientDetails() {
                   min={1}
                   value={licenseForm.limitKdsDevices}
                   onChange={(e) => setLicenseForm((prev) => ({ ...prev, limitKdsDevices: Number(e.target.value || 1) }))}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
+                  className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
                 />
               </label>
             </div>
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 flex flex-wrap gap-2 border-y border-slate-100 py-3">
+              <button type="button" onClick={() => setLicenseEditorSection("core")} className={licenseEditorSection === "core" ? "bg-[#17324D] px-3 py-2 text-xs font-semibold text-white" : "border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"}>Pachet de bază</button>
+              <button type="button" onClick={() => setLicenseEditorSection("marketplace")} className={licenseEditorSection === "marketplace" ? "bg-[#17324D] px-3 py-2 text-xs font-semibold text-white" : "border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"}>Marketplace <span className="ml-1 opacity-70">{marketplaceModules.length}</span></button>
+              <button type="button" onClick={() => setLicenseEditorSection("modules")} className={licenseEditorSection === "modules" ? "bg-[#17324D] px-3 py-2 text-xs font-semibold text-white" : "border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"}>Module avansate <span className="ml-1 opacity-70">{groupedDynamicModules.reduce((total, group) => total + group.items.length, 0)}</span></button>
+            </div>
+
+            {licenseEditorSection === "core" ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {moduleLabels.map(([key, label]) => {
                 const enabled = Boolean(licenseForm.modules[key])
                 return (
@@ -2590,7 +2598,7 @@ export default function ControlPanelClientDetails() {
                         modules: { ...prev.modules, [key]: !prev.modules[key] },
                       }))
                     }
-                    className={`rounded-2xl border px-3 py-3 text-left text-sm font-medium transition ${
+                    className={`border px-3 py-2.5 text-left text-sm font-medium transition ${
                       enabled
                         ? "border-[#17324D] bg-[#17324D] text-white"
                         : "border-slate-200 bg-slate-50 text-slate-600"
@@ -2601,9 +2609,10 @@ export default function ControlPanelClientDetails() {
                 )
               })}
             </div>
+            ) : null}
 
-            {marketplaceModules.length ? (
-              <section className="mt-5 rounded-[20px] border border-slate-200 bg-[#f8fafc] p-4">
+            {licenseEditorSection === "marketplace" && marketplaceModules.length ? (
+              <section className="mt-3 border border-slate-200 bg-[#f8fafc] p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Marketplace</div>
@@ -2614,14 +2623,14 @@ export default function ControlPanelClientDetails() {
                     {marketplaceModules.filter((item) => item.enabled).length} din {marketplaceModules.length} active
                   </div>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   {marketplaceModules.map((module) => (
                     <button
                       key={module.code}
                       type="button"
                       onClick={() => handleToggleDynamicModule(module)}
                       disabled={moduleBusyCode === module.code}
-                      className={`rounded-xl border px-3 py-3 text-left transition ${
+                      className={`border px-3 py-2 text-left transition ${
                         module.enabled
                           ? "border-[#17324D] bg-[#17324D] text-white"
                           : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
@@ -2631,17 +2640,17 @@ export default function ControlPanelClientDetails() {
                         <span className="text-sm font-semibold">{moduleBusyCode === module.code ? "Se actualizeaza..." : module.name}</span>
                         <span className={`h-2 w-2 rounded-full ${module.enabled ? "bg-emerald-300" : "bg-slate-300"}`} />
                       </div>
-                      <div className={`mt-1 text-xs ${module.enabled ? "text-slate-300" : "text-slate-500"}`}>{module.enabled ? "Activ pentru client" : "Neactiv"}</div>
+                      <div className={`mt-0.5 text-xs ${module.enabled ? "text-slate-300" : "text-slate-500"}`}>{module.enabled ? "Activ pentru client" : "Neactiv"}</div>
                     </button>
                   ))}
                 </div>
               </section>
             ) : null}
 
-            {groupedDynamicModules.length ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {licenseEditorSection === "modules" && groupedDynamicModules.length ? (
+            <div className="mt-3 grid gap-3 lg:grid-cols-3">
               {groupedDynamicModules.map((group) => (
-                <div key={group.area} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div key={group.area} className="border border-slate-200 bg-slate-50 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-[#17324D]">{group.label}</div>
@@ -2654,35 +2663,31 @@ export default function ControlPanelClientDetails() {
                     </div>
                   </div>
 
-                  <div className="mt-3 grid gap-2">
+                  <div className="mt-2 grid gap-1.5">
                     {group.items.map((module) => (
                       <button
                         key={module.code}
                         type="button"
                         onClick={() => handleToggleDynamicModule(module)}
                         disabled={moduleBusyCode === module.code}
-                        className={`rounded-2xl border px-3 py-3 text-left transition ${
+                        className={`border px-2.5 py-2 text-left transition ${
                           module.enabled
                             ? "border-[#F39C12]/40 bg-[#FFF1D6] text-[#17324D]"
                             : "border-slate-200 bg-white text-slate-700"
                         } disabled:cursor-not-allowed disabled:opacity-60`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-semibold">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold">
                               {moduleBusyCode === module.code ? "Se actualizeaza..." : module.name}
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">{module.description || "Modul configurabil pe client."}</div>
                           </div>
                           <div className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-500">
                             {moduleTargetLabel(module.target)}
                           </div>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em]">
                           <span>{moduleStatusLabel(module)}</span>
-                          {Array.isArray(module.inheritedFrom) && module.inheritedFrom.length ? (
-                            <span className="text-slate-400">Din: {module.inheritedFrom.join(", ")}</span>
-                          ) : null}
                         </div>
                       </button>
                     ))}
@@ -2692,7 +2697,7 @@ export default function ControlPanelClientDetails() {
             </div>
             ) : null}
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
               <button
                 type="button"
                 onClick={handleToggleLicenseSuspended}
