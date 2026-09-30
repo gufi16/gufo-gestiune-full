@@ -926,20 +926,25 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
       }),
       prisma.stockMove.findMany({
         where: { tenantId, companyId, createdAt: { gte: from, lte: to }, ...locationFilter, ...warehouseFilter },
-        select: { productId: true, type: true, qty: true },
+        select: { productId: true, locationId: true, warehouseId: true, type: true, qty: true },
       }),
     ])
+    const stockPositionKey = (productId: string, currentLocationId: string, currentWarehouseId: string | null) =>
+      `${productId}|${currentLocationId}|${currentWarehouseId || "__NO_WAREHOUSE__"}`
     const movements = new Map<string, { input: number; output: number; adjust: number }>()
     for (const move of moves) {
-      const row = movements.get(move.productId) || { input: 0, output: 0, adjust: 0 }
+      const key = stockPositionKey(move.productId, move.locationId, move.warehouseId)
+      const row = movements.get(key) || { input: 0, output: 0, adjust: 0 }
       if (move.type === "IN") row.input += toNumber(move.qty)
       else if (move.type === "OUT") row.output += toNumber(move.qty)
       else row.adjust += toNumber(move.qty)
-      movements.set(move.productId, row)
+      movements.set(key, row)
     }
-    const rows = balances.map((balance) => {
-      const movement = movements.get(balance.productId) || { input: 0, output: 0, adjust: 0 }
-      return [
+    const stockRows = balances.map((balance) => {
+      const movement = movements.get(stockPositionKey(balance.productId, balance.locationId, balance.warehouseId)) || { input: 0, output: 0, adjust: 0 }
+      return { balance, movement }
+    })
+    const rows = stockRows.map(({ balance, movement }) => [
         balance.product.name,
         balance.location?.name || "-",
         balance.warehouse?.name || "-",
@@ -948,13 +953,11 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         pdfFmt(movement.output, 3),
         pdfFmt(movement.adjust, 3),
         pdfFmt(balance.qty, 3),
-      ]
-    })
-    const movementTotals = Array.from(movements.values()).reduce(
-      (acc, movement) => ({ input: acc.input + movement.input, output: acc.output + movement.output, adjust: acc.adjust + movement.adjust }),
-      { input: 0, output: 0, adjust: 0 },
-    )
-    const currentStock = balances.reduce((sum, balance) => sum + toNumber(balance.qty), 0)
+      ])
+    const positionsWithInput = stockRows.filter(({ movement }) => movement.input > 0).length
+    const positionsWithOutput = stockRows.filter(({ movement }) => movement.output > 0).length
+    const positionsWithAdjustments = stockRows.filter(({ movement }) => movement.adjust !== 0).length
+    const negativeStockPositions = balances.filter((balance) => toNumber(balance.qty) < 0).length
     y = drawStandardReportHeader(doc, fonts, {
       title,
       subtitle: "Situatie stoc curent si miscari in intervalul selectat",
@@ -965,17 +968,17 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
       generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
         ["POZITII STOC", String(balances.length)],
-        ["INTRARI", pdfFmt(movementTotals.input, 3)],
-        ["IESIRI", pdfFmt(movementTotals.output, 3)],
-        ["AJUSTARI", pdfFmt(movementTotals.adjust, 3)],
-        ["STOC CURENT", pdfFmt(currentStock, 3)],
+        ["POZITII CU INTRARI", String(positionsWithInput)],
+        ["POZITII CU IESIRI", String(positionsWithOutput)],
+        ["POZITII AJUSTATE", String(positionsWithAdjustments)],
+        ["STOC NEGATIV", String(negativeStockPositions)],
       ],
     })
     y = drawAccountingTable(doc, fonts, {
       margin: 36, y, title,
       columns: [
-        { label: "Produs", width: 200 }, { label: "Locatie", width: 110 }, { label: "Gestiune", width: 110 }, { label: "UM", width: 55 },
-        { label: "Intrari", width: 90, align: "right" }, { label: "Iesiri", width: 90, align: "right" }, { label: "Ajustari", width: 90, align: "right" }, { label: "Stoc curent", width: 105, align: "right" },
+        { label: "Produs", width: 180 }, { label: "Locatie", width: 95 }, { label: "Gestiune", width: 105 }, { label: "UM", width: 40 },
+        { label: "Intrari", width: 75, align: "right" }, { label: "Iesiri", width: 75, align: "right" }, { label: "Ajustari", width: 75, align: "right" }, { label: "Stoc curent", width: 100, align: "right" },
       ],
       rows,
     })
