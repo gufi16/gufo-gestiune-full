@@ -51,7 +51,7 @@ import {
 import { hasTenantModule } from "../lib/tenantModules"
 import { sendDeliveryAnnouncementPush } from "../lib/deliveryPush"
 import { hasSmtpConfig, sendMail } from "../lib/mailer"
-import { drawDocumentHero, drawInfoCards, drawSignatureRow, drawSimpleTable, drawTotalsBox, pdfDate, pdfFmt, pdfText, registerPdfFonts } from "../lib/professionalPdf"
+import { drawReferenceInvoicePdf } from "../lib/referenceInvoicePdf"
 
 const router = Router()
 
@@ -2621,28 +2621,19 @@ router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, a
   res.setHeader("Content-Type", "application/pdf")
   res.setHeader("Content-Disposition", `inline; filename=\"${filename}\"`)
   const doc = new PDFDocument({ size: "A4", margin: 34, info: { Title: filename, Author: String(issuer.name), Subject: `Factura ${invoice.number}` } })
-  const fonts = registerPdfFonts(doc)
   doc.pipe(res)
-  const margin = 34
-  const contentWidth = doc.page.width - margin * 2
-  let y = drawDocumentHero(doc, fonts, {
-    title: "FACTURA",
-    subtitle: invoice.number,
-    companyName: String(issuer.name),
-    companyLines: [String(issuer.cui || ""), String(issuer.address || ""), String(issuer.email || "")].filter(Boolean),
-    rightPairs: [{ label: "Data", value: pdfDate(invoice.issueDate) }, { label: "Scadenta", value: pdfDate(invoice.dueDate) }, { label: "Moneda", value: invoice.currency }],
-    margin,
+  drawReferenceInvoicePdf(doc, {
+    supplier: { name: issuer.name, cui: issuer.cui, regNo: issuer.regNo, address: [issuer.address, issuer.city].filter(Boolean).join(", "), county: issuer.county, iban: issuer.iban, bank: issuer.bank, phone: issuer.phone, email: issuer.email },
+    customer: { name: customer?.name || invoice.tenant.name, cui: customer?.cui, regNo: customer?.regNo, address: customer?.address, county: customer?.county, phone: customer?.phone, email: customer?.email },
+    number: invoice.number,
+    issueDate: invoice.issueDate,
+    dueDate: invoice.dueDate,
+    currency: invoice.currency,
+    lines: [{ name: `${product} - ${cycle}`, qty: 1, unitPrice: invoice.amount, net: invoice.amount, vat: 0 }],
+    totalNet: invoice.amount,
+    totalVat: 0,
+    totalGross: invoice.amount,
   })
-  y += 4
-  y = drawInfoCards(doc, fonts, { margin, y, cards: [
-    { title: "FURNIZOR", pairs: [{ label: "CUI", value: pdfText(issuer.cui) }, { label: "Reg. com.", value: pdfText(issuer.regNo) }, { label: "Adresa", value: pdfText([issuer.address, issuer.city, issuer.county].filter(Boolean).join(", ")) }, { label: "IBAN", value: pdfText(issuer.iban) }] },
-    { title: "CLIENT", pairs: [{ label: "Denumire", value: pdfText(customer?.name || invoice.tenant.name) }, { label: "CUI", value: pdfText(customer?.cui) }, { label: "Adresa", value: pdfText(customer?.address) }, { label: "Email", value: pdfText(customer?.email) }] },
-  ] })
-  y += 22
-  y = drawSimpleTable(doc, fonts, { margin, y, columns: [{ label: "#", width: 36, align: "center" }, { label: "Denumire", width: 300 }, { label: "U.M.", width: 56, align: "center" }, { label: "Cant.", width: 56, align: "right" }, { label: "Pret", width: 80, align: "right" }, { label: "Valoare", width: 86, align: "right" }], rows: [["1", `${product} - ${cycle}`, "buc", "1", pdfFmt(invoice.amount), pdfFmt(invoice.amount)]] })
-  y += 22
-  drawTotalsBox(doc, fonts, { x: margin + contentWidth - 210, y, width: 210, lines: [{ label: "Total fara TVA", value: `${pdfFmt(invoice.amount)} ${invoice.currency}` }, { label: "TVA", value: "-" }, { label: "TOTAL", value: `${pdfFmt(invoice.amount)} ${invoice.currency}` }], highlightLast: true })
-  drawSignatureRow(doc, fonts, { margin, y: Math.min(y + 110, doc.page.height - margin - 90), labels: ["Emitent", "Client"] })
   doc.end()
 })
 

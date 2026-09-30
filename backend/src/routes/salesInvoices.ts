@@ -12,6 +12,7 @@ import { ensureTenantAdminAccess } from "../lib/tenantAdmin"
 import { readAnafHeader } from "../lib/anafHttp"
 import { resolveTenantCompany } from "../lib/companyResolver"
 import { drawDocumentHero, drawInfoCards, drawSimpleTable, drawSignatureRow, drawTotalsBox, ensurePdfPage, pdfDate, pdfFmt, pdfNum, pdfText, registerPdfFonts } from "../lib/professionalPdf"
+import { drawReferenceInvoicePdf } from "../lib/referenceInvoicePdf"
 import { buildCompanyScopedTenantWhere, requireRequestCompanyId, resolveRequestCompany } from "../lib/companyScope"
 import {
   anafCheckUploadStatus,
@@ -545,7 +546,7 @@ router.get("/api/v1/sales-invoices/:id", async (req: AuthedRequest, res) => {
 
   const id = req.params.id
 
-  const invoice = await prisma.salesInvoice.findFirst({
+  const invoiceFound = await prisma.salesInvoice.findFirst({
     where: { id, tenantId, companyId },
     include: {
       location: true,
@@ -566,9 +567,10 @@ router.get("/api/v1/sales-invoices/:id", async (req: AuthedRequest, res) => {
     },
   })
 
-  if (!invoice) {
+  if (!invoiceFound) {
     return res.status(404).json({ ok: false, error: "Factura nu a fost gasita." })
   }
+  const invoice = invoiceFound
 
   return res.json({
     ok: true,
@@ -866,7 +868,7 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
   const companyId = await requireRequestCompanyId(req)
   const id = req.params.id
 
-  const invoice = await prisma.salesInvoice.findFirst({
+  const pdfInvoiceFound = await prisma.salesInvoice.findFirst({
     where: { id, tenantId, companyId },
     include: {
       location: true,
@@ -884,9 +886,10 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
     },
   })
 
-  if (!invoice) {
+  if (!pdfInvoiceFound) {
     return res.status(404).json({ ok: false, error: "Factura nu a fost gasita." })
   }
+  const invoice = pdfInvoiceFound
 
   const company = await resolveRequestCompany(req)
   const filename = `Factura_${safeFilePart(invoice.docNo)}_${safeFilePart(invoice.customerName)}.pdf`
@@ -905,6 +908,50 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
 
   const fonts = registerPdfFonts(doc)
   doc.pipe(res)
+
+  // Both ERP and Control Panel invoices use the same classic fiscal document layout.
+  drawReferenceInvoicePdf(doc, {
+    supplier: {
+      name: company?.name,
+      cui: company?.cui,
+      regNo: company?.regNo,
+      address: company?.address,
+      county: company?.county,
+      iban: company?.iban,
+      bank: company?.bank,
+      phone: company?.phone,
+      email: company?.email || company?.contactEmail,
+    },
+    customer: {
+      name: invoice.customerName,
+      cui: invoice.customerCif,
+      regNo: invoice.customerRegNo,
+      address: invoice.customerAddress,
+      county: invoice.customer?.county,
+      phone: invoice.customerPhone,
+      email: invoice.customerEmail,
+    },
+    number: invoice.docNo,
+    issueDate: invoice.docDate,
+    dueDate: invoice.dueDate || invoice.docDate,
+    currency: invoice.currency,
+    vatRate: Number(invoice.items[0]?.vatRateValue || 0),
+    lines: invoice.items.map((item) => ({
+      name: item.productName || item.product?.name,
+      qty: item.qty,
+      unitPrice: item.unitPriceFc,
+      discount: item.discountAmountFc,
+      net: item.lineNetFc,
+      vat: item.lineVatFc,
+    })),
+    totalNet: invoice.totalNetFc,
+    totalDiscount: invoice.totalDiscountFc,
+    totalVat: invoice.totalVatFc,
+    totalGross: invoice.totalWithSgrFc || invoice.totalGrossFc,
+    note: sanitizeInvoicePdfNote(invoice.note),
+  })
+  doc.end()
+  return
 
   const margin = 34
   const pageWidth = doc.page.width
@@ -1074,7 +1121,7 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
     const spvY = observations ? y + 48 : y + 2
     doc.font(fonts.bold).fontSize(9.5).fillColor(dark).text('Detalii SPV', margin, spvY, { width: noteW })
     doc.font(fonts.regular).fontSize(9).fillColor(dark)
-    doc.text(`Trimisa in SPV: ${invoice.efacturaSentAt ? new Date(invoice.efacturaSentAt).toLocaleString('ro-RO') : '-'}`, margin, spvY + 16, { width: noteW })
+    doc.text(`Trimisa in SPV: ${invoice.efacturaSentAt ? new Date(invoice.efacturaSentAt || 0).toLocaleString('ro-RO') : '-'}`, margin, spvY + 16, { width: noteW })
     doc.text(`ID incarcare: ${pdfText(invoice.efacturaUploadIndex || '-')}`, margin, spvY + 30, { width: noteW })
     doc.text(`ID descarcare: ${pdfText(invoice.efacturaDownloadId || '-')}`, margin, spvY + 44, { width: noteW })
   }
