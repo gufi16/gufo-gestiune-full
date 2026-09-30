@@ -2057,8 +2057,8 @@ export default function ControlPanelClientDetails() {
       ) : null}
 
       {activeTab === "users" ? (
-      <section className="grid gap-4 lg:grid-cols-[0.95fr_0.75fr_1.3fr]">
-        <div className="border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="grid gap-4 lg:h-[calc(100vh-190px)] lg:grid-cols-[0.95fr_0.75fr_1.3fr] lg:overflow-hidden">
+        <div className="border border-slate-200 bg-white p-4 shadow-sm lg:min-h-0 lg:overflow-y-auto">
           <div className="mb-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Acces ERP</div>
             <div className="mt-1 text-sm font-semibold text-[#17324D]">Adaugare, editare si resetare utilizatori</div>
@@ -2162,7 +2162,7 @@ export default function ControlPanelClientDetails() {
           </div>
         </div>
 
-        <div className="border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="border border-slate-200 bg-white p-4 shadow-sm lg:min-h-0 lg:overflow-y-auto">
           <div className="mb-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Rezumat client</div>
             <div className="mt-1 text-sm font-semibold text-[#17324D]">Plan, facturare si contact principal</div>
@@ -2182,7 +2182,7 @@ export default function ControlPanelClientDetails() {
           </div>
         </div>
 
-        <div className="overflow-hidden border border-slate-200 bg-white shadow-sm lg:col-span-3">
+        <div className="overflow-hidden border border-slate-200 bg-white shadow-sm lg:min-h-0 lg:overflow-y-auto">
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Utilizatori ERP</div><div className="mt-1 text-sm font-semibold text-[#17324D]">Operatori, administratori si resetari rapide</div></div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
