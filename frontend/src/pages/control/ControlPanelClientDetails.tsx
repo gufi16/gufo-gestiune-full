@@ -649,7 +649,12 @@ export default function ControlPanelClientDetails() {
       }
     })
   }, [companies, users])
-  const enabledDynamicModules = dynamicModules.filter((module) => module.enabled).length
+  const marketplaceModules = dynamicModules.filter((module) => module.area === "marketplace")
+  const configurableDynamicModules = dynamicModules.filter((module) => {
+    if (module.code === "marketplace" || module.area === "marketplace") return false
+    return !module.inheritedFrom?.length || module.overrideEnabled !== null
+  })
+  const enabledDynamicModules = [...marketplaceModules, ...configurableDynamicModules].filter((module) => module.enabled).length
   const enabledCoreModules = moduleLabelsCount(licenseForm.modules)
   const explicitlyEnabledDynamicModules = dynamicModules.filter((module) => module.enabled && module.overrideEnabled).length
   const inheritedDynamicModules = dynamicModules.filter(
@@ -659,7 +664,7 @@ export default function ControlPanelClientDetails() {
   const totalEnabledModules = enabledCoreModules + enabledDynamicModules
   const groupedDynamicModules = useMemo(() => {
     const groups = new Map<string, DynamicModuleItem[]>()
-    for (const module of dynamicModules) {
+    for (const module of configurableDynamicModules) {
       const key = module.area || "other"
       const list = groups.get(key) || []
       list.push(module)
@@ -672,7 +677,7 @@ export default function ControlPanelClientDetails() {
         items: [...items].sort((left, right) => left.name.localeCompare(right.name, "ro")),
       }))
       .sort((left, right) => left.label.localeCompare(right.label, "ro"))
-  }, [dynamicModules])
+  }, [configurableDynamicModules])
   const canDeleteClient = client?.status && client.status !== "active"
   const filteredAuditLogs = useMemo(() => {
     return auditLogs.filter((entry) => {
@@ -2505,6 +2510,43 @@ export default function ControlPanelClientDetails() {
               })}
             </div>
 
+            {marketplaceModules.length ? (
+              <section className="mt-5 rounded-[20px] border border-slate-200 bg-[#f8fafc] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Marketplace</div>
+                    <div className="mt-1 text-sm font-semibold text-[#17324D]">Canale delivery disponibile pentru acest client</div>
+                    <div className="mt-1 text-xs text-slate-500">Activezi strict platformele incluse in contract. Restul nu apar in Marketplace-ul clientului.</div>
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                    {marketplaceModules.filter((item) => item.enabled).length} din {marketplaceModules.length} active
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {marketplaceModules.map((module) => (
+                    <button
+                      key={module.code}
+                      type="button"
+                      onClick={() => handleToggleDynamicModule(module)}
+                      disabled={moduleBusyCode === module.code}
+                      className={`rounded-xl border px-3 py-3 text-left transition ${
+                        module.enabled
+                          ? "border-[#17324D] bg-[#17324D] text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      } disabled:cursor-not-allowed disabled:opacity-60`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold">{moduleBusyCode === module.code ? "Se actualizeaza..." : module.name}</span>
+                        <span className={`h-2 w-2 rounded-full ${module.enabled ? "bg-emerald-300" : "bg-slate-300"}`} />
+                      </div>
+                      <div className={`mt-1 text-xs ${module.enabled ? "text-slate-300" : "text-slate-500"}`}>{module.enabled ? "Activ pentru client" : "Neactiv"}</div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {groupedDynamicModules.length ? (
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               {groupedDynamicModules.map((group) => (
                 <div key={group.area} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
@@ -2556,6 +2598,7 @@ export default function ControlPanelClientDetails() {
                 </div>
               ))}
             </div>
+            ) : null}
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
               <button

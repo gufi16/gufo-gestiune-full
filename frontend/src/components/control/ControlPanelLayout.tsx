@@ -7,7 +7,7 @@ export default function ControlPanelLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-[#f1f2f5] text-slate-900">
       <div className="flex min-h-screen">
         <ControlPanelSidebar
           mobileOpen={mobileSidebarOpen}
@@ -17,8 +17,8 @@ export default function ControlPanelLayout() {
         <div className="flex min-w-0 flex-1 flex-col">
           <ControlPanelTopbar onOpenMenu={() => setMobileSidebarOpen(true)} />
 
-          <main className="flex-1 p-2.5 md:p-6 xl:p-8">
-            <div className="mx-auto w-full max-w-[1600px]">
+          <main className="flex-1 p-3 md:p-5 xl:p-6">
+            <div className="mx-auto w-full max-w-[1800px]">
               <Outlet />
             </div>
           </main>

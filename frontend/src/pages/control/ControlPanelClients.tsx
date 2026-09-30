@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   Building2,
   Check,
@@ -277,6 +277,7 @@ function moduleLabel(key: string) {
 
 export default function ControlPanelClients() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [items, setItems] = useState<AdminClientItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -334,6 +335,10 @@ export default function ControlPanelClients() {
     loadOwnerProfile()
     loadClients()
   }, [])
+
+  useEffect(() => {
+    setSearch(searchParams.get("q") || "")
+  }, [searchParams])
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase()
