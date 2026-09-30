@@ -836,6 +836,17 @@ function formatMarketplaceDeliveryAddress(rawPayloadJson: unknown) {
   return pickFirstNonBlank(payload.deliveryAddress, payload.delivery_address);
 }
 
+function formatMarketplaceScheduledDelivery(rawPayloadJson: unknown) {
+  const payload = parseLooseJsonObject(rawPayloadJson);
+  const scheduled = asObject(asObject(payload.delivery).scheduledDelivery);
+  const date = pickFirstNonBlank(scheduled.date);
+  const time = pickFirstNonBlank(scheduled.time);
+  if (!date || !time) return null;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  return match ? `${match[3]}.${match[2]}.${match[1]} · ${time}` : `${date} · ${time}`;
+}
+
 function buildPublicAssetBaseUrl(req: Request) {
   const configured = normalizeText(process.env.PUBLIC_ASSET_BASE_URL);
   if (configured) {
@@ -3147,6 +3158,7 @@ function serializeGufoGoOrder(order: {
     customerNote: order.customerNote,
     paymentLabel: order.paymentLabel,
     deliveryAddress: formatMarketplaceDeliveryAddress(order.rawPayloadJson),
+    deliveryScheduledFor: formatMarketplaceScheduledDelivery(order.rawPayloadJson),
     subtotal: Number(order.subtotal || 0),
     total: Number(order.total || 0),
     placedAt: order.placedAt?.toISOString() || null,

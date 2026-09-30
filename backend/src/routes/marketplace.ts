@@ -232,6 +232,10 @@ const PublicGufoDeliveryCheckoutSchema = z.object({
   clientOrderId: z.string().uuid().optional(),
   restaurantId: z.string().min(1),
   fulfillmentType: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
+  scheduledDelivery: z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  }).optional(),
   customer: z.object({
     name: z.string().trim().min(1),
     phone: z.string().trim().min(1),
@@ -292,6 +296,26 @@ const KioskCashCheckoutSchema = PublicGufoDeliveryCheckoutSchema.omit({ restaura
   }),
   payment: z.object({ type: z.literal("CASH") }),
 })
+
+function bucharestDateInDays(days: number) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bucharest",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + days))
+  return date.toISOString().slice(0, 10)
+}
+
+function validateKioskScheduledDelivery(input: { fulfillmentType: string; scheduledDelivery?: { date: string; time: string } }) {
+  if (input.fulfillmentType !== "DELIVERY") throw new Error("Gufo Kiosk accepta doar livrare.")
+  if (!input.scheduledDelivery) throw new Error("Alege ora de livrare pentru maine.")
+  if (input.scheduledDelivery.date !== bucharestDateInDays(1)) {
+    throw new Error("Comenzile din Gufo Kiosk pot fi programate doar pentru maine.")
+  }
+}
 
 async function ensureKioskCustomerProfile(input: { name: string; email: string; phone: string }) {
   const email = input.email.trim().toLowerCase()
@@ -1193,7 +1217,7 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
           { code: "CARD", label: "Card online" },
           { code: "CASH", label: "Cash pentru test" },
         ],
-        fulfillmentTypes: ["DELIVERY", "PICKUP"],
+        fulfillmentTypes: ["DELIVERY"],
         schedule: "NEXT_DAY_ONLY",
       },
       updatedAt: menu.updatedAt,
@@ -1212,6 +1236,7 @@ export async function handleKioskCashCheckout(req: KioskAuthRequest, res: Respon
   try {
     const resolved = await resolveGufoKioskIntegration(req)
     if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
+    validateKioskScheduledDelivery(parsed.data)
 
     const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload, { skipDeliveryAreaValidation: true })
@@ -1255,6 +1280,7 @@ export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Respons
   try {
     const resolved = await resolveGufoKioskIntegration(req)
     if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
+    validateKioskScheduledDelivery(parsed.data)
 
     const settings = integrationSettings(resolved.integration.settingsJson)
 
@@ -1877,6 +1903,7 @@ async function buildGufoDeliveryCheckoutImportPayload(
         delivery: {
           fulfillmentType: input.fulfillmentType,
           address: input.deliveryAddress,
+          scheduledDelivery: input.scheduledDelivery || null,
           fee: deliveryFee,
           feeProductId: deliveryFeeProduct?.id || null,
           feeProductName: deliveryFeeProduct?.name || null,
