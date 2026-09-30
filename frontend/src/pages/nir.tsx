@@ -209,6 +209,7 @@ export default function NirPage() {
   const [numbering, setNumbering] = useState<NumberingPayload["previews"] | null>(null)
 
   const [saving, setSaving] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [loadingMeta, setLoadingMeta] = useState(false)
   const [loadingReceipt, setLoadingReceipt] = useState(false)
   const [authError, setAuthError] = useState("")
@@ -1237,6 +1238,34 @@ export default function NirPage() {
     }
   }
 
+  async function cancelNir() {
+    if (!receiptId || !isPosted) return
+    if (!window.confirm("Anulezi NIR-ul? Stocul va fi retras doar daca marfa nu a fost deja consumata, vanduta sau transferata.")) {
+      return
+    }
+
+    setCancelling(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/purchase-receipts/${receiptId}/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        alert(data.error || "Nu am putut anula NIR-ul.")
+        return
+      }
+
+      setStatus("CANCELLED")
+      alert("NIR anulat. Miscarea inversa de stoc a fost inregistrata.")
+      await loadReceipt(receiptId)
+    } catch {
+      alert("Nu am putut anula NIR-ul.")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   const matchedSuppliers = supplierMatches(supplierSearch)
   const isPosted = status === "POSTED"
   const pageTitle = !receiptId
@@ -1286,6 +1315,11 @@ export default function NirPage() {
                 <FileOutput size={16} className="mr-2" />
                 PDF
               </button>
+              {isPosted && (
+                <button type="button" onClick={cancelNir} disabled={cancelling || loadingReceipt} className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60">
+                  {cancelling ? "Se anuleaza..." : "Anuleaza NIR"}
+                </button>
+              )}
               {!isPosted && (
                 <button type="button" onClick={() => saveNir(true)} disabled={saving || loadingReceipt} className={documentButtonPrimaryClass}>
                   {saving ? "Se salveaza..." : "Finalizeaza"}

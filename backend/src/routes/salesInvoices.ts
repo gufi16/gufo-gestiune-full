@@ -8,6 +8,7 @@ import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { getNextNumberPreview, reserveNextNumber } from "../lib/numbering"
 import { generateInvoiceEFacturaXml, validateInvoiceForEFactura } from "../lib/efactura"
 import { requireTenantModule } from "../lib/tenantModules"
+import { ensureTenantAdminAccess } from "../lib/tenantAdmin"
 import { readAnafHeader } from "../lib/anafHttp"
 import { resolveTenantCompany } from "../lib/companyResolver"
 import { drawDocumentHero, drawInfoCards, drawSimpleTable, drawSignatureRow, drawTotalsBox, ensurePdfPage, pdfDate, pdfFmt, pdfNum, pdfText, registerPdfFonts } from "../lib/professionalPdf"
@@ -1120,6 +1121,7 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
 })
 
 router.post("/api/v1/sales-invoices/:id/efactura/prepare", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -1257,6 +1259,7 @@ router.post("/api/v1/sales-invoices/:id/efactura/prepare", async (req: AuthedReq
 })
 
 router.get("/api/v1/sales-invoices/:id/efactura/xml", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -1294,6 +1297,7 @@ router.get("/api/v1/sales-invoices/:id/efactura/xml", async (req: AuthedRequest,
 })
 
 router.get("/api/v1/sales-invoices/:id/efactura/logs", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -1318,6 +1322,7 @@ router.get("/api/v1/sales-invoices/:id/efactura/logs", async (req: AuthedRequest
 })
 
 router.post("/api/v1/sales-invoices/:id/efactura/send", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -1518,6 +1523,7 @@ router.post("/api/v1/sales-invoices/:id/efactura/send", async (req: AuthedReques
 })
 
 router.get("/api/v1/sales-invoices/:id/efactura/status", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -1659,6 +1665,7 @@ router.get("/api/v1/sales-invoices/:id/efactura/status", async (req: AuthedReque
 })
 
 router.get("/api/v1/sales-invoices/:id/efactura/receipt", async (req: AuthedRequest, res) => {
+  if (!ensureTenantAdminAccess(req, res)) return
   const tenantId = getTenantId(req)
   if (!tenantId) {
     return res.status(401).json({ ok: false, error: "Tenant invalid." })

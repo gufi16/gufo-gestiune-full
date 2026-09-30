@@ -5,6 +5,7 @@ import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { reserveNextNumber } from "../lib/numbering"
 import { buildCompanyScopedTenantWhere, buildCompanyWhere, requireRequestCompanyId } from "../lib/companyScope"
 import { resolveWarehouseForLocation } from "../lib/warehouse"
+import { decrementStockBalanceStrict } from "../lib/stock"
 
 const router = Router()
 
@@ -552,6 +553,134 @@ async function postReceiptToStock(tenantId: string, companyId: string, receiptId
   return prisma.$transaction(async (tx) => postReceiptToStockWithClient(tx, tenantId, companyId, receiptId))
 }
 
+async function cancelPostedReceiptWithClient(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  companyId: string,
+  receiptId: string,
+) {
+  const receipt = await tx.purchaseReceipt.findFirst({
+    where: { id: receiptId, tenantId, companyId, status: "POSTED" },
+    include: {
+      items: { include: { product: { include: { uom: true } } } },
+    },
+  })
+
+  if (!receipt) throw new Error("NIR-ul postat nu exista sau a fost deja anulat.")
+
+  for (const item of receipt.items) {
+    const qty = new Prisma.Decimal(item.stockQty)
+    const trackedLots = Boolean(item.product.trackLot || item.product.trackExpiry)
+    const lots = trackedLots
+      ? await tx.stockLot.findMany({
+          where: { sourceReceiptItemId: item.id, tenantId, companyId },
+          orderBy: { createdAt: "asc" },
+        })
+      : []
+
+    if (trackedLots) {
+      const remainingQty = lots.reduce((sum, lot) => sum.plus(lot.remainingQty), new Prisma.Decimal(0))
+      if (lots.length === 0 || remainingQty.lessThan(qty)) {
+        throw new Error(
+          `NIR-ul nu poate fi anulat: lotul pentru ${item.product.name} a fost deja consumat, vandut sau transferat.`
+        )
+      }
+    }
+
+    // The stock check prevents reversing stock already consumed by later documents.
+    await decrementStockBalanceStrict(tx, {
+      tenantId,
+      companyId,
+      locationId: receipt.locationId,
+      warehouseId: receipt.warehouseId || undefined,
+      productId: item.productId,
+      qty,
+      productName: item.product.name,
+      uomCode: item.product.uom?.code || item.product.uom?.name || "",
+    })
+
+    if (trackedLots) {
+      let qtyToReverse = qty
+      for (const lot of lots) {
+        if (qtyToReverse.lte(0)) break
+        const lotQty = Prisma.Decimal.min(lot.remainingQty, qtyToReverse)
+        const lotValue = qty.gt(0)
+          ? new Prisma.Decimal(item.lineNetRon).mul(lotQty).div(qty)
+          : new Prisma.Decimal(0)
+
+        await tx.stockLot.update({
+          where: { id: lot.id },
+          data: {
+            remainingQty: { decrement: lotQty },
+            totalRemainingValue: { decrement: lotValue },
+          },
+        })
+
+        await tx.stockMove.create({
+          data: {
+            tenantId,
+            companyId,
+            locationId: receipt.locationId,
+            warehouseId: receipt.warehouseId || null,
+            productId: item.productId,
+            lotId: lot.id,
+            type: "OUT",
+            qty: lotQty,
+            unitCost: item.unitCostNetRon,
+            totalValue: lotValue,
+            refType: "PURCHASE",
+            refId: receipt.id,
+            refItemId: item.id,
+            note: `Anulare NIR ${receipt.docNo}`,
+          },
+        })
+        qtyToReverse = qtyToReverse.minus(lotQty)
+      }
+    } else {
+      await tx.stockMove.create({
+        data: {
+          tenantId,
+          companyId,
+          locationId: receipt.locationId,
+          warehouseId: receipt.warehouseId || null,
+          productId: item.productId,
+          type: "OUT",
+          qty,
+          unitCost: item.unitCostNetRon,
+          totalValue: item.lineNetRon,
+          refType: "PURCHASE",
+          refId: receipt.id,
+          refItemId: item.id,
+          note: `Anulare NIR ${receipt.docNo}`,
+        },
+      })
+    }
+  }
+
+  if (receipt.sourceIncomingEInvoiceId) {
+    await tx.incomingEInvoice.updateMany({
+      where: {
+        id: receipt.sourceIncomingEInvoiceId,
+        tenantId,
+        companyId,
+        linkedReceiptId: receipt.id,
+      },
+      data: {
+        linkedReceiptId: null,
+        status: "SYNCED",
+      },
+    })
+  }
+
+  return tx.purchaseReceipt.update({
+    where: { id: receipt.id },
+    data: {
+      status: "CANCELLED",
+      sourceIncomingEInvoiceId: null,
+    },
+  })
+}
+
 router.get("/api/v1/purchase-receipts", async (req: AuthedRequest, res) => {
   const tenantId = String(req.auth?.tenantId || "").trim()
   if (!tenantId) return res.status(401).json({ ok: false, error: "Tenant invalid." })
@@ -970,24 +1099,24 @@ router.post("/api/v1/purchase-receipts/:id/cancel", async (req: AuthedRequest, r
     })
   }
 
-  if (receipt.status === "POSTED") {
+  try {
+    const cancelled = receipt.status === "POSTED"
+      ? await prisma.$transaction((tx) => cancelPostedReceiptWithClient(tx, tenantId, activeCompanyId, id))
+      : await prisma.purchaseReceipt.update({
+          where: { id },
+          data: { status: "CANCELLED" },
+        })
+
+    res.json({
+      ok: true,
+      receipt: cancelled,
+    })
+  } catch (e: unknown) {
     return res.status(400).json({
       ok: false,
-      error: "Posted receipts cannot be cancelled"
+      error: e instanceof Error ? e.message : "Nu am putut anula NIR-ul.",
     })
   }
-
-  const cancelled = await prisma.purchaseReceipt.update({
-    where: { id },
-    data: {
-      status: "CANCELLED"
-    }
-  })
-
-  res.json({
-    ok: true,
-    receipt: cancelled
-  })
 })
 
 export default router

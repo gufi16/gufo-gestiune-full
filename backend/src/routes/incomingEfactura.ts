@@ -9,6 +9,7 @@ import { prisma } from "../lib/prisma"
 import { anafDownloadById, anafListMessages, loadAnafCompanyContext } from "../lib/anafClient"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { requireTenantModule } from "../lib/tenantModules"
+import { ensureTenantAdminAccess } from "../lib/tenantAdmin"
 import { reserveNextNumber } from "../lib/numbering"
 import { resolveTenantCompany } from "../lib/companyResolver"
 import { requireRequestCompanyId } from "../lib/companyScope"
@@ -39,6 +40,10 @@ const router = Router()
 const execFileAsync = promisify(execFile)
 
 router.use(requireAuth)
+router.use((req: AuthedRequest, res, next) => {
+  if (!ensureTenantAdminAccess(req, res)) return
+  next()
+})
 
 const incomingEfacturaPdfDir = ensureUploadSubdir("incoming-efactura-pdfs")
 
