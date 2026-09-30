@@ -259,6 +259,21 @@ const TenantEfacturaModuleSchema = z.object({
   enabled: z.boolean(),
 })
 
+const PlatformBillingProfileSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  cui: z.string().trim().max(40).optional(),
+  regNo: z.string().trim().max(60).optional(),
+  address: z.string().trim().max(300).optional(),
+  city: z.string().trim().max(100).optional(),
+  county: z.string().trim().max(100).optional(),
+  country: z.string().trim().max(80).default("Romania"),
+  iban: z.string().trim().max(60).optional(),
+  bank: z.string().trim().max(100).optional(),
+  email: z.string().trim().email().optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional(),
+  invoiceSeries: z.string().trim().min(1).max(20).default("GUF"),
+})
+
 const TenantModuleToggleSchema = z.object({
   enabled: z.boolean(),
   limitValue: z.coerce.number().int().positive().nullable().optional(),
@@ -530,6 +545,26 @@ router.post("/api/v1/admin/platform/efactura", requireAuth, requireOwner, async 
       ),
     },
   })
+})
+
+router.get("/api/v1/admin/platform/billing-profile", requireAuth, requireOwner, async (_req, res) => {
+  const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+  return res.json({ ok: true, item: config?.billingProfile || null })
+})
+
+router.put("/api/v1/admin/platform/billing-profile", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = PlatformBillingProfileSchema.safeParse(req.body || {})
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+
+  const config = await prisma.platformConfig.upsert({
+    where: { key: "global" },
+    update: { billingProfile: parsed.data },
+    create: { key: "global", billingProfile: parsed.data },
+  })
+  await prisma.auditLog.create({
+    data: { actorType: "OWNER", actorId: req.auth?.userId, action: "PLATFORM_BILLING_PROFILE_UPDATED", entityType: "PlatformConfig", entityId: config.id, payload: { name: parsed.data.name, cui: parsed.data.cui || null, invoiceSeries: parsed.data.invoiceSeries } },
+  })
+  return res.json({ ok: true, item: config.billingProfile })
 })
 
 router.get("/api/v1/admin/platform/overview", requireAuth, requireOwner, async (_req, res) => {

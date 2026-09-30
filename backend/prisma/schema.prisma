@@ -320,6 +320,7 @@ model PlatformConfig {
   efacturaOauthClientSecret String?
   efacturaOauthRedirectUri  String?
   efacturaEnvironment       String? @default("test")
+  billingProfile            Json?
 }
 
 model Company {

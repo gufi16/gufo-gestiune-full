@@ -56,6 +56,7 @@ import ControlPanelDashboard from "./pages/control/ControlPanelDashboard"
 import ControlPanelClients from "./pages/control/ControlPanelClients"
 import ControlPanelClientDetails from "./pages/control/ControlPanelClientDetails"
 import ControlPanelIntegrations from "./pages/control/ControlPanelIntegrations"
+import ControlPanelBillingProfile from "./pages/control/ControlPanelBillingProfile"
 import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliveryAnnouncements"
 import DeliveryLegalPublic from "./pages/DeliveryLegalPublic"
 import DeliveryOrderLink from "./pages/DeliveryOrderLink"
@@ -116,6 +117,7 @@ export default function App() {
         <Route path="/control-panel/noutati" element={<ControlPanelDeliveryAnnouncements />} />
         <Route path="/control-panel/licente" element={<ControlPanelDashboard />} />
         <Route path="/control-panel/facturare" element={<ControlPanelDashboard />} />
+        <Route path="/control-panel/facturare/date-emitent" element={<ControlPanelBillingProfile />} />
         <Route path="/control-panel/audit" element={<ControlPanelDashboard />} />
       </Route>
 
