@@ -50,3 +50,46 @@ table td {
 .card {
   @apply rounded-xl bg-white shadow-sm border border-neutral-200;
 }
+
+/* ERP screens use many independently built modules. Keep their desktop density consistent
+   without changing mobile forms, where extra space remains useful for touch input. */
+@media (min-width: 1024px) {
+  .erp-workspace .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.875rem;
+  }
+
+  .erp-workspace .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+  }
+
+  .erp-workspace .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+  }
+
+  .erp-workspace .gap-5 {
+    gap: 0.875rem;
+  }
+
+  .erp-workspace .gap-4 {
+    gap: 0.75rem;
+  }
+
+  .erp-workspace .p-6 {
+    padding: 1rem;
+  }
+
+  .erp-workspace .p-5 {
+    padding: 0.875rem;
+  }
+
+  .erp-workspace .rounded-\[28px\],
+  .erp-workspace .rounded-\[24px\] {
+    border-radius: 1.125rem;
+  }
+
+  /* Tables are data workspaces, not full-page documents. Keep long records inside the card. */
+  .erp-workspace .overflow-x-auto {
+    max-height: calc(100vh - 19rem);
+    overflow-y: auto;
+  }
+}
