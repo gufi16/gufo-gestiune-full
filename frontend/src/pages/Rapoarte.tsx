@@ -266,16 +266,16 @@ function KPI({
   icon: any
 }) {
   return (
-    <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-slate-500">{title}</div>
-          <div className="mt-2 text-[24px] font-semibold tracking-tight text-slate-900">{value}</div>
-          <div className="mt-1 text-[13px] text-slate-500">{subtitle}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">{title}</div>
+          <div className="mt-1 text-xl font-semibold tracking-tight text-slate-900">{value}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div>
         </div>
 
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
-          <Icon size={20} />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+          <Icon size={17} />
         </span>
       </div>
     </div>
@@ -294,11 +294,11 @@ function SectionCard({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <div className="mb-3 flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <div className="text-lg font-semibold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
+          <div className="text-base font-semibold text-slate-900">{title}</div>
+          {subtitle ? <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div> : null}
         </div>
         {actions}
       </div>
@@ -309,7 +309,7 @@ function SectionCard({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
       {text}
     </div>
   )
@@ -480,27 +480,27 @@ export default function RapoartePage() {
   const diferenteCount = stockAlerts.filter((x) => x.status.includes("diferen")).length
 
   const filterActions = (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className="flex flex-wrap items-end gap-1.5">
       <div>
-        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           De la
         </label>
         <input
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+          className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
         />
       </div>
       <div>
-        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <label className="mb-0.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           Pana la
         </label>
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+          className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />
       </div>
       <button
@@ -509,7 +509,7 @@ export default function RapoartePage() {
           setDateFrom(defaultDateFrom)
           setDateTo(defaultDateTo)
         }}
-        className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
       >
         Resetare
       </button>
@@ -541,68 +541,37 @@ export default function RapoartePage() {
         </div>
       ) : null}
 
-      <section className="rounded-[20px] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-4 shadow-sm shadow-slate-900/[0.03]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm shadow-slate-900/[0.03]">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Pentru contabilitate</div>
-            <h2 className="mt-1 text-lg font-bold text-slate-900">Formulare PDF pe interval</h2>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Selecteaza perioada, apoi descarca centralizatorul de vanzari sau raportul SGR. Documentele includ firma activa si locatia selectata.
-            </p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">Rapoarte pe interval</div>
+            <h2 className="mt-0.5 text-base font-bold text-slate-900">PDF-uri contabile si de management</h2>
           </div>
           {filterActions}
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-            <div className="text-sm font-bold text-slate-900">Raport vanzari</div>
-            <p className="mt-1 text-sm text-slate-500">Bonuri, metode de plata, total fara SGR, SGR si total incasari.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-5">
+          {[
+            { key: "sales", label: "Vanzari", tone: "bg-slate-900 hover:bg-slate-700", run: () => exportAccountingPdf("sales") },
+            { key: "sgr", label: "SGR", tone: "bg-emerald-700 hover:bg-emerald-800", run: () => exportAccountingPdf("sgr") },
+            { key: "daily-close", label: "Inchidere zilnica", tone: "bg-slate-900 hover:bg-slate-700", run: () => exportManagementPdf("daily-close") },
+            { key: "profitability", label: "Profitabilitate", tone: "bg-slate-900 hover:bg-slate-700", run: () => exportManagementPdf("profitability") },
+            { key: "stock", label: "Stoc si miscari", tone: "bg-slate-900 hover:bg-slate-700", run: () => exportManagementPdf("stock") },
+          ].map((report) => (
             <button
+              key={report.key}
               type="button"
-              onClick={() => exportAccountingPdf("sales")}
+              onClick={report.run}
               disabled={exportingPdf !== null}
-              className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`flex h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${report.tone}`}
             >
-              {exportingPdf === "sales" ? "Se genereaza..." : "Descarca PDF vanzari"}
+              {exportingPdf === report.key ? "Se genereaza..." : `PDF ${report.label}`}
             </button>
-          </div>
-          <div className="rounded-2xl border border-emerald-200 bg-white/90 p-4">
-            <div className="text-sm font-bold text-slate-900">Raport SGR</div>
-            <p className="mt-1 text-sm text-slate-500">Centralizator de garantie-returnare cu totalul SGR din bonurile fiscale.</p>
-            <button
-              type="button"
-              onClick={() => exportAccountingPdf("sgr")}
-              disabled={exportingPdf !== null}
-              className="mt-4 inline-flex h-10 items-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {exportingPdf === "sgr" ? "Se genereaza..." : "Descarca PDF SGR"}
-            </button>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-            <div className="text-sm font-bold text-slate-900">Inchidere zilnica</div>
-            <p className="mt-1 text-sm text-slate-500">Bonuri, incasari, discounturi, TVA si inchideri Z din interval.</p>
-            <button type="button" onClick={() => exportManagementPdf("daily-close")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-              {exportingPdf === "daily-close" ? "Se genereaza..." : "Descarca PDF"}
-            </button>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-            <div className="text-sm font-bold text-slate-900">Profitabilitate</div>
-            <p className="mt-1 text-sm text-slate-500">Venit, cost teoretic din retetar, profit si marja pe produs.</p>
-            <button type="button" onClick={() => exportManagementPdf("profitability")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-              {exportingPdf === "profitability" ? "Se genereaza..." : "Descarca PDF"}
-            </button>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
-            <div className="text-sm font-bold text-slate-900">Stoc si miscari</div>
-            <p className="mt-1 text-sm text-slate-500">Intrari, iesiri, ajustari si stocul curent pe produs.</p>
-            <button type="button" onClick={() => exportManagementPdf("stock")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-              {exportingPdf === "stock" ? "Se genereaza..." : "Descarca PDF"}
-            </button>
-          </div>
+          ))}
         </div>
       </section>
 
-      <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03]">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
             {[
               { key: "CEO", label: "Tablou executiv", icon: ChartNoAxesCombined },
@@ -618,7 +587,7 @@ export default function RapoartePage() {
                   type="button"
                   onClick={() => setTab(item.key as TabKey)}
                   className={[
-                    "inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
+                    "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition",
                     active
                       ? "bg-slate-900 text-white shadow-sm"
                       : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
@@ -631,7 +600,7 @@ export default function RapoartePage() {
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
             <span className="font-semibold text-slate-800">Context activ:</span>
             <span>{selectedLocationId === "ALL" ? "Toate locatiile" : locationLabel}</span>
             <span className="text-slate-300">•</span>
@@ -642,17 +611,17 @@ export default function RapoartePage() {
 
       {tab === "CEO" ? (
         <>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KPI title="Vanzari totale" value={money(totals.sales)} subtitle={locationLabel} icon={CircleDollarSign} />
             <KPI title="Profit estimat" value={money(totals.profit)} subtitle="calculat din costuri" icon={BarChart3} />
             <KPI title="Marja medie" value={`${totals.margin.toFixed(1)}%`} subtitle="profit raportat la vanzari" icon={ChartNoAxesCombined} />
             <KPI title="Locatii active" value={String(totals.activeLocations)} subtitle="cu vanzari in interval" icon={Building2} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.3fr)_minmax(360px,0.7fr)]">
-            <SectionCard title="Performanta pe locatii" subtitle="Vanzari si profit pe locatiile tale" actions={filterActions}>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,0.7fr)]">
+            <SectionCard title="Performanta pe locatii" subtitle="Vanzari si profit pe locatiile tale">
               {salesByLocation.length ? (
-                <div className="h-[320px] w-full">
+                <div className="h-[230px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={salesByLocation} barCategoryGap={18}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -676,7 +645,7 @@ export default function RapoartePage() {
             <SectionCard title="Structura nomenclator" subtitle="Distributia categoriilor de produse">
               {pieData.length ? (
                 <>
-                  <div className="h-[320px] w-full">
+                  <div className="h-[190px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={86} paddingAngle={4}>
@@ -689,14 +658,14 @@ export default function RapoartePage() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2">
+                  <div className="mt-2 grid max-h-[116px] grid-cols-1 gap-1.5 overflow-y-auto pr-1">
                     {pieData.map((item, index) => (
-                      <div key={item.name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                      <div key={item.name} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                         <div className="flex items-center gap-2">
                           <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
-                          <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                          <span className="text-xs font-medium text-slate-700">{item.name}</span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-900">{item.value}%</span>
+                        <span className="text-xs font-semibold text-slate-900">{item.value}%</span>
                       </div>
                     ))}
                   </div>
@@ -711,14 +680,14 @@ export default function RapoartePage() {
 
       {tab === "SALES" ? (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <KPI title="Venituri taxe livrare" value={money(deliveryRevenue.total)} subtitle="doar comenzi Gufo Delivery fiscalizate" icon={CircleDollarSign} />
             <KPI title="Comenzi cu taxa" value={String(deliveryRevenue.orders)} subtitle="in intervalul selectat" icon={ShoppingBag} />
           </div>
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
-          <SectionCard title="Evolutie vanzari si profit" subtitle="Trend pe intervalul selectat" actions={filterActions}>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+          <SectionCard title="Evolutie vanzari si profit" subtitle="Trend pe intervalul selectat">
             {monthlyTrend.length ? (
-              <div className="h-[320px] w-full">
+              <div className="h-[230px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyTrend} barCategoryGap={22}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -737,14 +706,14 @@ export default function RapoartePage() {
 
           <SectionCard title="Performanta pe locatii" subtitle="Marja si rezultate pe fiecare locatie">
             {salesByLocation.length ? (
-              <div className="space-y-3">
+              <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1">
                 {salesByLocation.map((item) => (
-                  <div key={item.name} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div key={item.name} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-sm font-semibold text-slate-900">{item.name}</div>
                       <div className="text-sm font-semibold text-slate-900">{item.margin.toFixed(1)}%</div>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <div className="text-slate-500">Vanzari</div>
                         <div className="mt-1 font-semibold text-slate-900">{money(item.sales)}</div>
@@ -766,19 +735,19 @@ export default function RapoartePage() {
       ) : null}
 
       {tab === "PRODUCTS" ? (
-        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <SectionCard title="Top produse" subtitle="Vanzari si profit pe produs" actions={filterActions}>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <SectionCard title="Top produse" subtitle="Vanzari si profit pe produs">
             {topProducts.length ? (
-              <div className="space-y-3">
+              <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1">
                 {topProducts.map((product) => (
-                  <div key={product.name} className="grid grid-cols-[minmax(180px,1.5fr)_100px_130px_130px] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div key={product.name} className="grid grid-cols-[minmax(150px,1.5fr)_72px_112px_112px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-slate-900">{product.name}</div>
                       <div className="mt-1 text-xs text-slate-500">{product.qty} bucati</div>
                     </div>
-                    <div className="text-sm text-slate-700">{product.qty}</div>
-                    <div className="text-sm text-slate-700">{money(product.sales)}</div>
-                    <div className="text-sm font-semibold text-emerald-700">{money(product.profit)}</div>
+                    <div className="text-xs text-slate-700">{product.qty}</div>
+                    <div className="text-xs text-slate-700">{money(product.sales)}</div>
+                    <div className="text-xs font-semibold text-emerald-700">{money(product.profit)}</div>
                   </div>
                 ))}
               </div>
@@ -787,10 +756,10 @@ export default function RapoartePage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Consum materii prime" subtitle="Cantitatile consumate in interval" actions={filterActions}>
+          <SectionCard title="Consum materii prime" subtitle="Cantitatile consumate in interval">
             {rawConsumption.length ? (
               <>
-                <div className="h-[320px] w-full">
+                <div className="h-[190px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={rawConsumption.map((item) => ({ name: item.name, qty: item.qty }))} barCategoryGap={22}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -806,9 +775,9 @@ export default function RapoartePage() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-2 max-h-[82px] space-y-1.5 overflow-y-auto pr-1">
                   {rawConsumption.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div key={item.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold text-slate-900">{item.name}</div>
                         <div className="mt-1 text-xs text-slate-500">consum total in interval</div>
@@ -828,9 +797,9 @@ export default function RapoartePage() {
       ) : null}
 
       {tab === "OPERATIONS" ? (
-        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <SectionCard title="Alerte operationale" subtitle="Zone care cer atentie in fluxul zilnic" actions={filterActions}>
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <SectionCard title="Alerte operationale" subtitle="Zone care cer atentie in fluxul zilnic">
+            <div className="space-y-2">
               {[
                 { label: "Produse cu stoc critic", value: String(criticeCount), icon: TriangleAlert },
                 { label: "Produse fara cost setat", value: String(faraCostCount), icon: PackageSearch },
@@ -838,24 +807,24 @@ export default function RapoartePage() {
               ].map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
-                        <Icon size={18} />
+                  <div key={item.label} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+                        <Icon size={16} />
                       </span>
                       <div className="text-sm font-semibold text-slate-900">{item.label}</div>
                     </div>
-                    <div className="text-xl font-semibold text-slate-900">{item.value}</div>
+                    <div className="text-lg font-semibold text-slate-900">{item.value}</div>
                   </div>
                 )
               })}
             </div>
           </SectionCard>
 
-          <SectionCard title="Situatie stocuri" subtitle="Vizualizare rapida pentru produsele semnalate" actions={filterActions}>
+          <SectionCard title="Situatie stocuri" subtitle="Vizualizare rapida pentru produsele semnalate">
             {stockAlerts.length ? (
               <>
-                <div className="h-[320px] w-full">
+                <div className="h-[190px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stockAlerts.map((item) => ({ name: item.name, stock: item.stock }))} barCategoryGap={24}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -867,14 +836,14 @@ export default function RapoartePage() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                <div className="mt-2 max-h-[112px] space-y-1.5 overflow-y-auto pr-1">
                   {stockAlerts.map((item) => {
                     const isCritic = item.status.includes("critic")
                     const isNoCost = item.status.includes("fara cost")
                     const isDiff = item.status.includes("diferen")
 
                     return (
-                      <div key={`${item.name}-${item.status}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div key={`${item.name}-${item.status}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold text-slate-900">{item.name}</div>
                           <div className="mt-1 text-xs text-slate-500">
