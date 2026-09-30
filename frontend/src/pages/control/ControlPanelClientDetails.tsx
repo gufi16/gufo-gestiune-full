@@ -1439,6 +1439,65 @@ export default function ControlPanelClientDetails() {
       </section>
 
       {activeTab === "overview" ? (
+        <section className="space-y-3">
+          <div className="grid gap-3 xl:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => setOverviewPanelOpen("profile")}
+              className="border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#17324D]"
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Identitate client</div>
+              <div className="mt-2 truncate text-lg font-semibold text-[#17324D]">{client?.company?.name || client?.name || "Client"}</div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div><div className="text-slate-400">CUI</div><div className="mt-0.5 truncate font-medium text-slate-700">{client?.company?.cui || "-"}</div></div>
+                <div><div className="text-slate-400">Administrator</div><div className="mt-0.5 truncate font-medium text-slate-700">{principalUser?.fullName || "-"}</div></div>
+              </div>
+              <div className="mt-3 text-xs font-semibold text-[#17324D]">Editeaza profilul</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("license")}
+              className="border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#17324D]"
+            >
+              <div className="flex items-center justify-between gap-3"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Licenta</div><span className={client?.license?.isSuspended ? "bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700" : "bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700"}>{client?.license?.isSuspended ? "SUSPENDATA" : "ACTIVA"}</span></div>
+              <div className="mt-2 text-lg font-semibold text-[#17324D]">Expira {formatDate(client?.license?.expiresAt)}</div>
+              <div className="mt-2 text-sm text-slate-500">{enabledDynamicModules} module active · {licenseForm.limitLocations} locatii · {licenseForm.limitTerminals} POS</div>
+              <div className="mt-3 text-xs font-semibold text-[#17324D]">Gestioneaza licenta</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("locations")}
+              className="border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#17324D]"
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Operare si siguranta</div>
+              <div className="mt-2 text-lg font-semibold text-[#17324D]">{locations.length} locatii · {posDevicesCount + kdsDevicesCount + depotDevicesCount} device-uri</div>
+              <div className="mt-2 text-sm text-slate-500">{client?.backupHealth?.status === "protected" ? `Backup valid: ${formatDate(client?.backupHealth?.latestBackupAt)}` : "Backup-ul necesita interventie"}</div>
+              <div className="mt-3 text-xs font-semibold text-[#17324D]">Vezi locatiile si device-urile</div>
+            </button>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[1.25fr_0.75fr]">
+            <section className="border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Actiuni rapide</div><div className="mt-1 text-sm font-semibold text-[#17324D]">Lucreaza direct pe client</div></div><button type="button" onClick={() => setHistoryOpen(true)} className="border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"><History size={13} className="mr-1 inline" /> Istoric</button></div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <button type="button" onClick={() => setOverviewPanelOpen("companies")} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Firme ERP<span className="mt-1 block text-xs font-normal text-slate-500">{companies.length} configurate</span></button>
+                <button type="button" onClick={() => setLicenseModalOpen(true)} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Editeaza licenta<span className="mt-1 block text-xs font-normal text-slate-500">module si limite</span></button>
+                <button type="button" onClick={() => setActiveTab("users")} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Utilizatori<span className="mt-1 block text-xs font-normal text-slate-500">{users.length} conturi ERP</span></button>
+                <button type="button" onClick={load} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Reincarca<span className="mt-1 block text-xs font-normal text-slate-500">date actuale client</span></button>
+              </div>
+            </section>
+
+            <section className="border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Contract si contact</div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><div className="text-xs text-slate-400">Plan</div><div className="mt-1 font-semibold text-slate-800">{client?.subscription?.plan?.name || "-"}</div></div><div><div className="text-xs text-slate-400">Facturare</div><div className="mt-1 font-semibold text-slate-800">{client?.subscription?.billingStatus || "-"}</div></div><div><div className="text-xs text-slate-400">Urmatoarea plata</div><div className="mt-1 font-semibold text-slate-800">{formatDate(client?.subscription?.nextBillingDate)}</div></div><div><div className="text-xs text-slate-400">Email principal</div><div className="mt-1 truncate font-semibold text-slate-800">{principalUser?.email || client?.company?.email || "-"}</div></div></div>
+            </section>
+          </div>
+        </section>
+      ) : null}
+
+      {false ? (
         <div ref={companySectionRef} className="grid gap-3 xl:grid-cols-2">
           <button
             type="button"
