@@ -1395,10 +1395,10 @@ export default function ControlPanelClientDetails() {
       )}
 
       {!isOverview ? (
-      <section className="border border-slate-200 bg-white px-3 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-sm font-semibold text-[#17324D]">Administrare client</div>
-          <div className="flex flex-wrap gap-2">
+      <section className="border border-slate-200 bg-[#f5f7fa] px-3 py-3 shadow-sm lg:sticky lg:top-3 lg:float-left lg:mr-4 lg:w-[230px]">
+        <div>
+          <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Administrare client</div>
+          <div className="mt-2 flex flex-wrap gap-2 lg:flex-col lg:[&>button]:w-full lg:[&>button]:justify-between">
             {tabButton("Prezentare", isOverview, () => setActiveTab("overview"))}
             {tabButton("Licenta", activeTab === "license", () => setActiveTab("license"), totalEnabledModules)}
             {tabButton("Locatii si device-uri", activeTab === "locations", () => setActiveTab("locations"), locations.length)}
