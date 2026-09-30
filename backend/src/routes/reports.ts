@@ -105,6 +105,84 @@ function productUnitCost(product: ReportsProductLike | null | undefined) {
   return toNumber(product?.costPrice || 0)
 }
 
+type DailySaleLike = {
+  soldAt: Date
+  total: unknown
+  sgrTotal: unknown
+  discountTotal: unknown
+  paymentType: unknown
+  cashAmount: unknown
+  cardAmount: unknown
+}
+
+type DailySalesSummary = {
+  key: string
+  label: string
+  receipts: number
+  cash: number
+  card: number
+  other: number
+  sgr: number
+  discount: number
+  total: number
+}
+
+function reportDayKey(value: Date) {
+  const date = new Date(value)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function reportDayLabel(key: string) {
+  const [year, month, day] = key.split("-")
+  return `${day}.${month}.${year}`
+}
+
+function splitSalePayment(sale: DailySaleLike) {
+  const total = toNumber(sale.total)
+  const cashAmount = toNumber(sale.cashAmount)
+  const cardAmount = toNumber(sale.cardAmount)
+  const paymentType = String(sale.paymentType || "").trim().toUpperCase()
+
+  if (paymentType === "CASH") return { cash: cashAmount > 0 ? cashAmount : total, card: 0, other: 0 }
+  if (paymentType === "CARD") return { cash: 0, card: cardAmount > 0 ? cardAmount : total, other: 0 }
+
+  return {
+    cash: cashAmount,
+    card: cardAmount,
+    other: Math.max(0, total - cashAmount - cardAmount),
+  }
+}
+
+function buildDailySalesSummaries(sales: DailySaleLike[], from: Date, to: Date) {
+  const byDay = new Map<string, DailySalesSummary>()
+  const cursor = new Date(from)
+  cursor.setHours(0, 0, 0, 0)
+  const end = new Date(to)
+  end.setHours(0, 0, 0, 0)
+
+  while (cursor <= end) {
+    const key = reportDayKey(cursor)
+    byDay.set(key, { key, label: reportDayLabel(key), receipts: 0, cash: 0, card: 0, other: 0, sgr: 0, discount: 0, total: 0 })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  for (const sale of sales) {
+    const key = reportDayKey(sale.soldAt)
+    const row = byDay.get(key) || { key, label: reportDayLabel(key), receipts: 0, cash: 0, card: 0, other: 0, sgr: 0, discount: 0, total: 0 }
+    const payment = splitSalePayment(sale)
+    row.receipts += 1
+    row.cash += payment.cash
+    row.card += payment.card
+    row.other += payment.other
+    row.sgr += toNumber(sale.sgrTotal)
+    row.discount += toNumber(sale.discountTotal)
+    row.total += toNumber(sale.total)
+    byDay.set(key, row)
+  }
+
+  return Array.from(byDay.values()).sort((a, b) => a.key.localeCompare(b.key))
+}
+
 function formatDayLabel(date: Date) {
   const day = `${date.getDate()}`.padStart(2, "0")
   const month = `${date.getMonth() + 1}`.padStart(2, "0")
@@ -407,11 +485,11 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
   const totalGross = sales.reduce((sum, sale) => sum + toNumber(sale.total), 0)
   const recordedSgrTotal = sales.reduce((sum, sale) => sum + toNumber(sale.sgrTotal), 0)
   const totalWithoutSgr = totalGross - recordedSgrTotal
-  const paymentTotals = new Map<string, number>()
-  for (const sale of sales) {
-    const payment = String(sale.paymentType || "ALTA PLATA")
-    paymentTotals.set(payment, (paymentTotals.get(payment) || 0) + toNumber(sale.total))
-  }
+  const dailySales = buildDailySalesSummaries(sales, from, to)
+  const dailyTotals = dailySales.reduce(
+    (acc, row) => ({ cash: acc.cash + row.cash, card: acc.card + row.card, other: acc.other + row.other }),
+    { cash: 0, card: 0, other: 0 },
+  )
 
   const sgrRows = new Map<string, { sku: string; name: string; packagingType: string; volumeLiters: number; qty: number; unit: number; value: number }>()
   let unallocatedSgr = 0
@@ -570,8 +648,8 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
       reportLabel: "RAPORT CONTABIL",
       cards: [
         ["TOTAL BONURI", String(sales.length)],
-        ["NUMERAR", reportMoney(paymentTotals.get("CASH") || paymentTotals.get("NUMERAR") || 0)],
-        ["CARD", reportMoney(paymentTotals.get("CARD") || 0)],
+        ["NUMERAR", reportMoney(dailyTotals.cash)],
+        ["CARD", reportMoney(dailyTotals.card)],
         ["TOTAL SGR", reportMoney(recordedSgrTotal)],
         ["TOTAL INCASARI", reportMoney(totalGross)],
       ],
@@ -579,25 +657,29 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
     y = drawAccountingTable(doc, fonts, {
       margin: 36,
       y,
-      title,
+      title: "Centralizator zilnic vanzari",
+      totalRowIndexes: [dailySales.length],
       columns: [
-        { label: "Data / ora", width: 105 },
-        { label: "Bon", width: 90 },
-        { label: "Locatie", width: 130 },
-        { label: "Plata", width: 85 },
-        { label: "Fara SGR", width: 95, align: "right" },
-        { label: "SGR", width: 75, align: "right" },
-        { label: "Total", width: 95, align: "right" },
+        { label: "Data", width: 120 },
+        { label: "Bonuri", width: 100, align: "right" },
+        { label: "Numerar", width: 130, align: "right" },
+        { label: "Card", width: 130, align: "right" },
+        { label: "Alte plati", width: 125, align: "right" },
+        { label: "SGR", width: 110, align: "right" },
+        { label: "Total", width: 125, align: "right" },
       ],
-      rows: sales.map((sale) => [
-        new Date(sale.soldAt).toLocaleString("ro-RO"),
-        sale.receiptNo || sale.clientSaleId || "-",
-        sale.location?.name || "-",
-        String(sale.paymentType || "-"),
-        reportMoney(toNumber(sale.total) - toNumber(sale.sgrTotal)),
-        reportMoney(sale.sgrTotal),
-        reportMoney(sale.total),
-      ]),
+      rows: [
+        ...dailySales.map((row) => [
+          row.label,
+          String(row.receipts),
+          reportMoney(row.cash),
+          reportMoney(row.card),
+          reportMoney(row.other),
+          reportMoney(row.sgr),
+          reportMoney(row.total),
+        ]),
+        ["TOTAL", String(sales.length), reportMoney(dailyTotals.cash), reportMoney(dailyTotals.card), reportMoney(dailyTotals.other), reportMoney(recordedSgrTotal), reportMoney(totalGross)],
+      ],
     }) + 16
     y = ensureAccountingFooterSpace(doc, fonts, y, 36, title)
     y = drawTotalsBox(doc, fonts, {
@@ -682,19 +764,26 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         orderBy: { closedAt: "asc" },
       }),
     ])
-    const payments = new Map<string, number>()
     const vatTotals = new Map<number, number>()
     let salesTotal = 0
     let discounts = 0
     for (const sale of sales) {
       salesTotal += toNumber(sale.total)
       discounts += toNumber(sale.discountTotal)
-      const payment = String(sale.paymentType || "ALTA PLATA")
-      payments.set(payment, (payments.get(payment) || 0) + toNumber(sale.total))
       for (const item of sale.items) {
         const rate = Number(item.vatRate || 0)
         vatTotals.set(rate, (vatTotals.get(rate) || 0) + toNumber(item.lineTotalAfterDiscount))
       }
+    }
+    const dailySales = buildDailySalesSummaries(sales, from, to)
+    const dailyTotals = dailySales.reduce(
+      (acc, row) => ({ cash: acc.cash + row.cash, card: acc.card + row.card, other: acc.other + row.other }),
+      { cash: 0, card: 0, other: 0 },
+    )
+    const closuresByDay = new Map<string, number>()
+    for (const closure of closures) {
+      const key = reportDayKey(closure.closedAt)
+      closuresByDay.set(key, (closuresByDay.get(key) || 0) + 1)
     }
     y = drawStandardReportHeader(doc, fonts, {
       title,
@@ -706,26 +795,29 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
       generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
         ["TOTAL BONURI", String(sales.length)],
-        ["NUMERAR", reportMoney(payments.get("CASH") || payments.get("NUMERAR") || 0)],
-        ["CARD", reportMoney(payments.get("CARD") || 0)],
+        ["NUMERAR", reportMoney(dailyTotals.cash)],
+        ["CARD", reportMoney(dailyTotals.card)],
         ["INCHIDERI Z", String(closures.length)],
         ["TOTAL INCASARI", reportMoney(salesTotal)],
       ],
     })
-    const rows = sales.map((sale) => [
-      new Date(sale.soldAt).toLocaleString("ro-RO"),
-      sale.receiptNo || sale.clientSaleId || "-",
-      sale.location?.name || "-",
-      sale.terminal?.label || "-",
-      String(sale.paymentType || "-"),
-      reportMoney(sale.discountTotal),
-      reportMoney(sale.total),
-    ])
+    const rows = [
+      ...dailySales.map((row) => [
+        row.label,
+        String(row.receipts),
+        reportMoney(row.cash),
+        reportMoney(row.card),
+        reportMoney(row.other),
+        String(closuresByDay.get(row.key) || 0),
+        reportMoney(row.total),
+      ]),
+      ["TOTAL", String(sales.length), reportMoney(dailyTotals.cash), reportMoney(dailyTotals.card), reportMoney(dailyTotals.other), String(closures.length), reportMoney(salesTotal)],
+    ]
     y = drawAccountingTable(doc, fonts, {
-      margin: 36, y, title,
+      margin: 36, y, title: "Centralizator zilnic inchideri", totalRowIndexes: [dailySales.length],
       columns: [
-        { label: "Data / ora", width: 115 }, { label: "Bon", width: 90 }, { label: "Locatie", width: 120 },
-        { label: "Terminal", width: 110 }, { label: "Plata", width: 90 }, { label: "Discount", width: 90, align: "right" }, { label: "Total", width: 100, align: "right" },
+        { label: "Data", width: 120 }, { label: "Bonuri", width: 100, align: "right" }, { label: "Numerar", width: 130, align: "right" },
+        { label: "Card", width: 130, align: "right" }, { label: "Alte plati", width: 125, align: "right" }, { label: "Inchideri Z", width: 110, align: "right" }, { label: "Total", width: 125, align: "right" },
       ],
       rows,
     }) + 16
@@ -733,7 +825,9 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
     drawTotalsBox(doc, fonts, {
       x: doc.page.width - 275, y, width: 239,
       lines: [
-        ...Array.from(payments.entries()).map(([label, value]) => ({ label, value: reportMoney(value) })),
+        { label: "Numerar", value: reportMoney(dailyTotals.cash) },
+        { label: "Card", value: reportMoney(dailyTotals.card) },
+        { label: "Alte plati", value: reportMoney(dailyTotals.other) },
         ...Array.from(vatTotals.entries()).map(([rate, value]) => ({ label: `Baza TVA ${rate}%`, value: reportMoney(value) })),
         { label: "TOTAL INCASARI", value: reportMoney(salesTotal) },
       ],
@@ -742,43 +836,71 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
   }
 
   if (kind === "profitability") {
-    const sales = await prisma.sale.findMany({
-      where: { tenantId, companyId, soldAt: { gte: from, lte: to }, ...locationFilter },
-      include: {
-        items: {
-          include: {
-            product: { include: { recipe: { include: { items: { include: { ingredient: true } } } } } },
-          },
-        },
-      },
-    })
-    const products = new Map<string, { name: string; qty: number; revenue: number; cost: number }>()
+    const [sales, consumptionDocs] = await Promise.all([
+      prisma.sale.findMany({
+        where: { tenantId, companyId, soldAt: { gte: from, lte: to }, ...locationFilter },
+        include: { items: { include: { product: { select: { name: true, isSgr: true, sgrValue: true } } } } },
+      }),
+      prisma.consumptionDoc.findMany({
+        where: { tenantId, companyId, source: "POS_RECIPE", status: "VALIDATED", docDate: { gte: from, lte: to }, ...locationFilter },
+        select: { items: { select: { finishedProductId: true, totalCost: true } } },
+      }),
+    ])
+    const actualCostByProduct = new Map<string, number>()
+    for (const doc of consumptionDocs) {
+      for (const item of doc.items) {
+        if (!item.finishedProductId) continue
+        actualCostByProduct.set(item.finishedProductId, (actualCostByProduct.get(item.finishedProductId) || 0) + toNumber(item.totalCost))
+      }
+    }
+
+    const products = new Map<string, { name: string; qty: number; revenue: number }>()
     for (const sale of sales) {
       for (const item of sale.items) {
         if (isSyntheticSgrSaleItem(item)) continue
         const key = item.productId
-        const row = products.get(key) || { name: item.product.name, qty: 0, revenue: 0, cost: 0 }
+        const row = products.get(key) || { name: item.product.name, qty: 0, revenue: 0 }
         const qty = toNumber(item.qty)
         row.qty += qty
         row.revenue += toNumber(item.lineTotalAfterDiscount)
-        row.cost += productUnitCost(item.product) * qty
         products.set(key, row)
       }
     }
-    const rows = Array.from(products.values())
-      .sort((a, b) => (b.revenue - b.cost) - (a.revenue - a.cost))
-      .map((row) => {
-        const profit = row.revenue - row.cost
-        const margin = row.revenue > 0 ? (profit / row.revenue) * 100 : 0
-        return [row.name, pdfFmt(row.qty, 3), reportMoney(row.revenue), reportMoney(row.cost), reportMoney(profit), `${pdfFmt(margin, 1)}%`]
+    const productRows = Array.from(products.entries()).map(([productId, row]) => {
+      const cost = actualCostByProduct.get(productId)
+      const hasDocumentedCost = cost !== undefined
+      const profit = hasDocumentedCost ? row.revenue - cost : null
+      const margin = hasDocumentedCost && row.revenue > 0 ? (profit! / row.revenue) * 100 : null
+      return { ...row, cost: cost ?? null, profit, margin, hasDocumentedCost }
     })
-    const totals = Array.from(products.values()).reduce((acc, row) => ({ revenue: acc.revenue + row.revenue, cost: acc.cost + row.cost }), { revenue: 0, cost: 0 })
-    const totalQty = Array.from(products.values()).reduce((sum, row) => sum + row.qty, 0)
-    const totalProfit = totals.revenue - totals.cost
-    const totalMargin = totals.revenue > 0 ? (totalProfit / totals.revenue) * 100 : 0
+    const rows = productRows
+      .sort((a, b) => (b.profit ?? Number.NEGATIVE_INFINITY) - (a.profit ?? Number.NEGATIVE_INFINITY))
+      .map((row) => [
+        row.name,
+        pdfFmt(row.qty, 3),
+        reportMoney(row.revenue),
+        row.hasDocumentedCost ? reportMoney(row.cost) : "Cost indisponibil",
+        row.hasDocumentedCost ? reportMoney(row.profit) : "-",
+        row.hasDocumentedCost ? `${pdfFmt(row.margin, 1)}%` : "-",
+      ])
+    const totalQty = productRows.reduce((sum, row) => sum + row.qty, 0)
+    const totalRevenue = productRows.reduce((sum, row) => sum + row.revenue, 0)
+    const documentedRows = productRows.filter((row) => row.hasDocumentedCost)
+    const documentedRevenue = documentedRows.reduce((sum, row) => sum + row.revenue, 0)
+    const documentedCost = documentedRows.reduce((sum, row) => sum + (row.cost || 0), 0)
+    const documentedProfit = documentedRevenue - documentedCost
+    const documentedMargin = documentedRevenue > 0 ? (documentedProfit / documentedRevenue) * 100 : 0
+    rows.push([
+      "TOTAL CU COST VALIDAT",
+      pdfFmt(documentedRows.reduce((sum, row) => sum + row.qty, 0), 3),
+      reportMoney(documentedRevenue),
+      reportMoney(documentedCost),
+      reportMoney(documentedProfit),
+      `${pdfFmt(documentedMargin, 1)}%`,
+    ])
     y = drawStandardReportHeader(doc, fonts, {
       title,
-      subtitle: "Rentabilitate calculata din vanzari si costurile din retetar",
+      subtitle: "Profit calculat din bonuri de consum validate; costurile lipsa sunt marcate explicit",
       reportLabel: "RAPORT MANAGEMENT",
       companyName: company.name,
       period: reportPeriod(from, to),
@@ -786,17 +908,17 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
       generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
         ["CANTITATE VANDUTA", pdfFmt(totalQty, 0)],
-        ["VENIT", reportMoney(totals.revenue)],
-        ["COST RETETAR", reportMoney(totals.cost)],
-        ["PROFIT ESTIMAT", reportMoney(totalProfit)],
-        ["MARJA", `${pdfFmt(totalMargin, 1)}%`],
+        ["VENIT TOTAL", reportMoney(totalRevenue)],
+        ["VENIT COST VALIDAT", reportMoney(documentedRevenue)],
+        ["PROFIT CONFIRMAT", reportMoney(documentedProfit)],
+        ["MARJA CONFIRMATA", `${pdfFmt(documentedMargin, 1)}%`],
       ],
     })
     y = drawAccountingTable(doc, fonts, {
-      margin: 36, y, title,
+      margin: 36, y, title, totalRowIndexes: [rows.length - 1],
       columns: [
         { label: "Produs", width: 250 }, { label: "Cant.", width: 90, align: "right" }, { label: "Venit", width: 120, align: "right" },
-        { label: "Cost teoretic", width: 120, align: "right" }, { label: "Profit", width: 120, align: "right" }, { label: "Marja", width: 100, align: "right" },
+        { label: "Cost validat", width: 120, align: "right" }, { label: "Profit", width: 120, align: "right" }, { label: "Marja", width: 100, align: "right" },
       ],
       rows,
     })
