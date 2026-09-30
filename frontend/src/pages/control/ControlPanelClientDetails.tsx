@@ -1347,57 +1347,26 @@ export default function ControlPanelClientDetails() {
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={handleExportClient}
-            disabled={exportingClient || loading}
-            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            onClick={() => setLicenseModalOpen(true)}
+            className="inline-flex items-center gap-2 bg-[#e7981f] px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f2aa35]"
           >
-            <Download size={15} />
-            {exportingClient ? "Se pregateste..." : "Export client"}
-          </button>
-          <button
-            onClick={handleToggleLicenseSuspended}
-            disabled={!client?.license?.id || licenseBusy}
-            className="inline-flex items-center gap-2 border border-amber-300/40 bg-amber-300/10 px-3 py-2 text-sm font-medium text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <PauseCircle size={15} />
-            {client?.license?.isSuspended ? "Reactiveaza" : "Suspenda"}
-          </button>
-          <button
-            onClick={load}
-            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white"
-          >
-            <RefreshCw size={15} />
-            Reincarca
-          </button>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white"
-          >
-            <History size={15} />
-            Istoric
+            <Pencil size={15} />
+            Editeaza licenta
           </button>
           <button
             type="button"
             onClick={openCompanyForm}
-            className="inline-flex items-center gap-2 bg-[#e7981f] px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f2aa35] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white"
           >
             <Plus size={15} />
             Adauga firma
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={!canDeleteClient || deletingClient}
-            className="inline-flex items-center gap-2 border border-rose-300/40 bg-rose-300/10 px-3 py-2 text-sm font-medium text-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Trash2 size={15} />
-            Sterge client
           </button>
         </div>
       </div>
       </section>
 
-      <section className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-6">
+      <section className="hidden grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-6">
         {metricCard("Utilizatori", client?.usersCount ?? users.length)}
         {metricCard("Locatii", client?.locationsCount ?? locations.length)}
         {metricCard("POS", posDevicesCount)}
@@ -1486,6 +1455,12 @@ export default function ControlPanelClientDetails() {
                 <button type="button" onClick={() => setLicenseModalOpen(true)} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Editeaza licenta<span className="mt-1 block text-xs font-normal text-slate-500">module si limite</span></button>
                 <button type="button" onClick={() => setActiveTab("users")} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Utilizatori<span className="mt-1 block text-xs font-normal text-slate-500">{users.length} conturi ERP</span></button>
                 <button type="button" onClick={load} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Reincarca<span className="mt-1 block text-xs font-normal text-slate-500">date actuale client</span></button>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Administrare</span>
+                <button type="button" onClick={handleExportClient} disabled={exportingClient || loading} className="inline-flex items-center gap-1 border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"><Download size={12} />{exportingClient ? "Se pregateste..." : "Export client"}</button>
+                <button type="button" onClick={handleToggleLicenseSuspended} disabled={!client?.license?.id || licenseBusy} className="inline-flex items-center gap-1 border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"><PauseCircle size={12} />{client?.license?.isSuspended ? "Reactiveaza" : "Suspenda"}</button>
+                <button type="button" onClick={() => setDeleteDialogOpen(true)} disabled={!canDeleteClient || deletingClient} className="inline-flex items-center gap-1 border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-50"><Trash2 size={12} />Sterge client</button>
               </div>
             </section>
 
