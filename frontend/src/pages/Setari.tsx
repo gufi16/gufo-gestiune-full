@@ -200,20 +200,20 @@ export default function Setari() {
           )
         })}
 
-        <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[16px] font-semibold text-slate-900">Sync POS</div>
-              <div className="mt-1 text-sm leading-6 text-slate-500">Configurezi cat de des sincronizeaza ERP-ul cu Android POS si revii rapid la setarea activa.</div>
+              <div className="mt-1 text-[13px] leading-5 text-slate-500">Configurezi cat de des sincronizeaza ERP-ul cu Android POS si revii rapid la setarea activa.</div>
             </div>
 
-            <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-slate-900 text-white">
-              <Settings2 size={20} />
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <Settings2 size={17} />
             </span>
           </div>
 
-          <div className="mt-6">
-            <label className="mb-2 block text-sm font-medium text-slate-700">Interval autosync POS</label>
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-medium text-slate-700">Interval autosync POS</label>
 
             <select
               value={posSyncInterval}
@@ -229,7 +229,7 @@ export default function Setari() {
             </select>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-3 flex gap-2">
             <button className={documentButtonPrimaryClass} onClick={savePosSyncConfig} disabled={loadingConfig || savingConfig}>
               {savingConfig ? "Se salveaza..." : "Salveaza"}
             </button>

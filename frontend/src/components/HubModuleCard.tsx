@@ -29,27 +29,27 @@ export default function HubModuleCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group rounded-[20px] border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"} ${className}`.trim()}
+      className={`group rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"} ${className}`.trim()}
     >
-      <div className="flex items-start justify-between gap-4">
-        <span className={`flex h-10 w-10 items-center justify-center rounded-[14px] ${iconClassName}`}>
-          <Icon size={18} />
+      <div className="flex items-start justify-between gap-3">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconClassName}`}>
+          <Icon size={17} />
         </span>
 
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           {badge}
         </span>
       </div>
 
-      <div className="mt-4">
-        <div className="text-[16px] font-semibold text-slate-900">{title}</div>
-        <div className="mt-1.5 text-sm leading-6 text-slate-500">{description}</div>
+      <div className="mt-3">
+        <div className="text-[15px] font-semibold text-slate-900">{title}</div>
+        <div className="mt-1 text-[13px] leading-5 text-slate-500">{description}</div>
       </div>
 
       {disabled ? (
-        <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-400">In curand</div>
+        <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-400">In curand</div>
       ) : (
-        <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#17324D]">
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#17324D]">
           {ctaLabel}
           <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
         </div>

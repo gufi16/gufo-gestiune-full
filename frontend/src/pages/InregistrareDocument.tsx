@@ -66,7 +66,7 @@ export default function InregistrareDocument() {
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageHeader
         badge="operatiuni"
         title="Inregistrare documente"

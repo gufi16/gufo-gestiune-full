@@ -37,15 +37,15 @@ export default function QuickActions({ onOpenReceipts }: { onOpenReceipts?: () =
   const navigate = useNavigate()
 
   return (
-    <div className="rounded-[24px] border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.03] md:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-900/[0.03] md:p-3.5">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <div className="text-lg font-semibold tracking-[-0.01em] text-[#17324D]">Actiuni rapide</div>
-          <div className="mt-1 text-sm text-slate-500">Acces direct.</div>
+          <div className="text-base font-semibold tracking-[-0.01em] text-[#17324D]">Actiuni rapide</div>
+          <div className="mt-0.5 text-xs text-slate-500">Acces direct.</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
       {actions.map((action) => {
         const Icon = action.icon
         return (
@@ -59,12 +59,12 @@ export default function QuickActions({ onOpenReceipts }: { onOpenReceipts?: () =
               }
               if (action.path) navigate(action.path)
             }}
-            className="group rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-4 text-left shadow-sm shadow-slate-900/[0.03] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+            className="group rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-3 text-left shadow-sm shadow-slate-900/[0.03] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-2">
               <span
                 className={[
-                  "flex h-10 w-10 items-center justify-center rounded-[14px]",
+                  "flex h-9 w-9 items-center justify-center rounded-xl",
                   action.tone === "blue" && "bg-blue-600 text-white",
                   action.tone === "amber" && "bg-amber-500 text-white",
                   action.tone === "slate" && "bg-slate-900 text-white",
@@ -72,17 +72,17 @@ export default function QuickActions({ onOpenReceipts }: { onOpenReceipts?: () =
                   .filter(Boolean)
                   .join(" ")}
               >
-                <Icon size={20} />
+                <Icon size={17} />
               </span>
 
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                 rapid
               </span>
             </div>
 
-            <div className="mt-4">
-              <div className="text-[16px] font-semibold text-slate-900">{action.label}</div>
-              <div className="mt-1 text-sm leading-6 text-slate-500">{action.helper}</div>
+            <div className="mt-3">
+              <div className="text-sm font-semibold text-slate-900">{action.label}</div>
+              <div className="mt-0.5 text-xs leading-5 text-slate-500">{action.helper}</div>
             </div>
           </button>
         )

@@ -5,7 +5,7 @@ type Props = {
 export default function TableCell({ children }: Props) {
 
   return (
-    <td className="p-3">
+    <td className="px-3 py-2 text-[13px]">
 
       {children}
 

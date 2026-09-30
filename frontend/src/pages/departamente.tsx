@@ -127,7 +127,7 @@ export default function DepartamentePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageHeader title="Departamente" subtitle="Organizezi produsele pe departamente operationale si mentii rapid structura folosita mai departe in categorii, produse si POS." />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

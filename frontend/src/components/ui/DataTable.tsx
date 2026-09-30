@@ -118,15 +118,15 @@ export default function DataTable<T>({
   }
 
   return (
-    <div className="rounded-[18px] border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.03] md:p-5">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-900/[0.03] md:p-3.5">
       {(title || subtitle) && (
-        <div className="mb-4 border-b border-slate-100 pb-3">
-          {title ? <div className="text-lg font-semibold tracking-[-0.01em] text-[#17324D]">{title}</div> : null}
-          {subtitle ? <div className="mt-1 text-sm leading-6 text-slate-500">{subtitle}</div> : null}
+        <div className="mb-3 border-b border-slate-100 pb-2.5">
+          {title ? <div className="text-base font-semibold tracking-[-0.01em] text-[#17324D]">{title}</div> : null}
+          {subtitle ? <div className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</div> : null}
         </div>
       )}
 
-      <div className="mb-3.5 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -136,11 +136,11 @@ export default function DataTable<T>({
               setPage(1)
             }}
             placeholder={searchPlaceholder}
-            className="h-10 w-full rounded-[12px] border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-sm text-[#17324D] outline-none transition focus:border-[#244A7C] focus:bg-white focus:ring-2 focus:ring-[#DCE7F5]"
+            className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-[13px] text-[#17324D] outline-none transition focus:border-[#244A7C] focus:bg-white focus:ring-2 focus:ring-[#DCE7F5]"
           />
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-slate-500">
           <span>Randuri:</span>
           <select
             value={pageSize}
@@ -148,7 +148,7 @@ export default function DataTable<T>({
               setPageSize(Number(e.target.value))
               setPage(1)
             }}
-            className="rounded-[12px] border border-slate-200 bg-white px-3 py-2 text-sm text-[#17324D] outline-none"
+            className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-xs text-[#17324D] outline-none"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -165,14 +165,14 @@ export default function DataTable<T>({
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-[16px] border border-slate-200">
+          <div className="max-h-[58vh] overflow-auto rounded-xl border border-slate-200">
             <table className="w-full text-[13px]">
               <thead className="bg-slate-50/90 text-slate-500">
                 <tr>
                   {columns.map((col) => (
                     <th
                       key={String(col.key)}
-                      className={`px-3 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.08em] ${col.className || ""}`}
+                      className={`px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em] ${col.className || ""}`}
                     >
                       {col.sortable === false || col.render ? (
                         col.label
@@ -196,7 +196,7 @@ export default function DataTable<T>({
                 {paged.map((row, index) => (
                   <tr key={rowKey(row, index)} className="border-t border-slate-100 transition hover:bg-slate-50/80">
                     {columns.map((col) => (
-                      <td key={String(col.key)} className={`px-3 py-3 align-middle text-[13px] ${col.className || ""}`}>
+                      <td key={String(col.key)} className={`px-3 py-2 align-middle text-[13px] ${col.className || ""}`}>
                         {col.render ? (
                           col.render(row)
                         ) : col.type === "status" ? (
@@ -212,8 +212,8 @@ export default function DataTable<T>({
             </table>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-slate-500">
+          <div className="mt-2.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="text-xs text-slate-500">
               {sorted.length} rezultate • pagina {currentPage} din {totalPages}
             </div>
 
@@ -222,7 +222,7 @@ export default function DataTable<T>({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="rounded-[12px] border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#17324D] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-[#17324D] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Inapoi
               </button>
@@ -231,7 +231,7 @@ export default function DataTable<T>({
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="rounded-[12px] border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#17324D] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-[#17324D] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Inainte
               </button>

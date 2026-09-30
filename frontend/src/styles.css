@@ -35,11 +35,11 @@ textarea {
 
 input,
 select {
-  min-height: 2.5rem;
+  min-height: 2.25rem;
 }
 
 textarea {
-  min-height: 2.75rem;
+  min-height: 2.5rem;
 }
 
 table th,

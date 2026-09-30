@@ -6,7 +6,7 @@ type Props = {
 export default function Table({ columns, children }: Props) {
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
 
       <table className="w-full text-sm">
 
@@ -15,7 +15,7 @@ export default function Table({ columns, children }: Props) {
             {columns.map((c, i) => (
               <th
                 key={i}
-                className="p-3 text-left font-medium"
+                className="px-3 py-2 text-left text-xs font-semibold"
               >
                 {c}
               </th>

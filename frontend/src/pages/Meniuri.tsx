@@ -861,7 +861,7 @@ export default function MeniuriPage() {
   }, [items])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageHeader
         badge="nomenclator"
         title="Meniuri"
