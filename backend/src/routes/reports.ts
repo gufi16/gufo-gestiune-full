@@ -300,6 +300,61 @@ function drawSgrReportHeader(
   return y + 58
 }
 
+// Keep every operational PDF visually aligned with the accounting SGR document.
+function drawStandardReportHeader(
+  doc: PDFKit.PDFDocument,
+  fonts: ReportPdfFonts,
+  options: {
+    title: string
+    subtitle: string
+    reportLabel: string
+    companyName: string
+    period: string
+    locationName: string
+    generatedAt: string
+    cards: Array<[string, string]>
+  },
+) {
+  const margin = 36
+  const contentWidth = doc.page.width - margin * 2
+  let y = margin
+
+  doc.font(fonts.bold).fontSize(21).fillColor("#111827").text(options.title, margin, y)
+  doc.font(fonts.regular).fontSize(11).fillColor("#50627D").text(options.subtitle, margin, y + 28)
+  doc.save().rect(doc.page.width - margin - 142, y + 3, 142, 26).fill("#167D72").restore()
+  doc.font(fonts.bold).fontSize(8.8).fillColor("#FFFFFF").text(options.reportLabel, doc.page.width - margin - 142, y + 11, { width: 142, align: "center" })
+  y += 51
+
+  const meta = [
+    ["Companie", options.companyName],
+    ["Perioada", options.period],
+    ["Punct de lucru", options.locationName],
+    ["Data generarii", options.generatedAt],
+    ["Moneda", "RON"],
+  ]
+  const metaWidth = contentWidth / meta.length
+  meta.forEach(([label, value], index) => {
+    const x = margin + index * metaWidth
+    doc.save().rect(x, y, metaWidth, 37).fill("#F7F9FC").restore()
+    doc.save().lineWidth(0.65).strokeColor("#C8D4E3").rect(x, y, metaWidth, 37).stroke().restore()
+    doc.font(fonts.regular).fontSize(7.8).fillColor("#64748B").text(label, x + 8, y + 7)
+    doc.font(fonts.regular).fontSize(9.4).fillColor("#334155").text(value || "-", x + 8, y + 19, { width: metaWidth - 16, lineBreak: false })
+  })
+  y += 54
+
+  const cards = options.cards.slice(0, 5)
+  const gap = 7
+  const cardWidth = (contentWidth - gap * (cards.length - 1)) / cards.length
+  cards.forEach(([label, value], index) => {
+    const x = margin + index * (cardWidth + gap)
+    doc.save().lineWidth(0.7).strokeColor("#C8D4E3").rect(x, y, cardWidth, 46).stroke().restore()
+    doc.font(fonts.regular).fontSize(8.1).fillColor("#64748B").text(label, x + 6, y + 8, { width: cardWidth - 12, align: "center" })
+    doc.font(fonts.bold).fontSize(15).fillColor("#111827").text(value, x + 6, y + 22, { width: cardWidth - 12, align: "center", lineBreak: false })
+  })
+
+  return y + 58
+}
+
 function ensureAccountingFooterSpace(doc: PDFKit.PDFDocument, fonts: ReportPdfFonts, y: number, margin: number, title: string) {
   if (y + 130 <= doc.page.height - margin) return y
   doc.addPage({ size: "A4", layout: doc.page.layout === "landscape" ? "landscape" : "portrait", margin })
@@ -505,28 +560,22 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
       rows: detailRows,
     })
   } else {
-    let y = drawDocumentHero(doc, fonts, {
+    let y = drawStandardReportHeader(doc, fonts, {
       title,
       subtitle: `Centralizator vanzari pentru contabilitate${company.cui ? ` · CUI ${company.cui}` : ""}`,
       companyName: company.name,
-      companyLines: [company.cui ? `CUI: ${company.cui}` : "", company.address || "", company.city || ""].filter(Boolean),
-      rightPairs: [
-        { label: "Perioada", value: reportPeriod(from, to) },
-        { label: "Locatie", value: locationName },
-        { label: "Generat", value: new Date().toLocaleDateString("ro-RO") },
-      ],
-      margin: 36,
-    })
-    y = drawInfoCards(doc, fonts, {
-      margin: 36,
-      y,
-      height: 100,
+      period: reportPeriod(from, to),
+      locationName,
+      generatedAt: new Date().toLocaleDateString("ro-RO"),
+      reportLabel: "RAPORT CONTABIL",
       cards: [
-        { title: "Document", pairs: [{ label: "Perioada", value: reportPeriod(from, to) }, { label: "Locatie", value: locationName }] },
-        { title: "Vanzari", pairs: [{ label: "Bonuri", value: String(sales.length) }, { label: "Fara SGR", value: reportMoney(totalWithoutSgr) }] },
-        { title: "Incasari", pairs: Array.from(paymentTotals.entries()).slice(0, 3).map(([label, value]) => ({ label, value: reportMoney(value) })) },
+        ["TOTAL BONURI", String(sales.length)],
+        ["NUMERAR", reportMoney(paymentTotals.get("CASH") || paymentTotals.get("NUMERAR") || 0)],
+        ["CARD", reportMoney(paymentTotals.get("CARD") || 0)],
+        ["TOTAL SGR", reportMoney(recordedSgrTotal)],
+        ["TOTAL INCASARI", reportMoney(totalGross)],
       ],
-    }) + 18
+    })
     y = drawAccountingTable(doc, fonts, {
       margin: 36,
       y,
@@ -593,6 +642,10 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
   const warehouseFilter = warehouseId ? { warehouseId } : {}
   const company = await resolveTenantCompany(prisma, tenantId, companyId)
   if (!company) return res.status(404).json({ error: "Firma activa nu a fost gasita." })
+  const selectedLocation = locationId
+    ? await prisma.location.findFirst({ where: { id: locationId, tenantId, companyId }, select: { name: true } })
+    : null
+  const locationName = selectedLocation?.name || (locationId ? "Locatia selectata" : "Toate locatiile")
 
   const title =
     kind === "daily-close"
@@ -615,18 +668,7 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
   res.setHeader("Content-Disposition", `attachment; filename=${filename}_${safeFrom}-${safeTo}.pdf`)
   doc.pipe(res)
 
-  let y = drawDocumentHero(doc, fonts, {
-    title,
-    subtitle: "Document generat din datele operationale Gufo ERP",
-    companyName: company.name,
-    companyLines: [company.cui ? `CUI: ${company.cui}` : "", company.address || "", company.city || ""].filter(Boolean),
-    rightPairs: [
-      { label: "Perioada", value: reportPeriod(from, to) },
-      { label: "Locatie", value: locationId ? "Locatia selectata" : "Toate locatiile" },
-      { label: "Generat", value: new Date().toLocaleString("ro-RO") },
-    ],
-    margin: 36,
-  })
+  let y = 36
 
   if (kind === "daily-close") {
     const [sales, closures] = await Promise.all([
@@ -654,16 +696,22 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         vatTotals.set(rate, (vatTotals.get(rate) || 0) + toNumber(item.lineTotalAfterDiscount))
       }
     }
-    y = drawInfoCards(doc, fonts, {
-      margin: 36,
-      y,
-      height: 96,
+    y = drawStandardReportHeader(doc, fonts, {
+      title,
+      subtitle: "Centralizator vanzari, incasari si inchideri Z",
+      reportLabel: "RAPORT OPERATIONAL",
+      companyName: company.name,
+      period: reportPeriod(from, to),
+      locationName,
+      generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
-        { title: "Vanzari", pairs: [{ label: "Bonuri", value: String(sales.length) }, { label: "Total", value: reportMoney(salesTotal) }] },
-        { title: "Incasari", pairs: Array.from(payments.entries()).slice(0, 3).map(([label, value]) => ({ label, value: reportMoney(value) })) },
-        { title: "Control", pairs: [{ label: "Discounturi", value: reportMoney(discounts) }, { label: "Inchideri Z", value: String(closures.length) }] },
+        ["TOTAL BONURI", String(sales.length)],
+        ["NUMERAR", reportMoney(payments.get("CASH") || payments.get("NUMERAR") || 0)],
+        ["CARD", reportMoney(payments.get("CARD") || 0)],
+        ["INCHIDERI Z", String(closures.length)],
+        ["TOTAL INCASARI", reportMoney(salesTotal)],
       ],
-    }) + 18
+    })
     const rows = sales.map((sale) => [
       new Date(sale.soldAt).toLocaleString("ro-RO"),
       sale.receiptNo || sale.clientSaleId || "-",
@@ -723,16 +771,27 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         const profit = row.revenue - row.cost
         const margin = row.revenue > 0 ? (profit / row.revenue) * 100 : 0
         return [row.name, pdfFmt(row.qty, 3), reportMoney(row.revenue), reportMoney(row.cost), reportMoney(profit), `${pdfFmt(margin, 1)}%`]
-      })
+    })
     const totals = Array.from(products.values()).reduce((acc, row) => ({ revenue: acc.revenue + row.revenue, cost: acc.cost + row.cost }), { revenue: 0, cost: 0 })
-    y = drawInfoCards(doc, fonts, {
-      margin: 36, y, height: 88,
+    const totalQty = Array.from(products.values()).reduce((sum, row) => sum + row.qty, 0)
+    const totalProfit = totals.revenue - totals.cost
+    const totalMargin = totals.revenue > 0 ? (totalProfit / totals.revenue) * 100 : 0
+    y = drawStandardReportHeader(doc, fonts, {
+      title,
+      subtitle: "Rentabilitate calculata din vanzari si costurile din retetar",
+      reportLabel: "RAPORT MANAGEMENT",
+      companyName: company.name,
+      period: reportPeriod(from, to),
+      locationName,
+      generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
-        { title: "Vanzari", pairs: [{ label: "Produse", value: String(products.size) }, { label: "Venit", value: reportMoney(totals.revenue) }] },
-        { title: "Cost teoretic", pairs: [{ label: "Retetar / cost", value: reportMoney(totals.cost) }] },
-        { title: "Profit estimat", pairs: [{ label: "Marja", value: `${pdfFmt(totals.revenue > 0 ? ((totals.revenue - totals.cost) / totals.revenue) * 100 : 0, 1)}%` }] },
+        ["CANTITATE VANDUTA", pdfFmt(totalQty, 0)],
+        ["VENIT", reportMoney(totals.revenue)],
+        ["COST RETETAR", reportMoney(totals.cost)],
+        ["PROFIT ESTIMAT", reportMoney(totalProfit)],
+        ["MARJA", `${pdfFmt(totalMargin, 1)}%`],
       ],
-    }) + 18
+    })
     y = drawAccountingTable(doc, fonts, {
       margin: 36, y, title,
       columns: [
@@ -776,14 +835,27 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         pdfFmt(balance.qty, 3),
       ]
     })
-    y = drawInfoCards(doc, fonts, {
-      margin: 36, y, height: 88,
+    const movementTotals = Array.from(movements.values()).reduce(
+      (acc, movement) => ({ input: acc.input + movement.input, output: acc.output + movement.output, adjust: acc.adjust + movement.adjust }),
+      { input: 0, output: 0, adjust: 0 },
+    )
+    const currentStock = balances.reduce((sum, balance) => sum + toNumber(balance.qty), 0)
+    y = drawStandardReportHeader(doc, fonts, {
+      title,
+      subtitle: "Situatie stoc curent si miscari in intervalul selectat",
+      reportLabel: "RAPORT GESTIUNE",
+      companyName: company.name,
+      period: reportPeriod(from, to),
+      locationName,
+      generatedAt: new Date().toLocaleDateString("ro-RO"),
       cards: [
-        { title: "Produse", pairs: [{ label: "Pozitii stoc", value: String(balances.length) }] },
-        { title: "Miscari perioada", pairs: [{ label: "Documente", value: String(moves.length) }] },
-        { title: "Nota", pairs: [{ label: "Sold", value: "la momentul generarii" }] },
+        ["POZITII STOC", String(balances.length)],
+        ["INTRARI", pdfFmt(movementTotals.input, 3)],
+        ["IESIRI", pdfFmt(movementTotals.output, 3)],
+        ["AJUSTARI", pdfFmt(movementTotals.adjust, 3)],
+        ["STOC CURENT", pdfFmt(currentStock, 3)],
       ],
-    }) + 18
+    })
     y = drawAccountingTable(doc, fonts, {
       margin: 36, y, title,
       columns: [
