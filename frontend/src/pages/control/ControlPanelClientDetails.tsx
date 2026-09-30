@@ -1382,6 +1382,13 @@ export default function ControlPanelClientDetails() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={openSubscriptionEditor}
+            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+          >
+            Abonament comercial
+          </button>
+          <button
+            type="button"
             onClick={() => setLicenseModalOpen(true)}
             className="inline-flex items-center gap-2 bg-[#e7981f] px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f2aa35]"
           >
@@ -1447,6 +1454,7 @@ export default function ControlPanelClientDetails() {
               <div className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Administrare client</div>
               <div className="mt-2 grid gap-1">
                 <button type="button" onClick={() => setOverviewPanelOpen("profile")} className="flex items-center justify-between bg-[#17324D] px-3 py-3 text-left text-sm font-semibold text-white"><span>Date firmă</span><Pencil size={14} /></button>
+                <button type="button" onClick={openSubscriptionEditor} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Abonament comercial</span><span className="text-xs text-slate-400">{client?.subscription?.billingCycle === "MONTHLY" ? "Lunar" : client?.subscription?.billingCycle === "YEARLY" ? "Anual" : "Setează"}</span></button>
                 <button type="button" onClick={() => setActiveTab("license")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Licență și module</span><span className="text-xs text-slate-400">{enabledDynamicModules}</span></button>
                 <button type="button" onClick={() => setActiveTab("locations")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Locații și device-uri</span><span className="text-xs text-slate-400">{locations.length}</span></button>
                 <button type="button" onClick={() => setActiveTab("users")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Echipă și acces</span><span className="text-xs text-slate-400">{users.length}</span></button>
@@ -1461,7 +1469,7 @@ export default function ControlPanelClientDetails() {
             <div className="p-4">
               <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                 <div><div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Prezentare</div><div className="mt-1 text-lg font-semibold text-[#17324D]">Date operaționale și acces rapid</div></div>
-                <button type="button" onClick={() => setLicenseModalOpen(true)} className="inline-flex items-center justify-center gap-2 bg-[#17324D] px-3 py-2 text-sm font-semibold text-white"><Pencil size={14} /> Configurează licența</button>
+                <div className="flex flex-wrap gap-2"><button type="button" onClick={openSubscriptionEditor} className="inline-flex items-center justify-center gap-2 border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-[#17324D]"><span>Abonament comercial</span></button><button type="button" onClick={() => setLicenseModalOpen(true)} className="inline-flex items-center justify-center gap-2 bg-[#17324D] px-3 py-2 text-sm font-semibold text-white"><Pencil size={14} /> Configurează licența</button></div>
               </div>
 
               <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
