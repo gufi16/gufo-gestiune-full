@@ -283,6 +283,16 @@ const KioskVivaPrepareSchema = PublicGufoDeliveryVivaPrepareSchema.omit({ restau
   }),
 })
 
+const KioskCashCheckoutSchema = PublicGufoDeliveryCheckoutSchema.omit({ restaurantId: true }).extend({
+  customer: z.object({
+    name: z.string().trim().min(1),
+    phone: z.string().trim().min(1),
+    email: z.string().trim().email(),
+    note: z.string().trim().nullish().transform((value) => value || undefined),
+  }),
+  payment: z.object({ type: z.literal("CASH") }),
+})
+
 async function ensureKioskCustomerProfile(input: { name: string; email: string; phone: string }) {
   const email = input.email.trim().toLowerCase()
   const phone = input.phone.trim()
@@ -1168,10 +1178,6 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
 
     const menu = await buildGufoDeliveryMenuPayload(req, resolved.integration)
     const settings = integrationSettings(resolved.integration.settingsJson)
-    if (String(settings.dispatchMode || "").toUpperCase() !== "GO_CONFIRM") {
-      return res.status(409).json({ ok: false, error: "Kiosk-ul necesita un Gufo Go selectat pentru preluarea comenzilor." })
-    }
-
     return res.json({
       ok: true,
       terminal: {
@@ -1183,7 +1189,10 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
       catalog: menu.catalog,
       checkout: {
         paymentProvider: "VIVA",
-        paymentMethods: [{ code: "CARD", label: "Card online" }],
+        paymentMethods: [
+          { code: "CARD", label: "Card online" },
+          { code: "CASH", label: "Cash pentru test" },
+        ],
         fulfillmentTypes: ["DELIVERY", "PICKUP"],
         schedule: "NEXT_DAY_ONLY",
       },
@@ -1196,6 +1205,49 @@ export async function handleKioskBootstrap(req: KioskAuthRequest, res: Response)
 
 router.get("/api/v1/kiosk/bootstrap", handleKioskBootstrap)
 
+export async function handleKioskCashCheckout(req: KioskAuthRequest, res: Response) {
+  const parsed = KioskCashCheckoutSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+
+  try {
+    const resolved = await resolveGufoKioskIntegration(req)
+    if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
+
+    const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
+    const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload, { skipDeliveryAreaValidation: true })
+    const externalOrder = await importMarketplaceOrderForTenant(tenantId, importPayload, { preserveExisting: true })
+    if (!externalOrder?.id) throw new Error("Nu am putut crea comanda cash in ERP.")
+
+    const customer = await ensureKioskCustomerProfile({
+      name: parsed.data.customer.name,
+      email: parsed.data.customer.email,
+      phone: parsed.data.customer.phone,
+    })
+    if (customer?.email) {
+      void issueKioskProfileCode({ terminalId: resolved.terminal.id, customerId: customer.id, email: customer.email, welcome: true })
+        .catch((error: unknown) => console.warn("[gufo-kiosk] Could not send cash-order welcome code:", getErrorMessage(error, "unknown email error")))
+    }
+    void queueGufoDeliveryOrderReceipt({ email: parsed.data.customer.email, orderId: externalOrder.id, payload: importPayload })
+      .catch((error: unknown) => console.warn("[gufo-kiosk] Could not send cash-order receipt:", getErrorMessage(error, "unknown email error")))
+
+    return res.status(201).json({
+      ok: true,
+      order: {
+        id: externalOrder.id,
+        externalOrderId: importPayload.externalOrderId,
+        externalOrderNumber: importPayload.externalOrderNumber,
+        status: "RECEIVED",
+        total: importPayload.total,
+        currency: importPayload.currency,
+      },
+    })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut plasa comanda cash din kiosk.") })
+  }
+}
+
+router.post("/api/v1/kiosk/checkout/cash", handleKioskCashCheckout)
+
 export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Response) {
   const parsed = KioskVivaPrepareSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
@@ -1205,9 +1257,6 @@ export async function handleKioskVivaPrepare(req: KioskAuthRequest, res: Respons
     if (!resolved) return res.status(401).json({ ok: false, error: "Gufo Kiosk neautentificat sau neconfigurat." })
 
     const settings = integrationSettings(resolved.integration.settingsJson)
-    if (String(settings.dispatchMode || "").toUpperCase() !== "GO_CONFIRM") {
-      return res.status(409).json({ ok: false, error: "Kiosk-ul necesita un Gufo Go selectat pentru preluarea comenzilor." })
-    }
 
     const checkoutPayload = { ...parsed.data, restaurantId: resolved.integration.id }
     const { tenantId, importPayload } = await buildGufoDeliveryCheckoutImportPayload(req, checkoutPayload, { skipDeliveryAreaValidation: true })
@@ -4801,9 +4850,6 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
 
     const kioskEnabled = incomingSettings.kioskEnabled === true
     const kioskTerminalId = String(incomingSettings.kioskTerminalId || "").trim()
-    if (kioskEnabled && dispatchMode !== "GO_CONFIRM") {
-      return res.status(400).json({ ok: false, error: "Gufo Kiosk poate trimite comenzile numai catre Gufo Go." })
-    }
     if (kioskEnabled && !kioskTerminalId) {
       return res.status(400).json({ ok: false, error: "Selecteaza licenta Gufo Kiosk pentru acest restaurant." })
     }
