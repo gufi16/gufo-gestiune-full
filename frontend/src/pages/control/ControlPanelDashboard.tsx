@@ -60,9 +60,10 @@ function Status({ tone, children }: { tone: "good" | "warn" | "bad" | "neutral";
   return <span className={`inline-flex rounded-md border px-2 py-1 text-[11px] font-bold ${theme}`}>{children}</span>
 }
 
-function Metric({ label, value, helper, icon, tone = "neutral" }: { label: string; value: string | number; helper: string; icon: ReactNode; tone?: "good" | "warn" | "bad" | "neutral" }) {
+function Metric({ label, value, helper, icon, tone = "neutral", to }: { label: string; value: string | number; helper: string; icon: ReactNode; tone?: "good" | "warn" | "bad" | "neutral"; to?: string }) {
   const accent = tone === "good" ? "border-emerald-200" : tone === "warn" ? "border-amber-200" : tone === "bad" ? "border-rose-200" : "border-slate-200"
-  return <div className={`border bg-white px-4 py-3 shadow-sm ${accent}`}><div className="flex items-center justify-between gap-3"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</div><span className="text-slate-400">{icon}</span></div><div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</div><div className="mt-1 truncate text-xs text-slate-500">{helper}</div></div>
+  const content = <><div className="flex items-center justify-between gap-3"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</div><span className="text-slate-400">{icon}</span></div><div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</div><div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500"><span className="truncate">{helper}</span>{to ? <ArrowRight size={13} className="shrink-0 text-slate-400" /> : null}</div></>
+  return to ? <Link to={to} className={`block border bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#17324D] hover:shadow-md ${accent}`}>{content}</Link> : <div className={`border bg-white px-4 py-3 shadow-sm ${accent}`}>{content}</div>
 }
 
 function Section({ title, description, action, children }: { title: string; description: string; action?: ReactNode; children: ReactNode }) {
@@ -119,7 +120,7 @@ export default function ControlPanelDashboard() {
       <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Gufo Control / {mode === "overview" ? "Operare" : title}</div><h1 className="mt-1 text-2xl font-bold tracking-tight">{title}</h1><p className="mt-1 text-sm text-slate-300">{subtitle}</p></div>
-          <div className="flex flex-wrap gap-2"><Link to="/control-panel/clienti" className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"><Building2 size={14} />Clienti</Link><Link to="/control-panel/audit" className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"><Activity size={14} />Audit</Link><button type="button" onClick={() => void load()} className="inline-flex items-center gap-2 bg-[#f39c12] px-3 py-2 text-xs font-bold text-[#292a31] hover:bg-[#ffad2b]"><RefreshCw size={14} />Reincarca</button></div>
+          <div className="flex flex-wrap gap-2"><Link to="/control-panel/clienti" className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"><Building2 size={14} />Clienti</Link><Link to="/control-panel/audit" className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"><Activity size={14} />Audit</Link><button type="button" disabled={loading} onClick={() => void load()} className="inline-flex items-center gap-2 bg-[#f39c12] px-3 py-2 text-xs font-bold text-[#292a31] hover:bg-[#ffad2b] disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw size={14} className={loading ? "animate-spin" : ""} />{loading ? "Se incarca..." : "Reincarca"}</button></div>
         </div>
       </section>
 
@@ -127,12 +128,12 @@ export default function ControlPanelDashboard() {
 
       {mode === "overview" ? <>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          <Metric label="Clienti" value={loading ? "..." : Number(metrics.tenants || 0)} helper={`${Number(metrics.activeTenants || 0)} activi`} icon={<Building2 size={16} />} />
-          <Metric label="Alerte" value={loading ? "..." : totalAlerts} helper="backup, licente, plati" icon={<CircleAlert size={16} />} tone={totalAlerts ? "warn" : "good"} />
-          <Metric label="Backup valid" value={loading ? "..." : `${Number(metrics.protectedTenants || 0)}/${Number(metrics.tenants || 0)}`} helper="clienti protejati" icon={<Database size={16} />} tone={Number(metrics.riskyTenants || 0) ? "warn" : "good"} />
-          <Metric label="Device-uri" value={loading ? "..." : Number(metrics.terminals || 0)} helper="POS, KDS, Go, Kiosk" icon={<Server size={16} />} />
-          <Metric label="Locatii" value={loading ? "..." : Number(metrics.locations || 0)} helper="active in ERP" icon={<Store size={16} />} />
-          <Metric label="Utilizatori" value={loading ? "..." : Number(metrics.users || 0)} helper="conturi active" icon={<Users size={16} />} />
+          <Metric label="Clienti" value={loading ? "..." : Number(metrics.tenants || 0)} helper={`${Number(metrics.activeTenants || 0)} activi`} icon={<Building2 size={16} />} to="/control-panel/clienti" />
+          <Metric label="Alerte" value={loading ? "..." : totalAlerts} helper="backup, licente, plati" icon={<CircleAlert size={16} />} tone={totalAlerts ? "warn" : "good"} to="/control-panel/audit" />
+          <Metric label="Backup valid" value={loading ? "..." : `${Number(metrics.protectedTenants || 0)}/${Number(metrics.tenants || 0)}`} helper="clienti protejati" icon={<Database size={16} />} tone={Number(metrics.riskyTenants || 0) ? "warn" : "good"} to="/control-panel/clienti" />
+          <Metric label="Device-uri" value={loading ? "..." : Number(metrics.terminals || 0)} helper="POS, KDS, Go, Kiosk" icon={<Server size={16} />} to="/control-panel/clienti" />
+          <Metric label="Locatii" value={loading ? "..." : Number(metrics.locations || 0)} helper="active in ERP" icon={<Store size={16} />} to="/control-panel/clienti" />
+          <Metric label="Utilizatori" value={loading ? "..." : Number(metrics.users || 0)} helper="conturi active" icon={<Users size={16} />} to="/control-panel/clienti" />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.35fr_0.85fr]">
