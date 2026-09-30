@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { PlugZap, ShieldCheck } from "lucide-react"
+import { CircleAlert, CircleCheckBig, PlugZap, RefreshCw, Save, Server, ShieldCheck } from "lucide-react"
 import { api } from "../../lib/api"
 
 type PlatformEFacturaResponse = {
@@ -82,22 +82,23 @@ export default function ControlPanelIntegrations() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] border border-slate-200 bg-white px-5 py-5 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#f0ad3d]">
               <PlugZap size={14} />
-              Integrari
+              Platforma / Integrari
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">ANAF e-Factura</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">ANAF e-Factura</h1>
+            <p className="mt-1 text-sm text-slate-300">Credentialele globale pentru conectarea firmelor din platforma la serviciile ANAF.</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              Status: <span className="font-semibold text-slate-950">{configured ? "Configurat" : "Neconfigurat"}</span>
+          <div className="grid border border-white/15 sm:grid-cols-2">
+            <div className="flex items-center gap-2 border-b border-white/15 px-3 py-2 text-sm sm:border-b-0 sm:border-r">
+              {configured ? <CircleCheckBig size={16} className="text-emerald-400" /> : <CircleAlert size={16} className="text-amber-300" />}
+              <span className="text-slate-300">Conectare</span><span className="font-semibold">{configured ? "Configurata" : "Neconfigurata"}</span>
             </div>
-            <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              Mediu: <span className="font-semibold text-slate-950">{form.efacturaEnvironment === "prod" ? "Productie" : "Test"}</span>
+            <div className="flex items-center gap-2 px-3 py-2 text-sm"><Server size={16} className="text-slate-300" /><span className="text-slate-300">Mediu</span><span className="font-semibold">{form.efacturaEnvironment === "prod" ? "Productie" : "Test"}</span>
             </div>
           </div>
         </div>
@@ -106,9 +107,9 @@ export default function ControlPanelIntegrations() {
       {error ? <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
       {message ? <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
 
-      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
             <ShieldCheck size={14} />
             Configurare
           </div>
@@ -118,16 +119,18 @@ export default function ControlPanelIntegrations() {
               type="button"
               onClick={load}
               disabled={loading || saving}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+              className="inline-flex items-center gap-2 border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
             >
+              <RefreshCw size={15} />
               Reincarca
             </button>
             <button
               type="button"
               onClick={save}
               disabled={loading || saving}
-              className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
+              <Save size={15} />
               {saving ? "Se salveaza..." : "Salveaza"}
             </button>
           </div>
@@ -139,7 +142,7 @@ export default function ControlPanelIntegrations() {
             <input
               value={form.efacturaOauthClientId}
               onChange={(e) => update("efacturaOauthClientId", e.target.value)}
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
               placeholder="Client ID"
             />
           </label>
@@ -147,9 +150,10 @@ export default function ControlPanelIntegrations() {
           <label className="space-y-2 text-sm text-slate-700">
             <span className="font-medium">Client Secret</span>
             <input
+              type="password"
               value={form.efacturaOauthClientSecret}
               onChange={(e) => update("efacturaOauthClientSecret", e.target.value)}
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
               placeholder="Client Secret"
             />
           </label>
@@ -159,7 +163,7 @@ export default function ControlPanelIntegrations() {
             <input
               value={form.efacturaOauthRedirectUri}
               onChange={(e) => update("efacturaOauthRedirectUri", e.target.value)}
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
               placeholder="https://api.gufo.ink/api/v1/company/efactura/oauth/callback"
             />
           </label>
@@ -169,7 +173,7 @@ export default function ControlPanelIntegrations() {
             <select
               value={form.efacturaEnvironment}
               onChange={(e) => update("efacturaEnvironment", e.target.value)}
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
             >
               <option value="test">Test</option>
               <option value="prod">Productie</option>

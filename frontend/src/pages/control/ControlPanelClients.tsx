@@ -6,7 +6,6 @@ import {
   Copy,
   Crown,
   ExternalLink,
-  LogOut,
   Plus,
   RefreshCw,
   Search,
@@ -17,7 +16,7 @@ import {
   X,
 } from "lucide-react"
 import { api } from "../../lib/api"
-import { controlLogout, controlMe } from "../../lib/controlAuth"
+import { controlMe } from "../../lib/controlAuth"
 
 type AdminClientItem = {
   id: string
@@ -255,10 +254,10 @@ function normalizeClient(raw: any): AdminClientItem {
 
 function summaryCard(label: string, value: number, helper: string) {
   return (
-    <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className="mt-2 text-2xl font-semibold text-slate-950">{value}</div>
-      <div className="mt-1 text-xs text-slate-500">{helper}</div>
+    <div className="border border-slate-200 bg-white px-3 py-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-slate-950">{value}</div>
+      <div className="mt-0.5 text-[11px] text-slate-500">{helper}</div>
     </div>
   )
 }
@@ -288,7 +287,6 @@ export default function ControlPanelClients() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [ownerEmail, setOwnerEmail] = useState("")
-  const [loggingOut, setLoggingOut] = useState(false)
   const [createdCredentials, setCreatedCredentials] = useState<{ clientName: string; email: string; password: string; portalUrl?: string | null } | null>(null)
   const [form, setForm] = useState<CreateClientPayload>({
     companyName: "",
@@ -384,16 +382,6 @@ export default function ControlPanelClients() {
     }
   }
 
-  async function handleIesire() {
-    try {
-      setLoggingOut(true)
-      await controlLogout()
-      navigate("/cp/login", { replace: true })
-    } finally {
-      setLoggingOut(false)
-    }
-  }
-
   async function handleCreateClient(e: FormEvent) {
     e.preventDefault()
     try {
@@ -457,50 +445,42 @@ export default function ControlPanelClients() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] border border-slate-200 bg-white px-5 py-5 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#17324D] text-white">
+              <div className="flex h-10 w-10 items-center justify-center bg-[#e7981f] text-slate-950">
                 <Crown size={18} />
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-[#17324D]">{ownerEmail}</div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Administrare clienti</h1>
+                <div className="truncate text-xs font-medium text-slate-300">{ownerEmail}</div>
+                <h1 className="text-2xl font-semibold tracking-tight">Clienti</h1>
               </div>
             </div>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-500">
-              Lucrezi pe o lista curata de clienti, vezi rapid statusul, licenta, backup-ul si intri direct in fisa clientului.
+            <p className="mt-3 max-w-3xl text-sm text-slate-300">
+              Registru operational pentru firme, licente, backup-uri si acces rapid in fisa fiecarui client.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button
               onClick={loadClients}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+              className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20"
             >
               <RefreshCw size={15} />
               Reincarca
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#17324D] px-4 py-2 text-sm font-semibold text-white"
+              className="inline-flex items-center gap-2 bg-[#e7981f] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f2aa35]"
             >
               <Plus size={15} />
               Client nou
             </button>
-            <button
-              onClick={handleIesire}
-              disabled={loggingOut}
-              className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-60"
-            >
-              <LogOut size={15} />
-              {loggingOut ? "..." : "Iesire"}
-            </button>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-4 grid gap-px bg-white/15 sm:grid-cols-2 xl:grid-cols-5">
           {summaryCard("Clienti", summary.total, "total conturi")}
           {summaryCard("Activi", summary.active, "gata de operare")}
           {summaryCard("In risc", summary.risky, "backup lipsa sau invalid")}
@@ -545,7 +525,7 @@ export default function ControlPanelClients() {
         </section>
       ) : null}
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full max-w-2xl">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -553,7 +533,7 @@ export default function ControlPanelClients() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cauta firma, CUI, email, telefon sau subdomeniu"
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-[#17324D] focus:bg-white"
+              className="h-10 w-full border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-[#17324D] focus:bg-white"
             />
           </div>
 
@@ -563,7 +543,7 @@ export default function ControlPanelClients() {
                 key={status}
                 type="button"
                 onClick={() => setStatusFilter(status)}
-                className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${
+                className={`px-3 py-2 text-xs font-semibold transition ${
                   statusFilter === status ? "bg-[#17324D] text-white" : "border border-slate-200 bg-white text-slate-600"
                 }`}
               >
@@ -574,7 +554,7 @@ export default function ControlPanelClients() {
         </div>
       </section>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[16px] font-semibold text-[#17324D]">Lista clienti</div>
@@ -583,7 +563,7 @@ export default function ControlPanelClients() {
         </div>
 
         {!loading && filteredItems.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+          <div className="mt-3 border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
             Nu exista rezultate.
           </div>
         ) : null}
