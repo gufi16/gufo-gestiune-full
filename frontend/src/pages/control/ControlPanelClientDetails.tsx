@@ -1325,6 +1325,8 @@ export default function ControlPanelClientDetails() {
     setLocationForm(emptyLocationForm())
   }
 
+  const isOverview = activeTab === "overview"
+
   return (
     <div className="space-y-4">
       <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
@@ -1392,20 +1394,75 @@ export default function ControlPanelClientDetails() {
         </div>
       )}
 
+      {!isOverview ? (
       <section className="border border-slate-200 bg-white px-3 py-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-sm font-semibold text-[#17324D]">Administrare client</div>
           <div className="flex flex-wrap gap-2">
-            {tabButton("Prezentare", activeTab === "overview", () => setActiveTab("overview"))}
+            {tabButton("Prezentare", isOverview, () => setActiveTab("overview"))}
             {tabButton("Licenta", activeTab === "license", () => setActiveTab("license"), totalEnabledModules)}
             {tabButton("Locatii si device-uri", activeTab === "locations", () => setActiveTab("locations"), locations.length)}
             {tabButton("Echipa", activeTab === "users", () => setActiveTab("users"), users.length)}
           </div>
         </div>
       </section>
+      ) : null}
 
-      {activeTab === "overview" ? (
-        <section className="space-y-3">
+      {isOverview ? (
+        <section className="overflow-hidden border border-slate-200 bg-white shadow-sm">
+          <div className="grid lg:grid-cols-[230px_minmax(0,1fr)]">
+            <aside className="border-b border-slate-200 bg-[#f5f7fa] p-3 lg:border-b-0 lg:border-r">
+              <div className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Administrare client</div>
+              <div className="mt-2 grid gap-1">
+                <button type="button" onClick={() => setOverviewPanelOpen("profile")} className="flex items-center justify-between bg-[#17324D] px-3 py-3 text-left text-sm font-semibold text-white"><span>Date firmă</span><Pencil size={14} /></button>
+                <button type="button" onClick={() => setActiveTab("license")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Licență și module</span><span className="text-xs text-slate-400">{enabledDynamicModules}</span></button>
+                <button type="button" onClick={() => setActiveTab("locations")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Locații și device-uri</span><span className="text-xs text-slate-400">{locations.length}</span></button>
+                <button type="button" onClick={() => setActiveTab("users")} className="flex items-center justify-between border border-slate-200 bg-white px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]"><span>Echipă și acces</span><span className="text-xs text-slate-400">{users.length}</span></button>
+              </div>
+              <div className="mt-4 border-t border-slate-200 px-2 pt-3">
+                <div className="text-xs font-semibold text-slate-700">Backup</div>
+                <div className={client?.backupHealth?.status === "protected" ? "mt-1 text-xs text-emerald-700" : "mt-1 text-xs text-rose-700"}>{client?.backupHealth?.status === "protected" ? "Protejat pe server" : "Necesită intervenție"}</div>
+                <div className="mt-1 text-xs text-slate-500">{formatDate(client?.backupHealth?.latestBackupAt)}</div>
+              </div>
+            </aside>
+
+            <div className="p-4">
+              <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                <div><div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Prezentare</div><div className="mt-1 text-lg font-semibold text-[#17324D]">Date operaționale și acces rapid</div></div>
+                <button type="button" onClick={() => setLicenseModalOpen(true)} className="inline-flex items-center justify-center gap-2 bg-[#17324D] px-3 py-2 text-sm font-semibold text-white"><Pencil size={14} /> Configurează licența</button>
+              </div>
+
+              <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div><dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Firmă</dt><dd className="mt-1 truncate text-sm font-semibold text-slate-800">{client?.company?.name || client?.name || "-"}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">CUI</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{client?.company?.cui || "-"}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Licență expiră</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{formatDate(client?.license?.expiresAt)}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Contact principal</dt><dd className="mt-1 truncate text-sm font-semibold text-slate-800">{principalUser?.email || client?.company?.email || "-"}</dd></div>
+              </dl>
+
+              <div className="mt-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Acțiuni frecvente</div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <button type="button" onClick={() => setOverviewPanelOpen("companies")} className="border border-slate-200 bg-[#f8fafc] px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:border-[#17324D]">Gestionează firmele<span className="mt-1 block text-xs font-normal text-slate-500">{companies.length} firme configurate</span></button>
+                  <button type="button" onClick={() => setActiveTab("locations")} className="border border-slate-200 bg-[#f8fafc] px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:border-[#17324D]">Adaugă locație sau device<span className="mt-1 block text-xs font-normal text-slate-500">{locations.length} locații active</span></button>
+                  <button type="button" onClick={() => setActiveTab("users")} className="border border-slate-200 bg-[#f8fafc] px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:border-[#17324D]">Gestionează echipa<span className="mt-1 block text-xs font-normal text-slate-500">{users.length} utilizatori ERP</span></button>
+                  <button type="button" onClick={() => setHistoryOpen(true)} className="border border-slate-200 bg-[#f8fafc] px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:border-[#17324D]">Vezi istoricul<span className="mt-1 block text-xs font-normal text-slate-500">modificări și acțiuni</span></button>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Instrumente</span>
+                <button type="button" onClick={load} className="border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700"><RefreshCw size={12} className="mr-1 inline" />Reîncarcă</button>
+                <button type="button" onClick={handleExportClient} disabled={exportingClient || loading} className="border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"><Download size={12} className="mr-1 inline" />{exportingClient ? "Se pregătește..." : "Exportă"}</button>
+                <button type="button" onClick={handleToggleLicenseSuspended} disabled={!client?.license?.id || licenseBusy} className="border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"><PauseCircle size={12} className="mr-1 inline" />{client?.license?.isSuspended ? "Reactivează" : "Suspendă"}</button>
+                <button type="button" onClick={() => setDeleteDialogOpen(true)} disabled={!canDeleteClient || deletingClient} className="border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-50"><Trash2 size={12} className="mr-1 inline" />Șterge client</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {isOverview ? (
+        <section className="hidden space-y-3">
           <div className="grid gap-3 lg:grid-cols-3">
             <button
               type="button"
