@@ -7,6 +7,7 @@ import {
   CircleAlert,
   CreditCard,
   Database,
+  FileText,
   HardDriveDownload,
   PlugZap,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { api } from "../../lib/api"
+import { openPdfInNewTab } from "../../lib/pdf"
 import { formatAuditDateTime, getAuditActionLabel, getAuditArea } from "../../lib/auditFormat"
 
 type OverviewResponse = {
@@ -34,6 +36,7 @@ type OverviewResponse = {
 }
 
 type Mode = "overview" | "licenses" | "billing" | "audit"
+type PlatformInvoice = { id: string; number: string; issueDate: string; dueDate: string; amount: number; currency: string; status: string; tenant: { id: string; name: string; cui?: string | null }; subscription?: { id: string; planName: string; billingCycle: string } | null }
 
 function formatDate(value?: string | null) {
   if (!value) return "-"
@@ -82,14 +85,19 @@ export default function ControlPanelDashboard() {
   const [data, setData] = useState<OverviewResponse["item"] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [invoices, setInvoices] = useState<PlatformInvoice[]>([])
   const mode = getMode(location.pathname)
 
   async function load() {
     try {
       setLoading(true)
       setError(null)
-      const response = await api<OverviewResponse>("/api/v1/admin/platform/overview")
+      const [response, invoiceResponse] = await Promise.all([
+        api<OverviewResponse>("/api/v1/admin/platform/overview"),
+        api<{ items?: PlatformInvoice[] }>("/api/v1/admin/invoices"),
+      ])
       setData(response?.item || null)
+      setInvoices(invoiceResponse.items || [])
     } catch (err: any) {
       setError(err?.message || "Nu am putut incarca centrul de control.")
     } finally {
@@ -98,6 +106,16 @@ export default function ControlPanelDashboard() {
   }
 
   useEffect(() => { void load() }, [])
+
+  async function openInvoicePdf(invoiceId: string) {
+    try {
+      const response = await api<Response>(`/api/v1/admin/invoices/${invoiceId}/pdf`, { raw: true })
+      if (!response.ok) throw new Error("PDF-ul facturii nu a putut fi deschis.")
+      await openPdfInNewTab(response)
+    } catch (err: any) {
+      setError(err?.message || "Nu am putut deschide factura.")
+    }
+  }
 
   const metrics = data?.metrics || {}
   const expiringLicenses = data?.expiringLicenses || []
@@ -149,7 +167,7 @@ export default function ControlPanelDashboard() {
 
       {mode === "licenses" ? <div className="grid gap-4 xl:grid-cols-[0.75fr_1.25fr]"><Section title="Status licente" description="Imagine rapida asupra accesului clientilor."><div className="grid grid-cols-2 gap-px bg-slate-200 sm:grid-cols-4"><div className="bg-white px-4 py-4"><div className="text-[10px] font-bold uppercase text-slate-400">Active</div><div className="mt-1 text-2xl font-bold">{loading ? "..." : Number(metrics.activeTenants || 0)}</div></div><div className="bg-white px-4 py-4"><div className="text-[10px] font-bold uppercase text-slate-400">Suspendate</div><div className="mt-1 text-2xl font-bold text-amber-700">{loading ? "..." : Number(metrics.suspendedTenants || 0)}</div></div><div className="bg-white px-4 py-4"><div className="text-[10px] font-bold uppercase text-slate-400">Expirate</div><div className="mt-1 text-2xl font-bold text-rose-700">{loading ? "..." : Number(metrics.expiredTenants || 0)}</div></div><div className="bg-white px-4 py-4"><div className="text-[10px] font-bold uppercase text-slate-400">Urmeaza</div><div className="mt-1 text-2xl font-bold text-amber-700">{loading ? "..." : expiringLicenses.length}</div></div></div></Section><Section title="Licente care expira" description="Intra direct in client pentru prelungire sau modificare module."><div className="divide-y divide-slate-100">{expiringLicenses.map((item) => <Link key={item.id} to={`/control-panel/clienti/${item.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50"><ShieldAlert size={17} className="text-amber-500" /><div className="min-w-0 flex-1"><div className="truncate text-sm font-bold">{item.name}</div><div className="text-xs text-slate-500">Expira la {formatDate(item.expiresAt)}</div></div><Status tone="warn">Atentie</Status></Link>)}{!loading && !expiringLicenses.length ? <div className="px-4 py-10 text-center text-sm text-emerald-700">Nu exista expirari apropiate.</div> : null}</div></Section></div> : null}
 
-      {mode === "billing" ? <Section title="Abonamente de verificat" description="Statusul comercial este separat de drepturile tehnice ale licentei." action={<Link to="/control-panel/clienti" className="text-xs font-bold text-[#17324D]">Deschide clienti</Link>}><div className="divide-y divide-slate-100">{subscriptionAlerts.map((item) => <Link key={item.id} to={`/control-panel/clienti/${item.tenantId}`} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_160px_150px_100px] md:items-center hover:bg-slate-50"><div className="min-w-0"><div className="truncate text-sm font-bold">{item.clientName}</div><div className="truncate text-xs text-slate-500">{item.plan?.name || "Fara plan"}</div></div><div className="text-sm font-semibold text-slate-700">{Number(item.price || 0).toLocaleString("ro-RO")} {item.currency || "RON"}</div><div className="text-xs text-slate-500">Scadenta {formatDate(item.nextBillingDate)}</div><Status tone={item.billingStatus === "OK" ? "warn" : "bad"}>{item.billingStatus}</Status></Link>)}{!loading && !subscriptionAlerts.length ? <div className="px-4 py-10 text-center text-sm text-emerald-700">Nu exista abonamente cu risc.</div> : null}</div></Section> : null}
+      {mode === "billing" ? <div className="space-y-4"><Section title="Facturi emise" description="Facturile create din abonamentele clienților apar aici și rămân disponibile pentru PDF."><div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left"><thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-4 py-3">Număr</th><th className="px-4 py-3">Client</th><th className="px-4 py-3">Abonament</th><th className="px-4 py-3">Emitere</th><th className="px-4 py-3">Sumă</th><th className="px-4 py-3">Stare</th><th className="px-4 py-3 text-right">PDF</th></tr></thead><tbody className="divide-y divide-slate-100">{invoices.map((invoice) => <tr key={invoice.id} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs font-semibold text-[#17324D]">{invoice.number}</td><td className="px-4 py-3"><Link to={`/control-panel/clienti/${invoice.tenant.id}`} className="text-sm font-semibold text-slate-800 hover:text-[#17324D]">{invoice.tenant.name}</Link><div className="mt-0.5 text-xs text-slate-500">{invoice.tenant.cui || "-"}</div></td><td className="px-4 py-3 text-sm text-slate-600">{invoice.subscription?.planName || "-"}</td><td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.issueDate)}</td><td className="px-4 py-3 text-sm font-semibold text-slate-800">{Number(invoice.amount).toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {invoice.currency}</td><td className="px-4 py-3"><Status tone={invoice.status === "PAID" ? "good" : invoice.status === "ISSUED" ? "warn" : "neutral"}>{invoice.status === "ISSUED" ? "Emisă" : invoice.status}</Status></td><td className="px-4 py-3 text-right"><button type="button" onClick={() => void openInvoicePdf(invoice.id)} className="inline-flex items-center gap-2 border border-[#17324D] px-3 py-1.5 text-xs font-bold text-[#17324D] hover:bg-[#17324D] hover:text-white"><FileText size={14} />PDF</button></td></tr>)}{!loading && !invoices.length ? <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">Nu există facturi emise.</td></tr> : null}</tbody></table></div></Section><Section title="Abonamente de verificat" description="Statusul comercial este separat de drepturile tehnice ale licentei." action={<Link to="/control-panel/clienti" className="text-xs font-bold text-[#17324D]">Deschide clienti</Link>}><div className="divide-y divide-slate-100">{subscriptionAlerts.map((item) => <Link key={item.id} to={`/control-panel/clienti/${item.tenantId}`} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_160px_150px_100px] md:items-center hover:bg-slate-50"><div className="min-w-0"><div className="truncate text-sm font-bold">{item.clientName}</div><div className="truncate text-xs text-slate-500">{item.plan?.name || "Fara plan"}</div></div><div className="text-sm font-semibold text-slate-700">{Number(item.price || 0).toLocaleString("ro-RO")} {item.currency || "RON"}</div><div className="text-xs text-slate-500">Scadenta {formatDate(item.nextBillingDate)}</div><Status tone={item.billingStatus === "OK" ? "warn" : "bad"}>{item.billingStatus}</Status></Link>)}{!loading && !subscriptionAlerts.length ? <div className="px-4 py-10 text-center text-sm text-emerald-700">Nu exista abonamente cu risc.</div> : null}</div></Section></div> : null}
 
       {mode === "audit" ? <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]"><Section title="Activitate recenta" description="Actiuni inregistrate in ultimele 24 de ore."><div className="divide-y divide-slate-100">{recentAuditLogs.map((entry) => <div key={entry.id} className="flex items-start gap-3 px-4 py-3"><Activity size={16} className="mt-0.5 text-slate-400" /><div className="min-w-0 flex-1"><div className="text-sm font-bold text-slate-800">{getAuditActionLabel(entry as never)}</div><div className="mt-0.5 text-xs text-slate-500">{getAuditArea(entry as never)} · {formatAuditDateTime(entry.createdAt)}</div></div></div>)}{!loading && !recentAuditLogs.length ? <div className="px-4 py-10 text-center text-sm text-slate-500">Nu exista evenimente recente.</div> : null}</div></Section><Section title="Backup-uri recente" description="Ultimele snapshot-uri create."><div className="divide-y divide-slate-100">{recentBackups.map((item) => <div key={item.id} className="flex items-start gap-3 px-4 py-3"><HardDriveDownload size={16} className="mt-0.5 text-slate-400" /><div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-slate-800">{item.clientName}</div><div className="truncate text-xs text-slate-500">{item.label || item.fileName}</div></div><div className="text-right text-[11px] text-slate-500"><div>{formatBytes(item.fileSizeBytes)}</div><div>{formatDateTime(item.createdAt)}</div></div></div>)}{!loading && !recentBackups.length ? <div className="px-4 py-10 text-center text-sm text-slate-500">Nu exista backup-uri recente.</div> : null}</div></Section></div> : null}
     </div>

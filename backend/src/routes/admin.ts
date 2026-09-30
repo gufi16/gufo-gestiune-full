@@ -2579,6 +2579,31 @@ router.post("/api/v1/admin/subscriptions/:subscriptionId/invoices", requireAuth,
   return res.status(201).json({ ok: true, item: invoice })
 })
 
+router.get("/api/v1/admin/invoices", requireAuth, requireOwner, async (_req, res) => {
+  const items = await prisma.invoice.findMany({
+    orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }],
+    take: 250,
+    include: {
+      tenant: { select: { id: true, name: true, subdomain: true, companies: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], take: 1, select: { name: true, cui: true } } } },
+      subscription: { include: { plan: true } },
+    },
+  })
+  return res.json({
+    ok: true,
+    items: items.map((invoice) => ({
+      id: invoice.id,
+      number: invoice.number,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      status: invoice.status,
+      tenant: { id: invoice.tenant.id, name: invoice.tenant.companies[0]?.name || invoice.tenant.name, cui: invoice.tenant.companies[0]?.cui || null },
+      subscription: invoice.subscription ? { id: invoice.subscription.id, planName: invoice.subscription.plan.name, billingCycle: invoice.subscription.billingCycle } : null,
+    })),
+  })
+})
+
 router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, async (req, res) => {
   const invoice = await prisma.invoice.findUnique({
     where: { id: req.params.invoiceId },
