@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import {
+  ArrowLeft,
   Copy,
   Download,
   Filter,
@@ -416,8 +417,8 @@ function buildLocationFormFromItem(location?: Partial<LocationItem> | null): Loc
 
 function metricCard(label: string, value: string | number) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
+    <div className="border border-slate-200 bg-white px-3 py-2.5">
+      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</div>
       <div className="mt-1 text-lg font-semibold text-[#17324D]">{value}</div>
     </div>
   )
@@ -428,7 +429,7 @@ function tabButton(label: string, selected: boolean, onClick: () => void, badge?
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+      className={`inline-flex items-center gap-2 border px-3 py-2 text-sm font-semibold transition ${
         selected
           ? "border-[#17324D] bg-[#17324D] text-white"
           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
@@ -1326,18 +1327,20 @@ export default function ControlPanelClientDetails() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+      <section className="border border-[#2b2c33] bg-[#34353d] px-4 py-4 text-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold text-[#17324D]">{client?.company?.name || client?.name || "Client"}</h1>
+            <button type="button" onClick={() => navigate("/control-panel/clienti")} className="inline-flex h-8 w-8 items-center justify-center border border-white/20 bg-white/10 text-white transition hover:bg-white/20" title="Inapoi la clienti"><ArrowLeft size={16} /></button>
+            <h1 className="text-2xl font-semibold">{client?.company?.name || client?.name || "Client"}</h1>
             <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(client?.status)}`}>
               {statusLabel(client?.status)}
             </span>
           </div>
-          <div className="mt-1 text-sm text-slate-500">
+          <div className="mt-2 text-sm text-slate-300">
             {client?.company?.cui || "-"} | expirare {formatDate(client?.license?.expiresAt)} | tenant {client?.id || "-"}
           </div>
-          <div className="mt-2 text-xs text-slate-500">
+          <div className="mt-1 text-xs text-slate-400">
             {client?.portalUrl || "Portalul clientului apare dupa salvarea subdomeniului."}
           </div>
         </div>
@@ -1346,7 +1349,7 @@ export default function ControlPanelClientDetails() {
           <button
             onClick={handleExportClient}
             disabled={exportingClient || loading}
-            className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Download size={15} />
             {exportingClient ? "Se pregateste..." : "Export client"}
@@ -1354,21 +1357,21 @@ export default function ControlPanelClientDetails() {
           <button
             onClick={handleToggleLicenseSuspended}
             disabled={!client?.license?.id || licenseBusy}
-            className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 border border-amber-300/40 bg-amber-300/10 px-3 py-2 text-sm font-medium text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <PauseCircle size={15} />
             {client?.license?.isSuspended ? "Reactiveaza" : "Suspenda"}
           </button>
           <button
             onClick={load}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white"
           >
             <RefreshCw size={15} />
             Reincarca
           </button>
           <button
             onClick={() => setHistoryOpen(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+            className="inline-flex items-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white"
           >
             <History size={15} />
             Istoric
@@ -1376,7 +1379,7 @@ export default function ControlPanelClientDetails() {
           <button
             type="button"
             onClick={openCompanyForm}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#17324D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0F2740] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 bg-[#e7981f] px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f2aa35] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus size={15} />
             Adauga firma
@@ -1385,15 +1388,16 @@ export default function ControlPanelClientDetails() {
             type="button"
             onClick={() => setDeleteDialogOpen(true)}
             disabled={!canDeleteClient || deletingClient}
-            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 border border-rose-300/40 bg-rose-300/10 px-3 py-2 text-sm font-medium text-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 size={15} />
             Sterge client
           </button>
         </div>
       </div>
+      </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-6">
         {metricCard("Utilizatori", client?.usersCount ?? users.length)}
         {metricCard("Locatii", client?.locationsCount ?? locations.length)}
         {metricCard("POS", posDevicesCount)}
@@ -1419,10 +1423,10 @@ export default function ControlPanelClientDetails() {
         </div>
       )}
 
-      <section className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+      <section className="border border-slate-200 bg-white px-3 py-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Control panel client</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Zona de administrare</div>
             <div className="mt-1 text-sm font-semibold text-[#17324D]">Navighezi rapid intre overview, licenta, locatii si utilizatori</div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1439,7 +1443,7 @@ export default function ControlPanelClientDetails() {
           <button
             type="button"
             onClick={() => setOverviewPanelOpen("profile")}
-            className="rounded-[24px] border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300"
+            className="border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#17324D]"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -1462,7 +1466,7 @@ export default function ControlPanelClientDetails() {
           <button
             type="button"
             onClick={() => setOverviewPanelOpen("companies")}
-            className="rounded-[24px] border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300"
+            className="border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#17324D]"
           >
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Firme ERP</div>
             <div className="mt-1 text-base font-semibold text-[#17324D]">Administrare firme si identitate fiscala</div>
@@ -1474,7 +1478,7 @@ export default function ControlPanelClientDetails() {
             <div className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Deschide fereastra firme</div>
           </button>
 
-          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Licenta si module</div>
@@ -1554,7 +1558,7 @@ export default function ControlPanelClientDetails() {
           </div>
 
           <div className="space-y-3">
-            <section className="rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm">
+            <section className="border border-slate-200 bg-white p-3 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Operare rapida</div>
               <div className="mt-1 text-base font-semibold text-[#17324D]">Actiuni uzuale pentru acest client</div>
               <div className="mt-3 grid gap-2">
@@ -1586,7 +1590,7 @@ export default function ControlPanelClientDetails() {
               </div>
             </section>
 
-            <section className="rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm">
+            <section className="border border-slate-200 bg-white p-3 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Backup si siguranta</div>
               <div className="mt-1 text-base font-semibold text-[#17324D]">Stare backup si actiuni sensibile</div>
 
@@ -1633,7 +1637,7 @@ export default function ControlPanelClientDetails() {
       ) : null}
       {activeTab === "license" ? (
         <section className="grid gap-4">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Licenta</div>
               <div className="mt-1 text-sm font-semibold text-[#17324D]">Stare curenta pentru ERP, POS, KDS, Depozit si module, fara lista lunga in pagina</div>
 
@@ -1703,7 +1707,7 @@ export default function ControlPanelClientDetails() {
       ) : null}
 
       {activeTab === "locations" ? (
-      <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div><div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Locatii si device-uri</div><div className="mt-1 text-sm font-semibold text-[#17324D]">Administrare locatii, device-uri POS / KDS / Depozit si chei de licenta</div></div>
             <div className="flex flex-col gap-2 sm:flex-row">
