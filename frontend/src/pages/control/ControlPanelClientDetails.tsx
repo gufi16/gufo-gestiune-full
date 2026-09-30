@@ -1394,22 +1394,19 @@ export default function ControlPanelClientDetails() {
 
       <section className="border border-slate-200 bg-white px-3 py-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Zona de administrare</div>
-            <div className="mt-1 text-sm font-semibold text-[#17324D]">Navighezi rapid intre overview, licenta, locatii si utilizatori</div>
-          </div>
+          <div className="text-sm font-semibold text-[#17324D]">Administrare client</div>
           <div className="flex flex-wrap gap-2">
-            {tabButton("General", activeTab === "overview", () => setActiveTab("overview"))}
+            {tabButton("Prezentare", activeTab === "overview", () => setActiveTab("overview"))}
             {tabButton("Licenta", activeTab === "license", () => setActiveTab("license"), totalEnabledModules)}
-            {tabButton("Locatii", activeTab === "locations", () => setActiveTab("locations"), locations.length)}
-            {tabButton("Utilizatori", activeTab === "users", () => setActiveTab("users"), users.length)}
+            {tabButton("Locatii si device-uri", activeTab === "locations", () => setActiveTab("locations"), locations.length)}
+            {tabButton("Echipa", activeTab === "users", () => setActiveTab("users"), users.length)}
           </div>
         </div>
       </section>
 
       {activeTab === "overview" ? (
         <section className="space-y-3">
-          <div className="grid gap-3 xl:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3">
             <button
               type="button"
               onClick={() => setOverviewPanelOpen("profile")}
@@ -1447,10 +1444,10 @@ export default function ControlPanelClientDetails() {
             </button>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[1.25fr_0.75fr]">
+          <div className="grid gap-3 lg:grid-cols-[1.25fr_0.75fr]">
             <section className="border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Actiuni rapide</div><div className="mt-1 text-sm font-semibold text-[#17324D]">Lucreaza direct pe client</div></div><button type="button" onClick={() => setHistoryOpen(true)} className="border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"><History size={13} className="mr-1 inline" /> Istoric</button></div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <button type="button" onClick={() => setOverviewPanelOpen("companies")} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Firme ERP<span className="mt-1 block text-xs font-normal text-slate-500">{companies.length} configurate</span></button>
                 <button type="button" onClick={() => setLicenseModalOpen(true)} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Editeaza licenta<span className="mt-1 block text-xs font-normal text-slate-500">module si limite</span></button>
                 <button type="button" onClick={() => setActiveTab("users")} className="border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-[#17324D]">Utilizatori<span className="mt-1 block text-xs font-normal text-slate-500">{users.length} conturi ERP</span></button>
@@ -2003,7 +2000,7 @@ export default function ControlPanelClientDetails() {
       ) : null}
 
       {activeTab === "users" ? (
-      <section className="grid gap-4 xl:grid-cols-[0.95fr_0.75fr_1.3fr]">
+      <section className="grid gap-4 lg:grid-cols-[0.95fr_0.75fr_1.3fr]">
         <div className="border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Acces ERP</div>
@@ -2114,7 +2111,7 @@ export default function ControlPanelClientDetails() {
             <div className="mt-1 text-sm font-semibold text-[#17324D]">Plan, facturare si contact principal</div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {metricCard("Plan", client?.subscription?.plan?.name || "-")}
             {metricCard("Pret", currencyFormat(client?.subscription?.price, client?.subscription?.currency))}
             {metricCard("Facturare", client?.subscription?.billingStatus || "-")}
@@ -2128,7 +2125,7 @@ export default function ControlPanelClientDetails() {
           </div>
         </div>
 
-        <div className="overflow-hidden border border-slate-200 bg-white shadow-sm xl:col-span-3">
+        <div className="overflow-hidden border border-slate-200 bg-white shadow-sm lg:col-span-3">
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Utilizatori ERP</div><div className="mt-1 text-sm font-semibold text-[#17324D]">Operatori, administratori si resetari rapide</div></div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
