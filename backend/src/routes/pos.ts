@@ -823,13 +823,21 @@ function formatMarketplaceDeliveryAddress(rawPayloadJson: unknown) {
   ];
 
   for (const address of candidates) {
-    const street = pickFirstNonBlank(address.addressLine, address.street, address.address);
-    const city = pickFirstNonBlank(address.city, address.locality);
-    const county = pickFirstNonBlank(address.county, address.region);
-    const postalCode = pickFirstNonBlank(address.postalCode, address.postal_code);
-    const label = pickFirstNonBlank(address.label);
-    const details = pickFirstNonBlank(address.details, address.instructions, address.note);
-    const formatted = [label, street, city, county, postalCode, details].filter(Boolean).join(", ");
+    const validPart = (value: string | null) => value && !/^null$/i.test(value.trim()) ? value.trim() : null;
+    const street = validPart(pickFirstNonBlank(address.addressLine, address.street, address.address));
+    const city = validPart(pickFirstNonBlank(address.city, address.locality));
+    const county = validPart(pickFirstNonBlank(address.county, address.region));
+    const postalCode = validPart(pickFirstNonBlank(address.postalCode, address.postal_code));
+    const label = validPart(pickFirstNonBlank(address.label));
+    const details = validPart(pickFirstNonBlank(address.details, address.instructions, address.note));
+    // Kiosk sends label and addressLine with the same street. Prefer the label
+    // once, then append only missing locality details.
+    const primary = label || street;
+    const primaryLower = primary?.toLowerCase() || "";
+    const formatted = [primary, city, county, postalCode, details]
+      .filter((part): part is string => Boolean(part) && (part === primary || !primaryLower.includes(part!.toLowerCase())))
+      .filter((part, index, values) => values.findIndex((candidate) => candidate.toLowerCase() === part.toLowerCase()) === index)
+      .join(", ");
     if (formatted) return formatted;
   }
 
