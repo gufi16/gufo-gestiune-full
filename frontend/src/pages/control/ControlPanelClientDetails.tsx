@@ -468,6 +468,8 @@ function moduleAreaLabel(area?: string | null) {
       return "Rapoarte"
     case "pos":
       return "POS"
+    case "marketplace":
+      return "Marketplace"
     default:
       return "Module"
   }

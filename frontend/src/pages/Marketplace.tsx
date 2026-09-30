@@ -1055,7 +1055,8 @@ export default function MarketplacePage() {
         api<{ ok: boolean; items: DeliveryOptionGroup[] }>("/api/v1/delivery-option-groups"),
       ])
 
-      setPlatforms(Array.isArray(platformsData?.items) ? platformsData.items : defaultPlatforms)
+      const availablePlatforms = Array.isArray(platformsData?.items) ? platformsData.items : []
+      setPlatforms(availablePlatforms)
       setLocations(Array.isArray(locationsData?.locations) ? locationsData.locations : [])
       setCategories(Array.isArray(categoriesData?.items) ? categoriesData.items : [])
       setProducts(Array.isArray(productsData?.items) ? productsData.items : [])
@@ -1063,9 +1064,13 @@ export default function MarketplacePage() {
       const nextIntegrations = Array.isArray(integrationsData?.items) ? integrationsData.items : []
       setIntegrations(nextIntegrations)
 
+      const requestedPlatform = preferredPlatform ?? selectedPlatform
       const activeIntegration =
-        nextIntegrations.find((item) => item.platform === (preferredPlatform ?? selectedPlatform)) ?? nextIntegrations[0]
-      if (activeIntegration?.platform) setSelectedPlatform(activeIntegration.platform)
+        nextIntegrations.find((item) => item.platform === requestedPlatform) ??
+        nextIntegrations.find((item) => availablePlatforms.some((platform) => platform.code === item.platform))
+      const nextPlatform = activeIntegration?.platform ?? availablePlatforms[0]?.code
+      if (nextPlatform) setSelectedPlatform(nextPlatform)
+      if (!nextPlatform) setPlatformView(null)
       if (activeIntegration?.id) setMappingIntegrationId(activeIntegration.id)
     } catch (e: any) {
       setError(e?.message || "Nu am putut incarca modulul Marketplace.")
@@ -1903,7 +1908,7 @@ export default function MarketplacePage() {
       {message ? <InlineNotice tone="success">{message}</InlineNotice> : null}
       {!platformView ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {defaultPlatforms.map((platform) => {
+          {platforms.map((platform) => {
             const integrationCount = integrations.filter((item) => item.status === "ACTIVE" && item.platform === platform.code).length
             const orderCount = orders.filter((item) => item.platform === platform.code && item.status !== "FISCALIZED" && item.status !== "DELIVERED").length
             const productCount = recentExternalProducts.filter((item) => item.platform === platform.code).length
@@ -1971,6 +1976,12 @@ export default function MarketplacePage() {
               </button>
             )
           })}
+          {!platforms.length ? (
+            <div className="col-span-full rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+              <div className="text-base font-semibold text-[#17324D]">Niciun canal de delivery nu este activ pentru acest client.</div>
+              <div className="mt-2 text-sm text-slate-500">Activeaza Glovo, Wolt, Bolt Food sau Gufo Delivery din Control Panel, la licenta clientului.</div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <>

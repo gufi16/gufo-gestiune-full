@@ -18,7 +18,7 @@ export type ControlPanelModuleDefinition = {
   description: string
   target: ModuleTarget
   isCore: boolean
-  area: "catalog" | "settings" | "stock" | "documents" | "fiscal" | "reports" | "pos"
+  area: "catalog" | "settings" | "stock" | "documents" | "fiscal" | "reports" | "pos" | "marketplace"
   inheritedFrom: LicenseModuleCode[]
 }
 
@@ -278,6 +278,42 @@ const CONTROL_PANEL_MODULE_CATALOG: ControlPanelModuleDefinition[] = [
     target: ModuleTarget.BOTH,
     isCore: false,
     area: "fiscal",
+    inheritedFrom: [],
+  },
+  {
+    code: "marketplace_glovo",
+    name: "Glovo",
+    description: "Activeaza configurarea, catalogul si comenzile Glovo pentru acest client.",
+    target: ModuleTarget.BOTH,
+    isCore: false,
+    area: "marketplace",
+    inheritedFrom: [],
+  },
+  {
+    code: "marketplace_wolt",
+    name: "Wolt",
+    description: "Activeaza configurarea si comenzile Wolt pentru acest client.",
+    target: ModuleTarget.BOTH,
+    isCore: false,
+    area: "marketplace",
+    inheritedFrom: [],
+  },
+  {
+    code: "marketplace_bolt_food",
+    name: "Bolt Food",
+    description: "Activeaza configurarea si comenzile Bolt Food pentru acest client.",
+    target: ModuleTarget.BOTH,
+    isCore: false,
+    area: "marketplace",
+    inheritedFrom: [],
+  },
+  {
+    code: "marketplace_gufo_delivery",
+    name: "Gufo Delivery",
+    description: "Activeaza aplicatia Gufo Delivery, catalogul public si preluarea comenzilor pentru acest client.",
+    target: ModuleTarget.BOTH,
+    isCore: false,
+    area: "marketplace",
     inheritedFrom: [],
   },
   {

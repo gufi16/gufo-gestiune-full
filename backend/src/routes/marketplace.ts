@@ -10,6 +10,7 @@ import { requireDeliveryCustomerAuth, resolveOptionalDeliveryCustomer, type Deli
 import { resolvePosAuthContext } from "./pos"
 import { decryptSecret, encryptSecret } from "../lib/efacturaCertificate"
 import { hasSmtpConfig, sendMail } from "../lib/mailer"
+import { hasTenantModule } from "../lib/tenantModules"
 
 const router = Router()
 const db = prisma
@@ -49,6 +50,34 @@ type DeliveryScheduleDayKey = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | 
 type DeliveryScheduleDay = { enabled: boolean; open: string; close: string }
 type DeliverySchedule = Record<DeliveryScheduleDayKey, DeliveryScheduleDay>
 type DeliveryAvailabilityMode = "SCHEDULE" | "PAUSED" | "FORCE_OPEN" | "OPEN_AT"
+
+const MARKETPLACE_PLATFORM_MODULES: Record<MarketplacePlatform, string> = {
+  GLOVO: "marketplace_glovo",
+  WOLT: "marketplace_wolt",
+  BOLT_FOOD: "marketplace_bolt_food",
+  GUFO_DELIVERY: "marketplace_gufo_delivery",
+}
+
+async function getEnabledMarketplacePlatforms(tenantId: string): Promise<MarketplacePlatform[]> {
+  const results = await Promise.all(
+    PLATFORMS.map(async (platform) => ({
+      platform,
+      enabled: await hasTenantModule(tenantId, MARKETPLACE_PLATFORM_MODULES[platform]),
+    })),
+  )
+  return results.filter((item) => item.enabled).map((item) => item.platform)
+}
+
+async function ensureMarketplacePlatformEnabled(tenantId: string, platform: MarketplacePlatform, res: Response) {
+  const enabled = await hasTenantModule(tenantId, MARKETPLACE_PLATFORM_MODULES[platform])
+  if (enabled) return true
+
+  res.status(403).json({
+    ok: false,
+    error: `${platform === "GUFO_DELIVERY" ? "Gufo Delivery" : platform} nu este activat pentru acest client. Contacteaza administratorul.`,
+  })
+  return false
+}
 
 const DELIVERY_WEEKDAYS: Array<{ key: DeliveryScheduleDayKey; label: string }> = [
   { key: "MONDAY", label: "Luni" }, { key: "TUESDAY", label: "Marti" }, { key: "WEDNESDAY", label: "Miercuri" },
@@ -4347,7 +4376,11 @@ router.patch("/api/v1/marketplace/gufo-delivery/catalog-promotion", async (req: 
   return res.json({ ok: true, updatedProducts: products.length, discountPercent, applyDelivery, applyPos })
 })
 
-router.get("/api/v1/marketplace/platforms", (_req, res) => {
+router.get("/api/v1/marketplace/platforms", async (req: AuthedRequest, res) => {
+  const tenantId = req.auth?.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Missing tenant context" })
+
+  const enabledPlatforms = new Set(await getEnabledMarketplacePlatforms(tenantId))
   return res.json({
     ok: true,
     items: [
@@ -4355,7 +4388,7 @@ router.get("/api/v1/marketplace/platforms", (_req, res) => {
       { code: "WOLT", label: "Wolt", capabilities: ["ORDERS", "KDS", "READY_FOR_FISCAL"] },
       { code: "BOLT_FOOD", label: "Bolt Food", capabilities: ["ORDERS_PENDING_ACCESS", "KDS", "READY_FOR_FISCAL"] },
       { code: "GUFO_DELIVERY", label: "Gufo Delivery", capabilities: ["ORDERS", "KDS", "READY_FOR_FISCAL", "TENANT_ROUTING"] },
-    ],
+    ].filter((platform) => enabledPlatforms.has(platform.code as MarketplacePlatform)),
   })
 })
 
@@ -4365,8 +4398,9 @@ router.get("/api/v1/marketplace/integrations", async (req: AuthedRequest, res) =
     return res.status(400).json({ ok: false, error: "Missing tenant context" })
   }
 
+  const enabledPlatforms = await getEnabledMarketplacePlatforms(tenantId)
   const items = await db.externalIntegration.findMany({
-    where: { tenantId },
+    where: { tenantId, platform: { in: enabledPlatforms } },
     include: {
       location: {
         select: { id: true, name: true, code: true },
@@ -4812,6 +4846,7 @@ router.post("/api/v1/marketplace/integrations/:platform/connect", async (req: Au
   if (!platformParsed.success) {
     return res.status(400).json({ ok: false, error: "Platform invalid" })
   }
+  if (!(await ensureMarketplacePlatformEnabled(tenantId, platformParsed.data, res))) return
 
   const bodyParsed = ConnectIntegrationSchema.safeParse(req.body)
   if (!bodyParsed.success) {
