@@ -320,7 +320,7 @@ export default function RapoartePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [data, setData] = useState<AdvancedReportsResponse | null>(null)
-  const [exportingPdf, setExportingPdf] = useState<"sales" | "sgr" | null>(null)
+  const [exportingPdf, setExportingPdf] = useState<"sales" | "sgr" | "daily-close" | "profitability" | "stock" | null>(null)
   const [locations, setLocations] = useState<LocationOption[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState(getActiveLocationId() || "ALL")
   const [selectedTerminalId, setSelectedTerminalId] = useState(getActiveTerminalId() || "ALL")
@@ -432,6 +432,25 @@ export default function RapoartePage() {
     }
   }
 
+  async function exportManagementPdf(kind: "daily-close" | "profitability" | "stock") {
+    try {
+      setExportingPdf(kind)
+      const params = new URLSearchParams({ dateFrom, dateTo })
+      if (selectedLocationId && selectedLocationId !== "ALL") params.set("locationId", selectedLocationId)
+      const response = await api<Response>(`/api/v1/reports/management/${kind}/pdf?${params.toString()}`, { raw: true })
+      const labels = {
+        "daily-close": "Raport_Inchidere_Zilnica",
+        profitability: "Raport_Profitabilitate",
+        stock: "Raport_Stoc_Miscari",
+      }
+      await downloadPdfFile(response, `${labels[kind]}_${dateFrom}_${dateTo}.pdf`)
+    } catch (error: any) {
+      setError(error?.message || "Nu am putut genera PDF-ul raportului.")
+    } finally {
+      setExportingPdf(null)
+    }
+  }
+
   const salesByLocation = useMemo(() => normalizeLocationRows(data?.salesByLocation || []), [data])
   const monthlyTrend = useMemo(() => normalizeTrendRows(data?.salesTrend || data?.monthlyTrend || []), [data])
   const topProducts = useMemo(() => normalizeTopProducts(data?.topProducts || []), [data])
@@ -533,7 +552,7 @@ export default function RapoartePage() {
           </div>
           {filterActions}
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
             <div className="text-sm font-bold text-slate-900">Raport vanzari</div>
             <p className="mt-1 text-sm text-slate-500">Bonuri, metode de plata, total fara SGR, SGR si total incasari.</p>
@@ -556,6 +575,27 @@ export default function RapoartePage() {
               className="mt-4 inline-flex h-10 items-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportingPdf === "sgr" ? "Se genereaza..." : "Descarca PDF SGR"}
+            </button>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+            <div className="text-sm font-bold text-slate-900">Inchidere zilnica</div>
+            <p className="mt-1 text-sm text-slate-500">Bonuri, incasari, discounturi, TVA si inchideri Z din interval.</p>
+            <button type="button" onClick={() => exportManagementPdf("daily-close")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {exportingPdf === "daily-close" ? "Se genereaza..." : "Descarca PDF"}
+            </button>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+            <div className="text-sm font-bold text-slate-900">Profitabilitate</div>
+            <p className="mt-1 text-sm text-slate-500">Venit, cost teoretic din retetar, profit si marja pe produs.</p>
+            <button type="button" onClick={() => exportManagementPdf("profitability")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {exportingPdf === "profitability" ? "Se genereaza..." : "Descarca PDF"}
+            </button>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+            <div className="text-sm font-bold text-slate-900">Stoc si miscari</div>
+            <p className="mt-1 text-sm text-slate-500">Intrari, iesiri, ajustari si stocul curent pe produs.</p>
+            <button type="button" onClick={() => exportManagementPdf("stock")} disabled={exportingPdf !== null} className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {exportingPdf === "stock" ? "Se genereaza..." : "Descarca PDF"}
             </button>
           </div>
         </div>

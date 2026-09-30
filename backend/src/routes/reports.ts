@@ -133,6 +133,7 @@ function isSameSgrSyntheticLine(item: ReportsSaleItemLike) {
 }
 
 type AccountingReportKind = "sales" | "sgr"
+type ManagementReportKind = "daily-close" | "profitability" | "stock"
 
 type ReportPdfFonts = { regular: string; bold: string }
 type ReportPdfColumn = { label: string; width: number; align?: "left" | "center" | "right" }
@@ -577,6 +578,225 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
   doc.end()
 }
 
+async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest, res: any) {
+  const tenantId = String(req.auth?.tenantId || "").trim()
+  if (!tenantId) return res.status(401).json({ error: "Unauthorized" })
+
+  const companyId = await requireRequestCompanyId(req)
+  if (!companyId) return res.status(400).json({ error: "Firma activa lipsa." })
+
+  const from = parseDateStart(req.query.dateFrom) || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const to = parseDateEnd(req.query.dateTo) || new Date()
+  const locationId = String(req.query.locationId || "").trim() || null
+  const warehouseId = String(req.query.warehouseId || "").trim() || null
+  const locationFilter = locationId ? { locationId } : {}
+  const warehouseFilter = warehouseId ? { warehouseId } : {}
+  const company = await resolveTenantCompany(prisma, tenantId, companyId)
+  if (!company) return res.status(404).json({ error: "Firma activa nu a fost gasita." })
+
+  const title =
+    kind === "daily-close"
+      ? "RAPORT INCHIDERE ZILNICA"
+      : kind === "profitability"
+        ? "RAPORT PROFITABILITATE"
+        : "RAPORT STOC SI MISCARI"
+  const filename =
+    kind === "daily-close"
+      ? "Raport_Inchidere_Zilnica"
+      : kind === "profitability"
+        ? "Raport_Profitabilitate"
+        : "Raport_Stoc_Miscari"
+
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 36, info: { Title: title, Author: "Gufo ERP" } })
+  const fonts = registerPdfFonts(doc)
+  const safeFrom = reportFileDate(req.query.dateFrom || from.toISOString().slice(0, 10))
+  const safeTo = reportFileDate(req.query.dateTo || to.toISOString().slice(0, 10))
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", `attachment; filename=${filename}_${safeFrom}-${safeTo}.pdf`)
+  doc.pipe(res)
+
+  let y = drawDocumentHero(doc, fonts, {
+    title,
+    subtitle: "Document generat din datele operationale Gufo ERP",
+    companyName: company.name,
+    companyLines: [company.cui ? `CUI: ${company.cui}` : "", company.address || "", company.city || ""].filter(Boolean),
+    rightPairs: [
+      { label: "Perioada", value: reportPeriod(from, to) },
+      { label: "Locatie", value: locationId ? "Locatia selectata" : "Toate locatiile" },
+      { label: "Generat", value: new Date().toLocaleString("ro-RO") },
+    ],
+    margin: 36,
+  })
+
+  if (kind === "daily-close") {
+    const [sales, closures] = await Promise.all([
+      prisma.sale.findMany({
+        where: { tenantId, companyId, soldAt: { gte: from, lte: to }, ...locationFilter },
+        include: { items: { select: { vatRate: true, lineTotalAfterDiscount: true } }, location: { select: { name: true } }, terminal: { select: { label: true } } },
+        orderBy: [{ soldAt: "asc" }, { receiptNo: "asc" }],
+      }),
+      prisma.posDailyClosure.findMany({
+        where: { tenantId, companyId, closedAt: { gte: from, lte: to }, ...locationFilter },
+        orderBy: { closedAt: "asc" },
+      }),
+    ])
+    const payments = new Map<string, number>()
+    const vatTotals = new Map<number, number>()
+    let salesTotal = 0
+    let discounts = 0
+    for (const sale of sales) {
+      salesTotal += toNumber(sale.total)
+      discounts += toNumber(sale.discountTotal)
+      const payment = String(sale.paymentType || "ALTA PLATA")
+      payments.set(payment, (payments.get(payment) || 0) + toNumber(sale.total))
+      for (const item of sale.items) {
+        const rate = Number(item.vatRate || 0)
+        vatTotals.set(rate, (vatTotals.get(rate) || 0) + toNumber(item.lineTotalAfterDiscount))
+      }
+    }
+    y = drawInfoCards(doc, fonts, {
+      margin: 36,
+      y,
+      height: 96,
+      cards: [
+        { title: "Vanzari", pairs: [{ label: "Bonuri", value: String(sales.length) }, { label: "Total", value: reportMoney(salesTotal) }] },
+        { title: "Incasari", pairs: Array.from(payments.entries()).slice(0, 3).map(([label, value]) => ({ label, value: reportMoney(value) })) },
+        { title: "Control", pairs: [{ label: "Discounturi", value: reportMoney(discounts) }, { label: "Inchideri Z", value: String(closures.length) }] },
+      ],
+    }) + 18
+    const rows = sales.map((sale) => [
+      new Date(sale.soldAt).toLocaleString("ro-RO"),
+      sale.receiptNo || sale.clientSaleId || "-",
+      sale.location?.name || "-",
+      sale.terminal?.label || "-",
+      String(sale.paymentType || "-"),
+      reportMoney(sale.discountTotal),
+      reportMoney(sale.total),
+    ])
+    y = drawAccountingTable(doc, fonts, {
+      margin: 36, y, title,
+      columns: [
+        { label: "Data / ora", width: 115 }, { label: "Bon", width: 90 }, { label: "Locatie", width: 120 },
+        { label: "Terminal", width: 110 }, { label: "Plata", width: 90 }, { label: "Discount", width: 90, align: "right" }, { label: "Total", width: 100, align: "right" },
+      ],
+      rows,
+    }) + 16
+    y = ensureAccountingFooterSpace(doc, fonts, y, 36, title)
+    drawTotalsBox(doc, fonts, {
+      x: doc.page.width - 275, y, width: 239,
+      lines: [
+        ...Array.from(payments.entries()).map(([label, value]) => ({ label, value: reportMoney(value) })),
+        ...Array.from(vatTotals.entries()).map(([rate, value]) => ({ label: `Baza TVA ${rate}%`, value: reportMoney(value) })),
+        { label: "TOTAL INCASARI", value: reportMoney(salesTotal) },
+      ],
+      highlightLast: true,
+    })
+  }
+
+  if (kind === "profitability") {
+    const sales = await prisma.sale.findMany({
+      where: { tenantId, companyId, soldAt: { gte: from, lte: to }, ...locationFilter },
+      include: {
+        items: {
+          include: {
+            product: { include: { recipe: { include: { items: { include: { ingredient: true } } } } } },
+          },
+        },
+      },
+    })
+    const products = new Map<string, { name: string; qty: number; revenue: number; cost: number }>()
+    for (const sale of sales) {
+      for (const item of sale.items) {
+        if (isSyntheticSgrSaleItem(item)) continue
+        const key = item.productId
+        const row = products.get(key) || { name: item.product.name, qty: 0, revenue: 0, cost: 0 }
+        const qty = toNumber(item.qty)
+        row.qty += qty
+        row.revenue += toNumber(item.lineTotalAfterDiscount)
+        row.cost += productUnitCost(item.product) * qty
+        products.set(key, row)
+      }
+    }
+    const rows = Array.from(products.values())
+      .sort((a, b) => (b.revenue - b.cost) - (a.revenue - a.cost))
+      .map((row) => {
+        const profit = row.revenue - row.cost
+        const margin = row.revenue > 0 ? (profit / row.revenue) * 100 : 0
+        return [row.name, pdfFmt(row.qty, 3), reportMoney(row.revenue), reportMoney(row.cost), reportMoney(profit), `${pdfFmt(margin, 1)}%`]
+      })
+    const totals = Array.from(products.values()).reduce((acc, row) => ({ revenue: acc.revenue + row.revenue, cost: acc.cost + row.cost }), { revenue: 0, cost: 0 })
+    y = drawInfoCards(doc, fonts, {
+      margin: 36, y, height: 88,
+      cards: [
+        { title: "Vanzari", pairs: [{ label: "Produse", value: String(products.size) }, { label: "Venit", value: reportMoney(totals.revenue) }] },
+        { title: "Cost teoretic", pairs: [{ label: "Retetar / cost", value: reportMoney(totals.cost) }] },
+        { title: "Profit estimat", pairs: [{ label: "Marja", value: `${pdfFmt(totals.revenue > 0 ? ((totals.revenue - totals.cost) / totals.revenue) * 100 : 0, 1)}%` }] },
+      ],
+    }) + 18
+    y = drawAccountingTable(doc, fonts, {
+      margin: 36, y, title,
+      columns: [
+        { label: "Produs", width: 250 }, { label: "Cant.", width: 90, align: "right" }, { label: "Venit", width: 120, align: "right" },
+        { label: "Cost teoretic", width: 120, align: "right" }, { label: "Profit", width: 120, align: "right" }, { label: "Marja", width: 100, align: "right" },
+      ],
+      rows,
+    })
+  }
+
+  if (kind === "stock") {
+    const [balances, moves] = await Promise.all([
+      prisma.stockBalance.findMany({
+        where: { tenantId, companyId, ...locationFilter, ...warehouseFilter },
+        include: { product: { include: { uom: true } }, location: { select: { name: true } }, warehouse: { select: { name: true } } },
+        orderBy: { product: { name: "asc" } },
+      }),
+      prisma.stockMove.findMany({
+        where: { tenantId, companyId, createdAt: { gte: from, lte: to }, ...locationFilter, ...warehouseFilter },
+        select: { productId: true, type: true, qty: true },
+      }),
+    ])
+    const movements = new Map<string, { input: number; output: number; adjust: number }>()
+    for (const move of moves) {
+      const row = movements.get(move.productId) || { input: 0, output: 0, adjust: 0 }
+      if (move.type === "IN") row.input += toNumber(move.qty)
+      else if (move.type === "OUT") row.output += toNumber(move.qty)
+      else row.adjust += toNumber(move.qty)
+      movements.set(move.productId, row)
+    }
+    const rows = balances.map((balance) => {
+      const movement = movements.get(balance.productId) || { input: 0, output: 0, adjust: 0 }
+      return [
+        balance.product.name,
+        balance.location?.name || "-",
+        balance.warehouse?.name || "-",
+        balance.product.uom?.code || balance.product.uom?.name || "-",
+        pdfFmt(movement.input, 3),
+        pdfFmt(movement.output, 3),
+        pdfFmt(movement.adjust, 3),
+        pdfFmt(balance.qty, 3),
+      ]
+    })
+    y = drawInfoCards(doc, fonts, {
+      margin: 36, y, height: 88,
+      cards: [
+        { title: "Produse", pairs: [{ label: "Pozitii stoc", value: String(balances.length) }] },
+        { title: "Miscari perioada", pairs: [{ label: "Documente", value: String(moves.length) }] },
+        { title: "Nota", pairs: [{ label: "Sold", value: "la momentul generarii" }] },
+      ],
+    }) + 18
+    y = drawAccountingTable(doc, fonts, {
+      margin: 36, y, title,
+      columns: [
+        { label: "Produs", width: 200 }, { label: "Locatie", width: 110 }, { label: "Gestiune", width: 110 }, { label: "UM", width: 55 },
+        { label: "Intrari", width: 90, align: "right" }, { label: "Iesiri", width: 90, align: "right" }, { label: "Ajustari", width: 90, align: "right" }, { label: "Stoc curent", width: 105, align: "right" },
+      ],
+      rows,
+    })
+  }
+
+  doc.end()
+}
+
 router.get("/api/v1/reports/accounting/sales/pdf", requireAuth, async (req: AuthedRequest, res) => {
   try {
     await sendAccountingPdf("sales", req, res)
@@ -592,6 +812,33 @@ router.get("/api/v1/reports/accounting/sgr/pdf", requireAuth, async (req: Authed
   } catch (error) {
     console.error("SGR ACCOUNTING PDF ERROR:", error)
     if (!res.headersSent) res.status(500).json({ error: "Nu am putut genera raportul SGR." })
+  }
+})
+
+router.get("/api/v1/reports/management/daily-close/pdf", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    await sendManagementPdf("daily-close", req, res)
+  } catch (error) {
+    console.error("DAILY CLOSE PDF ERROR:", error)
+    if (!res.headersSent) res.status(500).json({ error: "Nu am putut genera raportul de inchidere zilnica." })
+  }
+})
+
+router.get("/api/v1/reports/management/profitability/pdf", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    await sendManagementPdf("profitability", req, res)
+  } catch (error) {
+    console.error("PROFITABILITY PDF ERROR:", error)
+    if (!res.headersSent) res.status(500).json({ error: "Nu am putut genera raportul de profitabilitate." })
+  }
+})
+
+router.get("/api/v1/reports/management/stock/pdf", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    await sendManagementPdf("stock", req, res)
+  } catch (error) {
+    console.error("STOCK REPORT PDF ERROR:", error)
+    if (!res.headersSent) res.status(500).json({ error: "Nu am putut genera raportul de stoc." })
   }
 })
 
