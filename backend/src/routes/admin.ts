@@ -222,6 +222,16 @@ const CreateDeviceSchema = z.object({
   deviceType: z.nativeEnum(TerminalDeviceType).default(TerminalDeviceType.POS),
 })
 
+const UpdateSubscriptionSchema = z.object({
+  planName: z.string().trim().min(2).max(80).default("Licenta personalizata"),
+  billingCycle: z.enum(["MONTHLY", "YEARLY"]),
+  price: z.coerce.number().min(0).max(999999.99),
+  currency: z.enum(["RON", "EUR", "USD", "HUF"]).default("RON"),
+  billingStatus: z.enum(["OK", "UNPAID", "FAILED"]).default("OK"),
+  nextBillingDate: z.coerce.date().nullable().optional(),
+  notes: z.string().trim().max(500).nullable().optional(),
+})
+
 const UpdateDeviceSchema = z.object({
   label: z.string().min(2),
   deviceType: z.nativeEnum(TerminalDeviceType).default(TerminalDeviceType.POS),
@@ -1145,6 +1155,7 @@ router.get("/api/v1/admin/clients/:id", requireAuth, requireOwner, async (req, r
             price: latestSubscription.price,
             currency: latestSubscription.currency,
             nextBillingDate: latestSubscription.nextBillingDate,
+            notes: latestSubscription.notes,
             plan: latestSubscription.plan
               ? {
                   id: latestSubscription.plan.id,
@@ -2404,6 +2415,57 @@ router.patch("/api/v1/admin/clients/:id/license", requireAuth, requireOwner, asy
       modules: moduleMapFromLicense(updated),
     },
   })
+})
+
+router.put("/api/v1/admin/clients/:id/subscription", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = UpdateSubscriptionSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: req.params.id },
+    include: { subscriptions: { orderBy: { createdAt: "desc" }, take: 1, include: { plan: true } } },
+  })
+  if (!tenant) return res.status(404).json({ ok: false, error: "Client inexistent" })
+
+  const data = parsed.data
+  const subscription = await prisma.$transaction(async (tx) => {
+    const current = tenant.subscriptions[0] || null
+    // Commercial terms are tenant-specific, so editing one customer never changes a shared plan.
+    const plan = await tx.plan.upsert({
+      where: { code: `custom-${tenant.id}` },
+      update: {
+        name: data.planName,
+        currency: data.currency,
+        priceMonthly: data.billingCycle === "MONTHLY" ? data.price : 0,
+        priceYearly: data.billingCycle === "YEARLY" ? data.price : 0,
+      },
+      create: {
+        code: `custom-${tenant.id}`,
+        name: data.planName,
+        currency: data.currency,
+        priceMonthly: data.billingCycle === "MONTHLY" ? data.price : 0,
+        priceYearly: data.billingCycle === "YEARLY" ? data.price : 0,
+      },
+    })
+    const saved = current
+      ? await tx.subscription.update({
+          where: { id: current.id },
+          data: { planId: plan.id, billingCycle: data.billingCycle, price: data.price, currency: data.currency, billingStatus: data.billingStatus, nextBillingDate: data.nextBillingDate ?? null, notes: data.notes ?? null },
+          include: { plan: true },
+        })
+      : await tx.subscription.create({
+          data: { tenantId: tenant.id, planId: plan.id, billingCycle: data.billingCycle, price: data.price, currency: data.currency, status: "ACTIVE", billingStatus: data.billingStatus, nextBillingDate: data.nextBillingDate ?? null, notes: data.notes ?? null },
+          include: { plan: true },
+        })
+    await tx.auditLog.create({
+      data: { tenantId: tenant.id, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_UPDATED", entityType: "Subscription", entityId: saved.id, payload: { billingCycle: data.billingCycle, price: data.price, currency: data.currency, billingStatus: data.billingStatus, nextBillingDate: data.nextBillingDate, planName: saved.plan.name } },
+    })
+    return saved
+  })
+
+  return res.json({ ok: true, item: { id: subscription.id, billingCycle: subscription.billingCycle, price: subscription.price, currency: subscription.currency, billingStatus: subscription.billingStatus, nextBillingDate: subscription.nextBillingDate, plan: subscription.plan ? { id: subscription.plan.id, code: subscription.plan.code, name: subscription.plan.name } : null } })
 })
 
 
