@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { requireRequestCompanyId } from "../lib/companyScope"
 import { resolveTenantCompany } from "../lib/companyResolver"
-import { drawDocumentHero, drawInfoCards, drawSignatureRow, drawTotalsBox, pdfDate, pdfFmt, registerPdfFonts } from "../lib/professionalPdf"
+import { drawDocumentHero, drawInfoCards, drawTotalsBox, pdfDate, pdfFmt, registerPdfFonts } from "../lib/professionalPdf"
 
 const router = Router()
 
@@ -397,7 +397,7 @@ function drawStandardReportHeader(
   const contentWidth = doc.page.width - margin * 2
   let y = margin
 
-  doc.font(fonts.bold).fontSize(21).fillColor("#111827").text(options.title, margin, y)
+  doc.font(fonts.bold).fontSize(21).fillColor("#111827").text(options.title, margin, y, { width: contentWidth - 160, lineBreak: false })
   doc.font(fonts.regular).fontSize(11).fillColor("#50627D").text(options.subtitle, margin, y + 28)
   doc.save().rect(doc.page.width - margin - 142, y + 3, 142, 26).fill("#167D72").restore()
   doc.font(fonts.bold).fontSize(8.8).fillColor("#FFFFFF").text(options.reportLabel, doc.page.width - margin - 142, y + 11, { width: 142, align: "center" })
@@ -433,8 +433,8 @@ function drawStandardReportHeader(
   return y + 58
 }
 
-function ensureAccountingFooterSpace(doc: PDFKit.PDFDocument, fonts: ReportPdfFonts, y: number, margin: number, title: string) {
-  if (y + 130 <= doc.page.height - margin) return y
+function ensureAccountingFooterSpace(doc: PDFKit.PDFDocument, fonts: ReportPdfFonts, y: number, margin: number, title: string, neededHeight = 130) {
+  if (y + neededHeight <= doc.page.height - margin) return y
   doc.addPage({ size: "A4", layout: doc.page.layout === "landscape" ? "landscape" : "portrait", margin })
   doc.font(fonts.bold).fontSize(10).fillColor("#17324D").text(`${title} - totaluri`, margin, margin)
   return margin + 22
@@ -660,13 +660,13 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
       title: "Centralizator zilnic vanzari",
       totalRowIndexes: [dailySales.length],
       columns: [
-        { label: "Data", width: 120 },
-        { label: "Bonuri", width: 100, align: "right" },
-        { label: "Numerar", width: 130, align: "right" },
-        { label: "Card", width: 130, align: "right" },
-        { label: "Alte plati", width: 125, align: "right" },
-        { label: "SGR", width: 110, align: "right" },
-        { label: "Total", width: 125, align: "right" },
+        { label: "Data", width: 110 },
+        { label: "Bonuri", width: 70, align: "right" },
+        { label: "Numerar", width: 110, align: "right" },
+        { label: "Card", width: 110, align: "right" },
+        { label: "Alte plati", width: 100, align: "right" },
+        { label: "SGR", width: 90, align: "right" },
+        { label: "Total", width: 140, align: "right" },
       ],
       rows: [
         ...dailySales.map((row) => [
@@ -681,7 +681,7 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
         ["TOTAL", String(sales.length), reportMoney(dailyTotals.cash), reportMoney(dailyTotals.card), reportMoney(dailyTotals.other), reportMoney(recordedSgrTotal), reportMoney(totalGross)],
       ],
     }) + 16
-    y = ensureAccountingFooterSpace(doc, fonts, y, 36, title)
+    y = ensureAccountingFooterSpace(doc, fonts, y, 36, title, 88)
     y = drawTotalsBox(doc, fonts, {
       x: doc.page.width - 275,
       y,
@@ -693,14 +693,13 @@ async function sendAccountingPdf(kind: AccountingReportKind, req: AuthedRequest,
       ],
       highlightLast: true,
     }) + 28
-    signatureY = y
   }
 
   if (signatureY !== null) {
-    drawSignatureRow(doc, fonts, { margin: 36, y: signatureY, labels: ["Intocmit", "Verificat", "Contabilitate"] })
+    // Reserved for reports that explicitly require a signature area.
   } else {
     doc.font(fonts.regular).fontSize(8.5).fillColor("#64748B").text(
-      "Raport contabil SGR generat din Gufo ERP",
+      isSgr ? "Raport contabil SGR generat din Gufo ERP" : "Raport contabil vanzari generat din Gufo ERP",
       36,
       doc.page.height - 34,
       { width: doc.page.width - 72 }
@@ -764,16 +763,11 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
         orderBy: { closedAt: "asc" },
       }),
     ])
-    const vatTotals = new Map<number, number>()
     let salesTotal = 0
     let discounts = 0
     for (const sale of sales) {
       salesTotal += toNumber(sale.total)
       discounts += toNumber(sale.discountTotal)
-      for (const item of sale.items) {
-        const rate = Number(item.vatRate || 0)
-        vatTotals.set(rate, (vatTotals.get(rate) || 0) + toNumber(item.lineTotalAfterDiscount))
-      }
     }
     const dailySales = buildDailySalesSummaries(sales, from, to)
     const dailyTotals = dailySales.reduce(
@@ -816,19 +810,18 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
     y = drawAccountingTable(doc, fonts, {
       margin: 36, y, title: "Centralizator zilnic inchideri", totalRowIndexes: [dailySales.length],
       columns: [
-        { label: "Data", width: 120 }, { label: "Bonuri", width: 100, align: "right" }, { label: "Numerar", width: 130, align: "right" },
-        { label: "Card", width: 130, align: "right" }, { label: "Alte plati", width: 125, align: "right" }, { label: "Inchideri Z", width: 110, align: "right" }, { label: "Total", width: 125, align: "right" },
+        { label: "Data", width: 110 }, { label: "Bonuri", width: 70, align: "right" }, { label: "Numerar", width: 110, align: "right" },
+        { label: "Card", width: 110, align: "right" }, { label: "Alte plati", width: 100, align: "right" }, { label: "Inchideri Z", width: 100, align: "right" }, { label: "Total", width: 140, align: "right" },
       ],
       rows,
     }) + 16
-    y = ensureAccountingFooterSpace(doc, fonts, y, 36, title)
+    y = ensureAccountingFooterSpace(doc, fonts, y, 36, title, 104)
     drawTotalsBox(doc, fonts, {
       x: doc.page.width - 275, y, width: 239,
       lines: [
         { label: "Numerar", value: reportMoney(dailyTotals.cash) },
         { label: "Card", value: reportMoney(dailyTotals.card) },
         { label: "Alte plati", value: reportMoney(dailyTotals.other) },
-        ...Array.from(vatTotals.entries()).map(([rate, value]) => ({ label: `Baza TVA ${rate}%`, value: reportMoney(value) })),
         { label: "TOTAL INCASARI", value: reportMoney(salesTotal) },
       ],
       highlightLast: true,
@@ -849,7 +842,7 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
     const actualCostByProduct = new Map<string, number>()
     for (const doc of consumptionDocs) {
       for (const item of doc.items) {
-        if (!item.finishedProductId) continue
+        if (!item.finishedProductId || toNumber(item.totalCost) <= 0) continue
         actualCostByProduct.set(item.finishedProductId, (actualCostByProduct.get(item.finishedProductId) || 0) + toNumber(item.totalCost))
       }
     }
@@ -917,8 +910,8 @@ async function sendManagementPdf(kind: ManagementReportKind, req: AuthedRequest,
     y = drawAccountingTable(doc, fonts, {
       margin: 36, y, title, totalRowIndexes: [rows.length - 1],
       columns: [
-        { label: "Produs", width: 250 }, { label: "Cant.", width: 90, align: "right" }, { label: "Venit", width: 120, align: "right" },
-        { label: "Cost validat", width: 120, align: "right" }, { label: "Profit", width: 120, align: "right" }, { label: "Marja", width: 100, align: "right" },
+        { label: "Produs", width: 225 }, { label: "Cant.", width: 75, align: "right" }, { label: "Venit", width: 110, align: "right" },
+        { label: "Cost validat", width: 120, align: "right" }, { label: "Profit", width: 110, align: "right" }, { label: "Marja", width: 90, align: "right" },
       ],
       rows,
     })
