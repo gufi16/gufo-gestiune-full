@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Copy,
   Download,
+  FileText,
   Filter,
   History,
   KeyRound,
@@ -17,8 +18,10 @@ import {
   Search,
   Smartphone,
   Trash2,
+  X,
 } from "lucide-react"
 import { api } from "../../lib/api"
+import { openPdfInNewTab } from "../../lib/pdf"
 import {
   formatAuditDateTime,
   getAuditActionLabel,
@@ -539,8 +542,8 @@ export default function ControlPanelClientDetails() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [licenseModalOpen, setLicenseModalOpen] = useState(false)
   const [subscriptionBusy, setSubscriptionBusy] = useState(false)
-  const [selectedSubscriptionLicenseId, setSelectedSubscriptionLicenseId] = useState("")
-  const [subscriptionForm, setSubscriptionForm] = useState({ planName: "Licenta personalizata", billingCycle: "YEARLY", price: "0", currency: "RON", billingStatus: "OK", nextBillingDate: "", notes: "" })
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
+  const [subscriptionForm, setSubscriptionForm] = useState({ licenseId: "", product: "ERP_POS", billingCycle: "YEARLY", price: "0", currency: "RON", billingStatus: "OK", notes: "" })
   const [licenseEditorSection, setLicenseEditorSection] = useState<"core" | "marketplace" | "modules">("core")
   const [overviewPanelOpen, setOverviewPanelOpen] = useState<OverviewPanel>(null)
   const [activeTab, setActiveTab] = useState<ClientTab>("overview")
@@ -609,32 +612,38 @@ export default function ControlPanelClientDetails() {
   }
 
   function openSubscriptionEditor(licenseId?: string) {
-    const resolvedLicenseId = licenseId || selectedSubscriptionLicenseId || client?.license?.id || client?.licenses?.[0]?.id || ""
-    const subscription = (Array.isArray(client?.subscriptions) ? client.subscriptions : []).find((item: any) => item.licenseId === resolvedLicenseId)
-      || (client?.licenses?.length === 1 ? client?.subscription : null)
-    setSelectedSubscriptionLicenseId(resolvedLicenseId)
-    setSubscriptionForm({
-      planName: subscription?.plan?.name || "Licenta personalizata",
-      billingCycle: subscription?.billingCycle === "MONTHLY" ? "MONTHLY" : "YEARLY",
-      price: String(subscription?.price ?? 0),
-      currency: subscription?.currency || "RON",
-      billingStatus: subscription?.billingStatus || "OK",
-      nextBillingDate: toInputDate((Array.isArray(client?.licenses) ? client.licenses : []).find((item: any) => item.id === resolvedLicenseId)?.expiresAt),
-      notes: subscription?.notes || "",
-    })
+    const resolvedLicenseId = licenseId || client?.license?.id || client?.licenses?.[0]?.id || ""
+    setSubscriptionForm({ licenseId: resolvedLicenseId, product: "ERP_POS", billingCycle: "YEARLY", price: "0", currency: "RON", billingStatus: "OK", notes: "" })
     setActiveTab("subscription")
+    setSubscriptionModalOpen(true)
   }
 
   async function handleSaveSubscription() {
     try {
       setSubscriptionBusy(true)
-      const licenseId = selectedSubscriptionLicenseId || client?.license?.id || client?.licenses?.[0]?.id
-      if (!licenseId) throw new Error("Selecteaza licenta pentru care salvezi abonamentul.")
-      await api(`/api/v1/admin/clients/${id}/subscription`, { method: "PUT", body: JSON.stringify({ ...subscriptionForm, licenseId, price: Number(subscriptionForm.price || 0), notes: subscriptionForm.notes || null }) })
+      if (!subscriptionForm.licenseId) throw new Error("Selecteaza licenta pentru abonament.")
+      await api(`/api/v1/admin/clients/${id}/subscriptions`, { method: "POST", body: JSON.stringify({ ...subscriptionForm, price: Number(subscriptionForm.price || 0), notes: subscriptionForm.notes || null }) })
       setMessage("Abonamentul comercial a fost salvat.")
+      setSubscriptionModalOpen(false)
       await load()
     } catch (err: any) {
       setError(err?.message || "Nu am putut salva abonamentul.")
+    } finally {
+      setSubscriptionBusy(false)
+    }
+  }
+
+  async function handleCreateSubscriptionInvoice(subscriptionId: string) {
+    try {
+      setSubscriptionBusy(true)
+      const created = await api<{ item: { id: string } }>(`/api/v1/admin/subscriptions/${subscriptionId}/invoices`, { method: "POST" })
+      const response = await api<Response>(`/api/v1/admin/invoices/${created.item.id}/pdf`, { raw: true })
+      if (!response.ok) throw new Error("Factura a fost creată, dar PDF-ul nu a putut fi deschis.")
+      await openPdfInNewTab(response)
+      setMessage("Factura a fost creată și PDF-ul a fost deschis.")
+      await load()
+    } catch (err: any) {
+      setError(err?.message || "Nu am putut crea factura.")
     } finally {
       setSubscriptionBusy(false)
     }
@@ -655,9 +664,7 @@ export default function ControlPanelClientDetails() {
   const users = Array.isArray(client?.users) ? (client.users as User[]) : []
   const licenses = Array.isArray(client?.licenses) ? client.licenses : client?.license ? [client.license] : []
   const subscriptions = Array.isArray(client?.subscriptions) ? client.subscriptions : client?.subscription ? [client.subscription] : []
-  const selectedSubscriptionLicense = licenses.find((license: any) => license.id === selectedSubscriptionLicenseId) || licenses[0] || null
-  const selectedSubscription = subscriptions.find((subscription: any) => subscription.licenseId === selectedSubscriptionLicense?.id)
-    || (licenses.length === 1 ? subscriptions[0] : null)
+  const selectedSubscriptionLicense = licenses.find((license: any) => license.id === subscriptionForm.licenseId) || licenses[0] || null
   const locations = Array.isArray(client?.locations) ? (client.locations as LocationItem[]) : []
   const auditLogs = Array.isArray(client?.auditLogs) ? (client.auditLogs as AuditLogItem[]) : []
   const companies = Array.isArray(client?.companies) ? client.companies : []
@@ -1774,36 +1781,9 @@ export default function ControlPanelClientDetails() {
         </div>
       ) : null}
       {activeTab === "subscription" ? (
-        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Licențele clientului</div>
-            <div className="mt-1 text-sm font-semibold text-[#17324D]">Alege licența vândută</div>
-            <div className="mt-3 grid gap-2">
-              {licenses.map((license: any) => {
-                const subscription = subscriptions.find((item: any) => item.licenseId === license.id) || (licenses.length === 1 ? subscriptions[0] : null)
-                const selected = selectedSubscriptionLicense?.id === license.id
-                return <button key={license.id} type="button" onClick={() => openSubscriptionEditor(license.id)} className={`border px-3 py-3 text-left transition ${selected ? "border-[#17324D] bg-[#17324D] text-white" : "border-slate-200 bg-white text-slate-700 hover:border-[#17324D]"}`}><div className="font-mono text-xs font-semibold">{license.keyPrefix || "LICENȚĂ"}</div><div className={`mt-1 text-xs ${selected ? "text-slate-200" : "text-slate-500"}`}>Expiră {formatDate(license.expiresAt)}</div><div className={`mt-2 text-xs font-semibold ${selected ? "text-white" : "text-[#17324D]"}`}>{subscription ? `${currencyFormat(Number(subscription.price), subscription.currency)} · ${subscription.billingCycle === "MONTHLY" ? "lunar" : "anual"}` : "Fără abonament setat"}</div></button>
-              })}
-              {!licenses.length ? <div className="border border-dashed border-slate-300 p-3 text-sm text-slate-500">Clientul nu are încă o licență creată.</div> : null}
-            </div>
-          </aside>
-
-          <section className="border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
-              <div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Abonament comercial</div><div className="mt-1 text-lg font-semibold text-[#17324D]">{selectedSubscriptionLicense?.keyPrefix || "Selectează o licență"}</div><div className="mt-1 text-sm text-slate-500">Scadența se preia automat din data de expirare a licenței.</div></div>
-              <div className="border border-slate-200 bg-slate-50 px-3 py-2 text-right"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Scadență licență</div><div className="mt-1 text-sm font-semibold text-[#17324D]">{formatDate(selectedSubscriptionLicense?.expiresAt)}</div></div>
-            </div>
-
-            {selectedSubscriptionLicense ? <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <label className="block lg:col-span-2"><span className="text-xs font-semibold text-slate-600">Denumire pachet</span><input value={subscriptionForm.planName} onChange={(event) => setSubscriptionForm((current) => ({ ...current, planName: event.target.value }))} className="mt-1 w-full border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. Gufo ERP Pro" /></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Facturare</span><select value={subscriptionForm.billingCycle} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingCycle: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="MONTHLY">Lunar</option><option value="YEARLY">Anual</option></select></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Preț</span><div className="mt-1 flex"><input type="number" min="0" step="0.01" value={subscriptionForm.price} onChange={(event) => setSubscriptionForm((current) => ({ ...current, price: event.target.value }))} className="min-w-0 flex-1 border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" /><select value={subscriptionForm.currency} onChange={(event) => setSubscriptionForm((current) => ({ ...current, currency: event.target.value }))} className="border border-l-0 border-slate-200 bg-slate-50 px-2 text-sm outline-none"><option value="RON">RON</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></div></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Stare plată</span><select value={subscriptionForm.billingStatus} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingStatus: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#17324D]"><option value="OK">La zi</option><option value="UNPAID">Neplătit</option><option value="FAILED">Eșuat</option></select></label>
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Scadență</span><input value={formatDate(selectedSubscriptionLicense.expiresAt)} readOnly className="mt-1 w-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none" /></label>
-              <label className="block lg:col-span-2"><span className="text-xs font-semibold text-slate-600">Notițe interne</span><textarea value={subscriptionForm.notes} onChange={(event) => setSubscriptionForm((current) => ({ ...current, notes: event.target.value }))} rows={3} className="mt-1 w-full resize-none border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#17324D]" placeholder="Ex. contract semnat, condiții negociate" /></label>
-              <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 lg:col-span-2"><div className="text-sm text-slate-500">{selectedSubscription ? "Condițiile existente vor fi actualizate." : "Prima salvare creează abonamentul acestei licențe."}</div><button type="button" onClick={handleSaveSubscription} disabled={subscriptionBusy || !subscriptionForm.planName.trim()} className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"><Save size={15} />{subscriptionBusy ? "Se salvează..." : "Salvează abonamentul"}</button></div>
-            </div> : null}
-          </section>
+        <section className="border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Comercial</div><h2 className="mt-1 text-lg font-semibold text-[#17324D]">Abonamente client</h2><p className="mt-1 text-sm text-slate-500">Fiecare produs vândut are preț, perioadă și factură proprie. Scadența se preia din licență.</p></div><button type="button" onClick={() => openSubscriptionEditor()} disabled={!licenses.length} className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"><Plus size={16} />Creează abonament</button></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-5 py-3">Produs</th><th className="px-4 py-3">Licență</th><th className="px-4 py-3">Perioadă</th><th className="px-4 py-3">Preț</th><th className="px-4 py-3">Scadență</th><th className="px-4 py-3">Stare</th><th className="px-5 py-3 text-right">Acțiuni</th></tr></thead><tbody className="divide-y divide-slate-100">{subscriptions.map((subscription: any) => <tr key={subscription.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-semibold text-[#17324D]">{subscription.plan?.name || subscription.product}</td><td className="px-4 py-4 font-mono text-xs text-slate-700">{subscription.license?.keyPrefix || licenses.find((item: any) => item.id === subscription.licenseId)?.keyPrefix || "-"}</td><td className="px-4 py-4 text-sm text-slate-600">{subscription.billingCycle === "MONTHLY" ? "Lunar" : "Anual"}</td><td className="px-4 py-4 text-sm font-semibold text-slate-800">{currencyFormat(Number(subscription.price), subscription.currency)}</td><td className="px-4 py-4 text-sm text-slate-600">{formatDate(subscription.nextBillingDate)}</td><td className="px-4 py-4 text-xs font-semibold text-emerald-700">{subscription.billingStatus === "OK" ? "La zi" : subscription.billingStatus}</td><td className="px-5 py-4 text-right"><button type="button" onClick={() => void handleCreateSubscriptionInvoice(subscription.id)} disabled={subscriptionBusy} className="inline-flex items-center gap-2 border border-[#17324D] px-3 py-2 text-xs font-semibold text-[#17324D] hover:bg-[#17324D] hover:text-white disabled:opacity-50"><FileText size={14} />Creează factură</button></td></tr>)}{!subscriptions.length ? <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-500">Nu există abonamente. Creează primul produs comercial pentru acest client.</td></tr> : null}</tbody></table></div>
         </section>
       ) : null}
 
@@ -3172,6 +3152,24 @@ export default function ControlPanelClientDetails() {
                 {catalogSaving ? "Se salveaza..." : "Salveaza catalogul"}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {subscriptionModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Abonament nou</div><h2 className="mt-1 text-xl font-semibold text-[#17324D]">Configurează produsul vândut</h2><p className="mt-1 text-sm text-slate-500">Tipul este fix; prețul și perioada sunt specifice acestui client.</p></div><button type="button" onClick={() => setSubscriptionModalOpen(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button></div>
+            <div className="grid gap-4 p-6 md:grid-cols-2">
+              <label className="block md:col-span-2"><span className="text-xs font-bold text-slate-600">Licență *</span><select value={subscriptionForm.licenseId} onChange={(event) => setSubscriptionForm((current) => ({ ...current, licenseId: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#17324D]"><option value="">Selectează licența</option>{licenses.map((license: any) => <option key={license.id} value={license.id}>{license.keyPrefix} · expiră {formatDate(license.expiresAt)}</option>)}</select></label>
+              <label className="block md:col-span-2"><span className="text-xs font-bold text-slate-600">Produs *</span><select value={subscriptionForm.product} onChange={(event) => setSubscriptionForm((current) => ({ ...current, product: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#17324D]"><option value="ERP_POS">Licență ERP + Gufo POS</option><option value="DELIVERY">Licență Delivery</option><option value="KDS">Licență KDS</option><option value="WAITER">Licență Ospătar</option><option value="GUFO_GO">Licență Gufo Go</option><option value="KIOSK">Licență Kiosk</option></select></label>
+              <label className="block"><span className="text-xs font-bold text-slate-600">Facturare</span><select value={subscriptionForm.billingCycle} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingCycle: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#17324D]"><option value="MONTHLY">Lunar</option><option value="YEARLY">Anual</option></select></label>
+              <label className="block"><span className="text-xs font-bold text-slate-600">Preț</span><div className="mt-1 flex"><input type="number" min="0" step="0.01" value={subscriptionForm.price} onChange={(event) => setSubscriptionForm((current) => ({ ...current, price: event.target.value }))} className="min-w-0 flex-1 border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17324D]" /><select value={subscriptionForm.currency} onChange={(event) => setSubscriptionForm((current) => ({ ...current, currency: event.target.value }))} className="border border-l-0 border-slate-200 bg-slate-50 px-2 text-sm"><option value="RON">RON</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="HUF">HUF</option></select></div></label>
+              <label className="block"><span className="text-xs font-bold text-slate-600">Stare plată</span><select value={subscriptionForm.billingStatus} onChange={(event) => setSubscriptionForm((current) => ({ ...current, billingStatus: event.target.value }))} className="mt-1 w-full border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="OK">La zi</option><option value="UNPAID">Neplătit</option><option value="FAILED">Eșuat</option></select></label>
+              <div className="border border-sky-100 bg-sky-50 px-3 py-2.5 text-sm text-sky-800"><div className="text-xs font-bold uppercase tracking-[0.1em]">Scadență</div><div className="mt-1 font-semibold">{formatDate(selectedSubscriptionLicense?.expiresAt)}</div><div className="mt-1 text-xs">Preluată automat din licența selectată.</div></div>
+              <label className="block md:col-span-2"><span className="text-xs font-bold text-slate-600">Notițe interne</span><textarea rows={3} value={subscriptionForm.notes} onChange={(event) => setSubscriptionForm((current) => ({ ...current, notes: event.target.value }))} className="mt-1 w-full resize-none border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17324D]" placeholder="Opțional" /></label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4"><button type="button" onClick={() => setSubscriptionModalOpen(false)} className="border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Renunță</button><button type="button" onClick={() => void handleSaveSubscription()} disabled={subscriptionBusy || !subscriptionForm.licenseId} className="inline-flex items-center gap-2 bg-[#17324D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Save size={15} />{subscriptionBusy ? "Se salvează..." : "Salvează abonamentul"}</button></div>
           </div>
         </div>
       ) : null}

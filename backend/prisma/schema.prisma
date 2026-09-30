@@ -2556,6 +2556,15 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum SubscriptionProduct {
+  ERP_POS
+  DELIVERY
+  KDS
+  WAITER
+  GUFO_GO
+  KIOSK
+}
+
 enum InvoiceStatus {
   DRAFT
   ISSUED
@@ -2632,7 +2641,8 @@ model TenantModule {
 model Subscription {
   id                 String             @id @default(cuid())
   tenantId           String
-  licenseId          String?            @unique
+  licenseId          String?
+  product            SubscriptionProduct @default(ERP_POS)
   planId             String
   vivaSubscriptionId String?
   vivaOrderCode      String?
@@ -2657,6 +2667,7 @@ model Subscription {
   invoices Invoice[]
 
   @@index([tenantId])
+  @@index([licenseId])
   @@index([planId])
   @@index([status])
   @@index([billingStatus])

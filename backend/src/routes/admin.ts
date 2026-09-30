@@ -4,6 +4,7 @@ import { TerminalDeviceType, UserRole } from "@prisma/client"
 import { z } from "zod"
 import fs from "node:fs"
 import path from "node:path"
+import PDFDocument from "pdfkit"
 
 import { prisma } from "../lib/prisma"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
@@ -50,6 +51,7 @@ import {
 import { hasTenantModule } from "../lib/tenantModules"
 import { sendDeliveryAnnouncementPush } from "../lib/deliveryPush"
 import { hasSmtpConfig, sendMail } from "../lib/mailer"
+import { drawDocumentHero, drawInfoCards, drawSignatureRow, drawSimpleTable, drawTotalsBox, pdfDate, pdfFmt, pdfText, registerPdfFonts } from "../lib/professionalPdf"
 
 const router = Router()
 
@@ -222,9 +224,9 @@ const CreateDeviceSchema = z.object({
   deviceType: z.nativeEnum(TerminalDeviceType).default(TerminalDeviceType.POS),
 })
 
-const UpdateSubscriptionSchema = z.object({
+const CreateSubscriptionSchema = z.object({
   licenseId: z.string().min(1),
-  planName: z.string().trim().min(2).max(80).default("Licenta personalizata"),
+  product: z.enum(["ERP_POS", "DELIVERY", "KDS", "WAITER", "GUFO_GO", "KIOSK"]),
   billingCycle: z.enum(["MONTHLY", "YEARLY"]),
   price: z.coerce.number().min(0).max(999999.99),
   currency: z.enum(["RON", "EUR", "USD", "HUF"]).default("RON"),
@@ -232,6 +234,15 @@ const UpdateSubscriptionSchema = z.object({
   nextBillingDate: z.coerce.date().nullable().optional(),
   notes: z.string().trim().max(500).nullable().optional(),
 })
+
+const SUBSCRIPTION_PRODUCT_LABELS = {
+  ERP_POS: "Licenta ERP + Gufo POS",
+  DELIVERY: "Licenta Delivery",
+  KDS: "Licenta KDS",
+  WAITER: "Licenta Ospatar",
+  GUFO_GO: "Licenta Gufo Go",
+  KIOSK: "Licenta Kiosk",
+} as const
 
 const UpdateDeviceSchema = z.object({
   label: z.string().min(2),
@@ -1038,13 +1049,13 @@ router.get("/api/v1/admin/clients/:id", requireAuth, requireOwner, async (req, r
       },
       licenses: {
         orderBy: { createdAt: "desc" },
-        take: 1,
       },
       subscriptions: {
         orderBy: { createdAt: "desc" },
-        take: 1,
         include: {
           plan: true,
+          license: { select: { id: true, keyPrefix: true, expiresAt: true } },
+          invoices: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, number: true, issueDate: true, status: true } },
         },
       },
       auditLogs: {
@@ -1204,6 +1215,7 @@ router.get("/api/v1/admin/clients/:id", requireAuth, requireOwner, async (req, r
       subscriptions: tenant.subscriptions.map((subscription) => ({
         id: subscription.id,
         licenseId: subscription.licenseId,
+        product: subscription.product,
         billingStatus: subscription.billingStatus,
         billingCycle: subscription.billingCycle,
         price: subscription.price,
@@ -1213,6 +1225,8 @@ router.get("/api/v1/admin/clients/:id", requireAuth, requireOwner, async (req, r
         plan: subscription.plan
           ? { id: subscription.plan.id, code: subscription.plan.code, name: subscription.plan.name }
           : null,
+        license: subscription.license ? { id: subscription.license.id, keyPrefix: subscription.license.keyPrefix, expiresAt: subscription.license.expiresAt } : null,
+        latestInvoice: subscription.invoices[0] || null,
       })),
       activeModules: effectiveDynamicModules.filter((row) => row.enabled).map((row) => ({
         code: row.code,
@@ -2473,8 +2487,8 @@ router.patch("/api/v1/admin/clients/:id/license", requireAuth, requireOwner, asy
   })
 })
 
-router.put("/api/v1/admin/clients/:id/subscription", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
-  const parsed = UpdateSubscriptionSchema.safeParse(req.body)
+router.post("/api/v1/admin/clients/:id/subscriptions", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = CreateSubscriptionSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: parsed.error.flatten() })
   }
@@ -2493,42 +2507,118 @@ router.put("/api/v1/admin/clients/:id/subscription", requireAuth, requireOwner, 
   if (!license) return res.status(400).json({ ok: false, error: "Licenta nu apartine acestui client" })
 
   const subscription = await prisma.$transaction(async (tx) => {
-    const current = tenant.subscriptions.find((item) => item.licenseId === license.id)
-      || (tenant.licenses.length === 1 ? tenant.subscriptions.find((item) => !item.licenseId) : null)
-    // Commercial terms are tenant-specific, so editing one customer never changes a shared plan.
+    const productLabel = SUBSCRIPTION_PRODUCT_LABELS[data.product]
+    const existing = tenant.subscriptions.find((item) => item.licenseId === license.id && item.product === data.product)
+    if (existing) throw new Error(`Exista deja ${productLabel} pentru licenta ${license.keyPrefix}.`)
+    // Commercial terms are tenant-specific and product-specific.
     const plan = await tx.plan.upsert({
-      where: { code: `custom-${tenant.id}-${license.id}` },
+      where: { code: `subscription-${tenant.id}-${license.id}-${data.product}` },
       update: {
-        name: data.planName,
+        name: productLabel,
         currency: data.currency,
         priceMonthly: data.billingCycle === "MONTHLY" ? data.price : 0,
         priceYearly: data.billingCycle === "YEARLY" ? data.price : 0,
       },
       create: {
-        code: `custom-${tenant.id}-${license.id}`,
-        name: data.planName,
+        code: `subscription-${tenant.id}-${license.id}-${data.product}`,
+        name: productLabel,
         currency: data.currency,
         priceMonthly: data.billingCycle === "MONTHLY" ? data.price : 0,
         priceYearly: data.billingCycle === "YEARLY" ? data.price : 0,
       },
     })
-    const saved = current
-      ? await tx.subscription.update({
-          where: { id: current.id },
-          data: { licenseId: license.id, planId: plan.id, billingCycle: data.billingCycle, price: data.price, currency: data.currency, billingStatus: data.billingStatus, nextBillingDate: license.expiresAt, notes: data.notes ?? null },
-          include: { plan: true },
-        })
-      : await tx.subscription.create({
-          data: { tenantId: tenant.id, licenseId: license.id, planId: plan.id, billingCycle: data.billingCycle, price: data.price, currency: data.currency, status: "ACTIVE", billingStatus: data.billingStatus, nextBillingDate: license.expiresAt, notes: data.notes ?? null },
-          include: { plan: true },
-        })
+    const saved = await tx.subscription.create({
+      data: { tenantId: tenant.id, licenseId: license.id, product: data.product, planId: plan.id, billingCycle: data.billingCycle, price: data.price, currency: data.currency, status: "ACTIVE", billingStatus: data.billingStatus, nextBillingDate: license.expiresAt, notes: data.notes ?? null },
+      include: { plan: true },
+    })
     await tx.auditLog.create({
-      data: { tenantId: tenant.id, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_UPDATED", entityType: "Subscription", entityId: saved.id, payload: { licenseId: license.id, licenseKey: license.keyPrefix, billingCycle: data.billingCycle, price: data.price, currency: data.currency, billingStatus: data.billingStatus, nextBillingDate: license.expiresAt, planName: saved.plan.name } },
+      data: { tenantId: tenant.id, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_CREATED", entityType: "Subscription", entityId: saved.id, payload: { product: data.product, productLabel, licenseId: license.id, licenseKey: license.keyPrefix, billingCycle: data.billingCycle, price: data.price, currency: data.currency, billingStatus: data.billingStatus, nextBillingDate: license.expiresAt } },
     })
     return saved
   })
 
-  return res.json({ ok: true, item: { id: subscription.id, licenseId: subscription.licenseId, billingCycle: subscription.billingCycle, price: subscription.price, currency: subscription.currency, billingStatus: subscription.billingStatus, nextBillingDate: subscription.nextBillingDate, plan: subscription.plan ? { id: subscription.plan.id, code: subscription.plan.code, name: subscription.plan.name } : null } })
+  return res.json({ ok: true, item: { id: subscription.id, licenseId: subscription.licenseId, product: subscription.product, billingCycle: subscription.billingCycle, price: subscription.price, currency: subscription.currency, billingStatus: subscription.billingStatus, nextBillingDate: subscription.nextBillingDate, plan: subscription.plan ? { id: subscription.plan.id, code: subscription.plan.code, name: subscription.plan.name } : null } })
+})
+
+router.post("/api/v1/admin/subscriptions/:subscriptionId/invoices", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const [config, subscription] = await Promise.all([
+    prisma.platformConfig.findUnique({ where: { key: "global" } }),
+    prisma.subscription.findUnique({
+      where: { id: req.params.subscriptionId },
+      include: { plan: true, license: true, tenant: { include: { companies: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } } } },
+    }),
+  ])
+  const issuer = (config?.billingProfile || {}) as Record<string, unknown>
+  if (!subscription) return res.status(404).json({ ok: false, error: "Abonament inexistent" })
+  if (!String(issuer.name || "").trim() || !String(issuer.cui || "").trim()) {
+    return res.status(400).json({ ok: false, error: "Completeaza mai intai firma emitenta din profilul tau." })
+  }
+
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "")
+  const series = String(issuer.invoiceSeries || "GUF").trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "GUF"
+  const number = `${series}-${datePart}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
+  const invoice = await prisma.$transaction(async (tx) => {
+    const created = await tx.invoice.create({
+      data: {
+        tenantId: subscription.tenantId,
+        subscriptionId: subscription.id,
+        number,
+        issueDate: new Date(),
+        dueDate: subscription.nextBillingDate || new Date(),
+        amount: subscription.price,
+        currency: subscription.currency,
+        status: "ISSUED",
+        externalRef: subscription.product,
+      },
+    })
+    await tx.auditLog.create({
+      data: { tenantId: subscription.tenantId, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_INVOICE_CREATED", entityType: "Invoice", entityId: created.id, payload: { number: created.number, subscriptionId: subscription.id, product: subscription.product, amount: subscription.price, currency: subscription.currency } },
+    })
+    return created
+  })
+  return res.status(201).json({ ok: true, item: invoice })
+})
+
+router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, async (req, res) => {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: req.params.invoiceId },
+    include: { subscription: { include: { plan: true, license: true } }, tenant: { include: { companies: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } } } },
+  })
+  const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+  const issuer = (config?.billingProfile || {}) as Record<string, unknown>
+  if (!invoice || !invoice.subscription) return res.status(404).json({ ok: false, error: "Factura inexistentă" })
+  if (!String(issuer.name || "").trim()) return res.status(400).json({ ok: false, error: "Firma emitenta nu este configurata." })
+
+  const customer = pickPrimaryCompany(invoice.tenant.companies)
+  const product = SUBSCRIPTION_PRODUCT_LABELS[invoice.subscription.product]
+  const cycle = invoice.subscription.billingCycle === "MONTHLY" ? "abonament lunar" : "abonament anual"
+  const filename = `Factura_${invoice.number}.pdf`
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", `inline; filename=\"${filename}\"`)
+  const doc = new PDFDocument({ size: "A4", margin: 34, info: { Title: filename, Author: String(issuer.name), Subject: `Factura ${invoice.number}` } })
+  const fonts = registerPdfFonts(doc)
+  doc.pipe(res)
+  const margin = 34
+  const contentWidth = doc.page.width - margin * 2
+  let y = drawDocumentHero(doc, fonts, {
+    title: "FACTURA",
+    subtitle: invoice.number,
+    companyName: String(issuer.name),
+    companyLines: [String(issuer.cui || ""), String(issuer.address || ""), String(issuer.email || "")].filter(Boolean),
+    rightPairs: [{ label: "Data", value: pdfDate(invoice.issueDate) }, { label: "Scadenta", value: pdfDate(invoice.dueDate) }, { label: "Moneda", value: invoice.currency }],
+    margin,
+  })
+  y += 4
+  y = drawInfoCards(doc, fonts, { margin, y, cards: [
+    { title: "FURNIZOR", pairs: [{ label: "CUI", value: pdfText(issuer.cui) }, { label: "Reg. com.", value: pdfText(issuer.regNo) }, { label: "Adresa", value: pdfText([issuer.address, issuer.city, issuer.county].filter(Boolean).join(", ")) }, { label: "IBAN", value: pdfText(issuer.iban) }] },
+    { title: "CLIENT", pairs: [{ label: "Denumire", value: pdfText(customer?.name || invoice.tenant.name) }, { label: "CUI", value: pdfText(customer?.cui) }, { label: "Adresa", value: pdfText(customer?.address) }, { label: "Email", value: pdfText(customer?.email) }] },
+  ] })
+  y += 22
+  y = drawSimpleTable(doc, fonts, { margin, y, columns: [{ label: "#", width: 36, align: "center" }, { label: "Denumire", width: 300 }, { label: "U.M.", width: 56, align: "center" }, { label: "Cant.", width: 56, align: "right" }, { label: "Pret", width: 80, align: "right" }, { label: "Valoare", width: 86, align: "right" }], rows: [["1", `${product} - ${cycle}`, "buc", "1", pdfFmt(invoice.amount), pdfFmt(invoice.amount)]] })
+  y += 22
+  drawTotalsBox(doc, fonts, { x: margin + contentWidth - 210, y, width: 210, lines: [{ label: "Total fara TVA", value: `${pdfFmt(invoice.amount)} ${invoice.currency}` }, { label: "TVA", value: "-" }, { label: "TOTAL", value: `${pdfFmt(invoice.amount)} ${invoice.currency}` }], highlightLast: true })
+  drawSignatureRow(doc, fonts, { margin, y: Math.min(y + 110, doc.page.height - margin - 90), labels: ["Emitent", "Client"] })
+  doc.end()
 })
 
 

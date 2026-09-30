@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react"
-import { Bell, LogOut, Menu, Search, ShieldCheck } from "lucide-react"
+import { Bell, LogOut, Menu, Search, ShieldCheck, UserCircle } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { controlLogout } from "../../lib/controlAuth"
 
@@ -8,6 +8,7 @@ function pageTitle(pathname: string) {
   if (pathname.endsWith("/clienti")) return "Clienti"
   if (pathname.endsWith("/licente")) return "Licente"
   if (pathname.endsWith("/facturare")) return "Facturare"
+  if (pathname.endsWith("/profil")) return "Profil owner"
   if (pathname.endsWith("/integrari")) return "Integrari platforma"
   if (pathname.endsWith("/noutati")) return "Anunturi Delivery"
   if (pathname.endsWith("/audit")) return "Evenimente si audit"
@@ -56,6 +57,9 @@ export default function ControlPanelTopbar({ onOpenMenu }: { onOpenMenu?: () => 
         <div className="min-w-0 flex-1 md:hidden"><div className="truncate text-sm font-semibold">{title}</div></div>
         <button type="button" onClick={() => navigate("/control-panel/audit")} className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Evenimente si audit">
           <Bell size={17} />
+        </button>
+        <button type="button" onClick={() => navigate("/control-panel/profil")} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-white/10 px-3 text-xs font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white" aria-label="Profil și firma emitentă">
+          <UserCircle size={17} /><span className="hidden lg:inline">Profil</span>
         </button>
         <button type="button" onClick={handleLogout} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-white/10 px-3 text-xs font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white">
           <LogOut size={15} />
