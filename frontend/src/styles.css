@@ -595,6 +595,87 @@ table td {
     box-shadow: 0 2px 10px rgba(33, 50, 79, 0.04) !important;
   }
 
+  .erp-dashboard .dashboard-bottom-card {
+    padding: 0.85rem !important;
+  }
+
+  .erp-dashboard .dashboard-bottom-card > div:first-child {
+    min-height: 1.55rem;
+    margin-bottom: 0.45rem !important;
+  }
+
+  .erp-dashboard .dashboard-mini-table {
+    table-layout: fixed;
+  }
+
+  .erp-dashboard .dashboard-mini-table th {
+    height: 1.65rem;
+    background: #f3f6f9;
+    color: #71829a;
+    font-size: 0.67rem;
+  }
+
+  .erp-dashboard .dashboard-mini-table td {
+    height: 1.85rem;
+    white-space: nowrap;
+  }
+
+  .erp-dashboard .dashboard-mini-table th:first-child,
+  .erp-dashboard .dashboard-mini-table td:first-child {
+    width: 2.5rem;
+  }
+
+  .erp-dashboard .dashboard-mini-table th:nth-child(3),
+  .erp-dashboard .dashboard-mini-table td:nth-child(3) {
+    width: 6.5rem;
+  }
+
+  .erp-dashboard .dashboard-mini-table th:last-child,
+  .erp-dashboard .dashboard-mini-table td:last-child {
+    width: 7.15rem;
+  }
+
+  .erp-dashboard .dashboard-activity {
+    position: relative;
+    padding-left: 0.25rem;
+  }
+
+  .erp-dashboard .dashboard-activity::before {
+    position: absolute;
+    top: 0.45rem;
+    bottom: 0.45rem;
+    left: 0.57rem;
+    width: 1px;
+    background: #d8e1eb;
+    content: "";
+  }
+
+  .erp-dashboard .dashboard-activity > div {
+    min-height: 2.55rem;
+    padding-left: 1.65rem !important;
+  }
+
+  .erp-dashboard .dashboard-activity > div > span:first-child {
+    z-index: 1;
+    width: 0.52rem;
+    height: 0.52rem;
+    left: 0.32rem;
+    border: 1px solid #fff;
+  }
+
+  .erp-dashboard .dashboard-stock-table > div:first-child {
+    height: 1.65rem;
+    align-items: center;
+    background: #f3f6f9;
+    padding: 0 0.5rem !important;
+  }
+
+  .erp-dashboard .dashboard-stock-table > div:not(:first-child) {
+    min-height: 1.58rem;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+
   .erp-dashboard .dashboard-secondary table th,
   .erp-dashboard .dashboard-secondary table td {
     padding-top: 0.45rem;

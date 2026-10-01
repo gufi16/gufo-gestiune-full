@@ -11,6 +11,7 @@
   FileText,
   FolderSymlink,
   PackagePlus,
+  MoreHorizontal,
   Receipt,
   ScanLine,
   Search,
@@ -402,8 +403,8 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col border border-[#dce5ea] bg-white p-3.5 shadow-sm">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="dashboard-bottom-card flex h-full min-h-0 flex-col border border-[#dce5ea] bg-white p-3 shadow-sm">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <div className="text-[15px] font-semibold tracking-[0.01em] text-slate-950">{title}</div>
           {subtitle ? <div className="mt-0.5 text-[13px] text-slate-500">{subtitle}</div> : null}
@@ -914,7 +915,7 @@ export default function Dashboard() {
 
       {topProductsOpen ? createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[82vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
+          <div className="flex h-[78vh] max-h-[78vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
               <div>
                 <div className="text-lg font-bold text-slate-900">Top produse vândute</div>
@@ -922,7 +923,7 @@ export default function Dashboard() {
               </div>
               <button type="button" onClick={() => setTopProductsOpen(false)} className="border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Închide</button>
             </div>
-            <div className="min-h-0 overflow-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
               <table className="w-full text-left text-sm">
                 <thead><tr><th className="px-3 py-2">#</th><th className="px-3 py-2">Produs</th><th className="px-3 py-2 text-right">Cantitate</th><th className="px-3 py-2 text-right">Vânzări</th></tr></thead>
                 <tbody>
@@ -944,12 +945,12 @@ export default function Dashboard() {
 
       {activityOpen ? createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[82vh] w-full max-w-3xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
+          <div className="flex h-[78vh] max-h-[78vh] w-full max-w-3xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
               <div><div className="text-lg font-bold text-slate-900">Activitate recentă</div><div className="mt-1 text-sm text-slate-500">Activitate reală din locația și intervalul selectate.</div></div>
               <button type="button" onClick={() => setActivityOpen(false)} className="border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Închide</button>
             </div>
-            <div className="min-h-0 overflow-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
               <div className="divide-y divide-slate-100">
                 {recentActivity.map((item, index) => { const Icon = ACTIVITY_ICON_MAP[item.type] || FileText; return <div key={`modal-${item.type}-${item.at}-${index}`} className="flex items-center gap-3 py-3"><div className="flex h-9 w-9 items-center justify-center border border-slate-200 bg-slate-50 text-slate-700"><Icon size={18} /></div><div className="min-w-0 flex-1"><div className="font-semibold text-slate-900">{item.title}</div><div className="mt-0.5 text-sm text-slate-500">{item.meta}</div></div><div className="shrink-0 text-sm text-slate-400">{formatRelativeTime(item.at)}</div></div> })}
                 {!recentActivity.length ? <div className="py-10 text-center text-sm text-slate-500">Nu există activitate pentru selecția curentă.</div> : null}
@@ -960,12 +961,12 @@ export default function Dashboard() {
 
       {stockOpen ? createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[82vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
+          <div className="flex h-[78vh] max-h-[78vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
               <div><div className="text-lg font-bold text-slate-900">Stoc critic automat</div><div className="mt-1 text-sm text-slate-500">Produse reale cu stoc zero sau negativ.</div></div>
               <button type="button" onClick={() => setStockOpen(false)} className="border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Închide</button>
             </div>
-            <div className="min-h-0 overflow-auto p-5"><table className="w-full text-left text-sm"><thead><tr><th className="px-3 py-2">Produs</th><th className="px-3 py-2">Locație</th><th className="px-3 py-2 text-right">Diferență</th></tr></thead><tbody>{resolvedStockRows.map((item, index) => <tr key={`stock-modal-${item.product}-${index}`}><td className="px-3 py-2 font-semibold text-slate-800">{item.product}</td><td className="px-3 py-2 text-slate-500">{item.location}</td><td className="px-3 py-2 text-right font-semibold text-rose-600">{formatQtyRo(item.qty)}</td></tr>)}{!resolvedStockRows.length ? <tr><td colSpan={3} className="px-3 py-10 text-center text-slate-500">Nu există produse cu stoc critic.</td></tr> : null}</tbody></table></div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5"><table className="w-full text-left text-sm"><thead><tr><th className="px-3 py-2">Produs</th><th className="px-3 py-2">Locație</th><th className="px-3 py-2 text-right">Diferență</th></tr></thead><tbody>{resolvedStockRows.map((item, index) => <tr key={`stock-modal-${item.product}-${index}`}><td className="px-3 py-2 font-semibold text-slate-800">{item.product}</td><td className="px-3 py-2 text-slate-500">{item.location}</td><td className="px-3 py-2 text-right font-semibold text-rose-600">{formatQtyRo(item.qty)}</td></tr>)}{!resolvedStockRows.length ? <tr><td colSpan={3} className="px-3 py-10 text-center text-slate-500">Nu există produse cu stoc critic.</td></tr> : null}</tbody></table></div>
           </div>
         </div>, document.body) : null}
 
@@ -973,9 +974,7 @@ export default function Dashboard() {
       <div className="contents">
         <SectionCard
           title="Top produse"
-          action={
-            <span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">Top 5</span>
-          }
+          action={<div className="flex items-center gap-2"><span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">Top 5</span><MoreHorizontal size={17} className="text-slate-400" /></div>}
         >
           <div className="flex h-full min-h-0 flex-col">
             {dashboardLoading ? (
@@ -1002,11 +1001,7 @@ export default function Dashboard() {
 
         <SectionCard
           title="Activitate recenta"
-          action={
-            <div className="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#B66A00]">
-              {lastUpdatedLabel}
-            </div>
-          }
+          action={<div className="flex items-center gap-2"><div className="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#B66A00]">{lastUpdatedLabel}</div><MoreHorizontal size={17} className="text-slate-400" /></div>}
         >
           <div className="flex h-full min-h-0 flex-col">
           <div className="dashboard-activity min-h-0 divide-y divide-slate-100">
@@ -1043,7 +1038,7 @@ export default function Dashboard() {
       <div>
         <SectionCard
           title="Stoc critic automat"
-          action={<span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">{criticalStockCount} produse</span>}
+          action={<div className="flex items-center gap-2"><span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">{criticalStockCount} produse</span><MoreHorizontal size={17} className="text-slate-400" /></div>}
         >
           <div className="flex h-full min-h-0 flex-col">
           <div className="dashboard-stock-table min-h-0 flex-1 overflow-hidden">
