@@ -1021,6 +1021,26 @@ table td {
 }
 
 @media (min-width: 1280px) {
+  .erp-sidebar-brand {
+    align-items: center !important;
+    width: 100%;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    text-align: center !important;
+  }
+
+  .erp-sidebar-brand img {
+    width: 4.25rem !important;
+    height: 4.25rem !important;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .erp-sidebar-brand > div {
+    width: 100%;
+    text-align: center !important;
+  }
+
   .erp-topbar--dashboard .erp-workspace-title {
     display: none !important;
   }

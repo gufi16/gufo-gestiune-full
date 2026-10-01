@@ -43,7 +43,7 @@ type NavGroup = {
 }
 
 const navigation: NavGroup[] = [
-  { label: "PANOU", items: [{ to: "/dashboard", label: "Privire generală", icon: LayoutDashboard, module: "dashboard" }] },
+  { label: "PANOU", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" }] },
   {
     label: "Operațiuni",
     icon: FilePlus2,
