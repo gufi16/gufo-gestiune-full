@@ -9,7 +9,7 @@ export default function AppShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
-    <div className="erp-workspace min-h-screen overflow-x-hidden bg-[#f5f1e9] text-slate-900">
+    <div className="erp-workspace min-h-screen overflow-x-hidden bg-[#f4f6f8] text-slate-900">
       <div className="flex min-h-screen overflow-x-hidden">
         <Sidebar
           mobileOpen={mobileSidebarOpen}

@@ -10,17 +10,17 @@
 :root {
   color-scheme: light;
   font-size: 14px;
-  --erp-forest: #344239;
-  --erp-forest-deep: #29342d;
-  --erp-cream: #f5f1e9;
-  --erp-paper: #fffdf9;
-  --erp-line: #e6ddcf;
-  --erp-clay: #c97a43;
-  --erp-sage: #b8c6b3;
+  --erp-forest: #2e6174;
+  --erp-forest-deep: #29323c;
+  --erp-cream: #f4f6f8;
+  --erp-paper: #ffffff;
+  --erp-line: #dce3e8;
+  --erp-clay: #dc9a3d;
+  --erp-sage: #a7c7c1;
 }
 
 body {
-  @apply bg-[#f5f1e9] text-neutral-900 leading-snug;
+  @apply bg-[#f4f6f8] text-neutral-900 leading-snug;
 }
 
 #root {
@@ -55,28 +55,28 @@ table td {
 }
 
 .card {
-  @apply rounded-xl bg-[#fffdf9] shadow-sm border border-[#e6ddcf];
+  @apply rounded-xl bg-white shadow-sm border border-[#dce3e8];
 }
 
 .erp-workspace main {
   background:
-    radial-gradient(circle at 90% -10%, rgba(201, 122, 67, 0.12), transparent 28rem),
-    radial-gradient(circle at 24% 0%, rgba(184, 198, 179, 0.2), transparent 24rem),
-    #f5f1e9;
+    radial-gradient(circle at 90% -10%, rgba(101, 175, 168, 0.13), transparent 28rem),
+    radial-gradient(circle at 24% 0%, rgba(220, 154, 61, 0.1), transparent 24rem),
+    #f4f6f8;
 }
 
 .erp-workspace input:not([type="checkbox"]):not([type="radio"]),
 .erp-workspace select,
 .erp-workspace textarea {
-  border-color: #ddd2c2;
-  background-color: #fffdf9;
+  border-color: #d8e1e7;
+  background-color: #ffffff;
 }
 
 .erp-workspace input:not([type="checkbox"]):not([type="radio"]):focus,
 .erp-workspace select:focus,
 .erp-workspace textarea:focus {
-  border-color: #b66c39;
-  box-shadow: 0 0 0 3px rgba(201, 122, 67, 0.13);
+  border-color: #43849a;
+  box-shadow: 0 0 0 3px rgba(67, 132, 154, 0.13);
 }
 
 /* Normalize legacy blue utility colors while older screens are progressively rebuilt. */
@@ -90,7 +90,7 @@ table td {
 
 .erp-workspace [class*="bg-[#EEF4FB]"],
 .erp-workspace [class*="bg-[#EAF3FF]"] {
-  background-color: #e5ede1 !important;
+  background-color: #e8f2f3 !important;
 }
 
 .erp-workspace [class*="border-slate-200"],
@@ -139,29 +139,42 @@ table td {
 }
 
 .erp-topbar [class*="border-slate-200"] {
-  border-color: #d8cbb9 !important;
+  border-color: #d8e1e7 !important;
 }
 
 .erp-topbar [class*="bg-[#EEF4FB]"] {
-  background-color: #e2eadc !important;
-  color: #425346 !important;
+  background-color: #e8f2f3 !important;
+  color: #2e6174 !important;
 }
 
 .erp-topbar :is(input, select) {
   min-height: 1.8rem;
-  border-color: #ddcfbd !important;
+  border-color: #d8e1e7 !important;
   border-radius: 0.35rem !important;
-  background-color: #fffaf1 !important;
+  background-color: #ffffff !important;
 }
 
 .erp-dashboard [class*="bg-[linear-gradient"] {
-  background-image: linear-gradient(135deg, #fffdf9 0%, #f4ecdf 100%) !important;
+  background-image: linear-gradient(135deg, #ffffff 0%, #f1f6f7 100%) !important;
 }
 
 .erp-dashboard [class*="shadow-[0_18px"],
 .erp-dashboard [class*="shadow-[0_20px"] {
   box-shadow: 0 8px 18px rgba(71, 56, 38, 0.06) !important;
 }
+
+/* Coherent SaaS palette for components that still have legacy hard-coded values. */
+.erp-workspace [class*="bg-[#29342d]"] { background-color: #29323c !important; }
+.erp-workspace [class*="bg-[#354238]"],
+.erp-workspace [class*="bg-[#334238]"] { background-color: #344852 !important; }
+.erp-workspace [class*="bg-[#425346]"] { background-color: #2e6174 !important; }
+.erp-workspace [class*="text-[#334036]"] { color: #294b5a !important; }
+.erp-workspace [class*="bg-[#e2eadc]"] { background-color: #e8f2f3 !important; }
+.erp-workspace [class*="bg-[#c97a43]"] { background-color: #dc9a3d !important; }
+.erp-workspace [class*="border-[#e5dccd]"],
+.erp-workspace [class*="border-[#d7cbb9]"] { border-color: #dce3e8 !important; }
+.erp-workspace [class*="bg-[#fffaf1]"],
+.erp-workspace [class*="bg-[#f8f3ea]"] { background-color: #f7fafb !important; }
 
 @media (min-width: 1024px) {
   .erp-workspace main section {

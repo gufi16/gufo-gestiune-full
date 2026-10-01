@@ -908,20 +908,9 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="hidden grid-cols-1 gap-3 xl:grid">
-        <SalesChart
-          data={safeSales}
-          loading={dashboardLoading}
-          total={salesTotal}
-          average={filteredSales.length ? salesTotal / filteredSales.length : 0}
-          cash={cashTotal}
-          card={cardTotal}
-          receipts={receiptsCount}
-        />
-      </div>
-
-      <div className="hidden xl:block">
-        <QuickActions onOpenReceipts={() => setReceiptsOpen(true)} />
+      <div className="hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <SalesChart data={safeSales} loading={dashboardLoading} total={salesTotal} average={filteredSales.length ? salesTotal / filteredSales.length : 0} cash={cashTotal} card={cardTotal} receipts={receiptsCount} />
+        <div className="dashboard-quick-actions"><QuickActions compact onOpenReceipts={() => setReceiptsOpen(true)} /></div>
       </div>
 
       {receiptsOpen ? (
@@ -945,7 +934,8 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden grid-cols-1 gap-3 xl:grid xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]">
+      <div className="hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.1fr)]">
         <SectionCard
           title="Top produse"
           action={
@@ -1024,7 +1014,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      <div className="hidden xl:block">
+      <div>
         <SectionCard
           title="Stoc critic automat"
         >
@@ -1068,6 +1058,7 @@ export default function Dashboard() {
             )}
           </div>
         </SectionCard>
+      </div>
       </div>
     </div>
   )
