@@ -2617,9 +2617,9 @@ router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, a
   const customer = pickPrimaryCompany(invoice.tenant.companies)
   const product = SUBSCRIPTION_PRODUCT_LABELS[invoice.subscription.product]
   const cycle = invoice.subscription.billingCycle === "MONTHLY" ? "abonament lunar" : "abonament anual"
-  const filename = `Factura_${invoice.number}.pdf`
+  const filename = `Factura_${invoice.number.replace(/[^A-Za-z0-9_-]/g, "_")}.pdf`
   res.setHeader("Content-Type", "application/pdf")
-  res.setHeader("Content-Disposition", `inline; filename=\"${filename}\"`)
+  res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`)
   const doc = new PDFDocument({ size: "A4", margin: 34, info: { Title: filename, Author: String(issuer.name), Subject: `Factura ${invoice.number}` } })
   doc.pipe(res)
   drawReferenceInvoicePdf(doc, {

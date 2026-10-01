@@ -892,7 +892,7 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
   const invoice = pdfInvoiceFound
 
   const company = await resolveRequestCompany(req)
-  const filename = `Factura_${safeFilePart(invoice.docNo)}_${safeFilePart(invoice.customerName)}.pdf`
+  const filename = `Factura_${safeFilePart(invoice.docNo)}.pdf`
   res.setHeader("Content-Type", "application/pdf")
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`)
 
@@ -949,6 +949,7 @@ router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => 
     totalVat: invoice.totalVatFc,
     totalGross: invoice.totalWithSgrFc || invoice.totalGrossFc,
     note: sanitizeInvoicePdfNote(invoice.note),
+    spvDownloadId: invoice.efacturaDownloadId,
   })
   doc.end()
   return
