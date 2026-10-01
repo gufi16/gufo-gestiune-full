@@ -984,16 +984,19 @@ export default function Dashboard() {
                 Nu exista produse vandute in intervalul selectat.
               </div>
             ) : (
-              <table className="dashboard-mini-table w-full text-left text-xs">
-                <thead><tr><th>#</th><th>Produs</th><th className="text-right">Cantitate</th><th className="text-right">Vânzări</th></tr></thead>
-                <tbody>{topProducts.slice(0, 5).map((item, index) => (
-                  <tr key={`${item.name}-${index}`}>
-                    <td>{index + 1}</td><td className="max-w-0 truncate font-semibold text-slate-800">{item.name}</td>
-                    <td className="text-right"><span className="inline-flex rounded-full bg-[#17324d] px-2 py-0.5 font-semibold text-white">{formatQtyRo(item.qty || 0)}</span></td>
-                    <td className="text-right font-semibold text-emerald-700">{formatRon(item.sales)}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
+              <div className="dashboard-top-products min-h-0 flex-1 overflow-hidden text-xs">
+                <div className="grid grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_6.7rem] items-center gap-2 border-b border-slate-200 px-2 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                  <span>#</span><span>Produs</span><span className="text-right">Cantitate</span><span className="text-right">Vânzări</span>
+                </div>
+                {topProducts.slice(0, 5).map((item, index) => (
+                  <div key={`${item.name}-${index}`} className="grid grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_6.7rem] items-center gap-2 border-b border-slate-100 px-2">
+                    <span className="font-semibold text-slate-600">{index + 1}</span>
+                    <span className="truncate font-semibold text-slate-800">{item.name}</span>
+                    <span className="text-right font-semibold text-slate-700">{formatQtyRo(item.qty || 0)}</span>
+                    <span className="text-right font-semibold text-emerald-700">{formatRon(item.sales)}</span>
+                  </div>
+                ))}
+              </div>
             )}
             <button type="button" onClick={() => setTopProductsOpen(true)} className="mt-auto self-end pt-2 text-xs font-semibold text-[#2563eb] hover:underline">Vezi toate produsele →</button>
           </div>

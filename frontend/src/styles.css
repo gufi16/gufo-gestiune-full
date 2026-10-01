@@ -604,35 +604,14 @@ table td {
     margin-bottom: 0.45rem !important;
   }
 
-  .erp-dashboard .dashboard-mini-table {
-    table-layout: fixed;
-  }
-
-  .erp-dashboard .dashboard-mini-table th {
+  .erp-dashboard .dashboard-top-products > div:first-child {
     height: 1.65rem;
+    align-items: center;
     background: #f3f6f9;
-    color: #71829a;
-    font-size: 0.67rem;
   }
 
-  .erp-dashboard .dashboard-mini-table td {
-    height: 1.85rem;
-    white-space: nowrap;
-  }
-
-  .erp-dashboard .dashboard-mini-table th:first-child,
-  .erp-dashboard .dashboard-mini-table td:first-child {
-    width: 2.5rem;
-  }
-
-  .erp-dashboard .dashboard-mini-table th:nth-child(3),
-  .erp-dashboard .dashboard-mini-table td:nth-child(3) {
-    width: 6.5rem;
-  }
-
-  .erp-dashboard .dashboard-mini-table th:last-child,
-  .erp-dashboard .dashboard-mini-table td:last-child {
-    width: 7.15rem;
+  .erp-dashboard .dashboard-top-products > div:not(:first-child) {
+    min-height: 1.85rem;
   }
 
   .erp-dashboard .dashboard-activity {
