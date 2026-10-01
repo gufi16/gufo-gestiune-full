@@ -149,9 +149,33 @@ table td {
 
 .erp-topbar :is(input, select) {
   min-height: 1.8rem;
-  border-color: #d8e1e7 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
   border-radius: 0.35rem !important;
-  background-color: #ffffff !important;
+  background-color: rgba(16, 29, 37, 0.24) !important;
+  color: #ffffff !important;
+  color-scheme: dark;
+}
+
+.erp-topbar [class~="bg-white"],
+.erp-topbar [class*="bg-[linear-gradient"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.erp-topbar [class*="text-[#6C7A89]"],
+.erp-topbar [class*="text-slate-500"] {
+  color: #b9cad0 !important;
+}
+
+.erp-topbar [class*="text-[#17324D]"] {
+  color: #ffffff !important;
+}
+
+.erp-topbar :is(select, input) option {
+  color: #1f2c34;
+  background: #ffffff;
 }
 
 .erp-dashboard [class*="bg-[linear-gradient"] {
