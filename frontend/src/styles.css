@@ -79,6 +79,30 @@ table td {
   box-shadow: 0 0 0 3px rgba(201, 122, 67, 0.13);
 }
 
+/* Normalize legacy blue utility colors while older screens are progressively rebuilt. */
+.erp-workspace [class*="bg-[#17324D]"] {
+  background-color: var(--erp-forest) !important;
+}
+
+.erp-workspace [class*="text-[#17324D]"] {
+  color: var(--erp-forest) !important;
+}
+
+.erp-workspace [class*="bg-[#EEF4FB]"],
+.erp-workspace [class*="bg-[#EAF3FF]"] {
+  background-color: #e5ede1 !important;
+}
+
+.erp-workspace [class*="border-slate-200"],
+.erp-workspace [class*="border-[#DCE6EF]"],
+.erp-workspace [class*="border-[#D9E4EE]"] {
+  border-color: var(--erp-line) !important;
+}
+
+.erp-workspace [class~="bg-white"] {
+  background-color: var(--erp-paper);
+}
+
 /* Desktop ERP workspace: dense operational screens. Mobile layouts keep their own touch-first spacing. */
 @media (min-width: 1024px) {
   .erp-desktop-dense .space-y-6 > :not([hidden]) ~ :not([hidden]) {

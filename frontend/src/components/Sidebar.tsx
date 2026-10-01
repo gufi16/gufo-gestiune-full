@@ -372,18 +372,18 @@ function SidebarContent({
 
       {!mobile && activeDesktopSection ? (
         <div
-          className="absolute left-[calc(100%+12px)] z-50 hidden w-[292px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_52px_rgba(15,35,55,0.18)] xl:flex xl:max-h-[calc(100vh-32px)] xl:flex-col"
+          className="absolute left-[calc(100%+12px)] z-50 hidden w-[292px] overflow-hidden rounded-2xl border border-black/20 bg-[#354238] shadow-[0_20px_52px_rgba(30,40,33,0.28)] xl:flex xl:max-h-[calc(100vh-32px)] xl:flex-col"
           style={{ top: flyoutTop }}
         >
-          <div className="flex items-start justify-between border-b border-[#e6ddcf] bg-[#f7f1e7] px-4 py-3">
+          <div className="flex items-start justify-between border-b border-white/10 bg-[#354238] px-4 py-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8a765b]">Submeniu</div>
-              <div className="mt-1 text-base font-semibold text-[#334036]">{activeDesktopSection}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b8c6b3]">Submeniu</div>
+              <div className="mt-1 text-base font-semibold text-white">{activeDesktopSection}</div>
             </div>
             <button
               type="button"
               onClick={() => onActiveDesktopSectionChange?.(null)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-[#17324D]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#b8c6b3] transition hover:bg-white/10 hover:text-white"
               aria-label={`Inchide submeniul ${activeDesktopSection}`}
             >
               <X size={16} />
