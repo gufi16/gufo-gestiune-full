@@ -57,6 +57,7 @@ import { hasSmtpConfig, sendMail } from "../lib/mailer"
 import { drawReferenceInvoicePdf } from "../lib/referenceInvoicePdf"
 import { generateInvoiceEFacturaXml, validateInvoiceForEFactura } from "../lib/efactura"
 import { anafCheckUploadStatus, anafUploadXml } from "../lib/anafClient"
+import { anafHttpRequest } from "../lib/anafHttp"
 import { deleteEfacturaCertificateFile, encryptSecret, ensureEfacturaCertDir, getEfacturaCertPath } from "../lib/efacturaCertificate"
 
 const router = Router()
@@ -613,7 +614,21 @@ router.get("/api/v1/admin/platform/billing-efactura/oauth/start", requireAuth, r
   const state = jwt.sign({ scope: "control-billing", returnTo: "/control-panel/profil" }, getJwtSecret(), { expiresIn: "15m" })
   res.cookie(CONTROL_EFACTURA_OAUTH_COOKIE, state, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/v1/admin/platform/billing-efactura/oauth/callback", maxAge: 15 * 60 * 1000 })
   const params = new URLSearchParams({ response_type: "code", client_id: config.efacturaOauthClientId, redirect_uri: config.efacturaOauthRedirectUri, token_content_type: "jwt", scope: "", state })
-  return res.json({ ok: true, url: `${ANAF_AUTH_URL}?${params.toString()}` })
+  return res.json({ ok: true, url: `${ANAF_AUTH_URL}?${params.toString()}`, freshSessionUrl: "https://login.anaf.ro/my.logout.php3?errorcode=19" })
+})
+
+router.post("/api/v1/admin/platform/billing-efactura/oauth/test", requireAuth, requireOwner, async (_req, res) => {
+  const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+  if (!config?.billingEfacturaAccessToken) return res.status(400).json({ ok: false, error: "Genereaza mai intai tokenul ANAF." })
+  try {
+    const response = await anafHttpRequest("https://api.anaf.ro/TestOauth/jaxrs/hello?name=Gufo%20Control", { headers: { Authorization: `Bearer ${config.billingEfacturaAccessToken}` } })
+    if (!response.ok) {
+      await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaLastError: response.text.slice(0, 1000) } })
+      return res.status(400).json({ ok: false, error: "Conexiunea ANAF a raspuns cu eroare.", details: response.text })
+    }
+    await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaLastError: null } })
+    return res.json({ ok: true, message: "Conexiunea ANAF a raspuns corect." })
+  } catch (error) { return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut testa conexiunea ANAF.") }) }
 })
 
 router.get("/api/v1/admin/platform/billing-efactura/oauth/callback", async (req, res) => {
