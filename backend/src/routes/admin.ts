@@ -2738,28 +2738,40 @@ router.post("/api/v1/admin/subscriptions/:subscriptionId/invoices", requireAuth,
     return res.status(400).json({ ok: false, error: "Completeaza mai intai firma emitenta din profilul tau." })
   }
 
-  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "")
-  const series = String(issuer.invoiceSeries || "GUF").trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "GUF"
-  const number = `${series}-${datePart}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
-  const invoice = await prisma.$transaction(async (tx) => {
-    const created = await tx.invoice.create({
-      data: {
-        tenantId: subscription.tenantId,
-        subscriptionId: subscription.id,
-        number,
-        issueDate: new Date(),
-        dueDate: subscription.nextBillingDate || new Date(),
-        amount: toMoneyNumber(subscription.price),
-        currency: subscription.currency,
-        status: "ISSUED",
-        externalRef: subscription.product,
-      },
-    })
-    await tx.auditLog.create({
-      data: { tenantId: subscription.tenantId, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_INVOICE_CREATED", entityType: "Invoice", entityId: created.id, payload: { number: created.number, subscriptionId: subscription.id, product: subscription.product, amount: subscription.price, currency: subscription.currency } },
-    })
-    return created
-  })
+  const existingNumbers = await prisma.invoice.findMany({ select: { number: true } })
+  const lastNumericNumber = existingNumbers.reduce((maximum, item) => {
+    const value = /^\d+$/.test(item.number) ? Number(item.number) : 0
+    return Number.isSafeInteger(value) ? Math.max(maximum, value) : maximum
+  }, 0)
+
+  let invoice: Awaited<ReturnType<typeof prisma.invoice.create>> | null = null
+  for (let attempt = 0; attempt < 5 && !invoice; attempt += 1) {
+    const number = String(lastNumericNumber + attempt + 1).padStart(3, "0")
+    try {
+      invoice = await prisma.$transaction(async (tx) => {
+        const created = await tx.invoice.create({
+          data: {
+            tenantId: subscription.tenantId,
+            subscriptionId: subscription.id,
+            number,
+            issueDate: new Date(),
+            dueDate: subscription.nextBillingDate || new Date(),
+            amount: toMoneyNumber(subscription.price),
+            currency: subscription.currency,
+            status: "ISSUED",
+            externalRef: subscription.product,
+          },
+        })
+        await tx.auditLog.create({
+          data: { tenantId: subscription.tenantId, actorType: "OWNER", actorId: req.auth?.userId, action: "SUBSCRIPTION_INVOICE_CREATED", entityType: "Invoice", entityId: created.id, payload: { number: created.number, subscriptionId: subscription.id, product: subscription.product, amount: subscription.price, currency: subscription.currency } },
+        })
+        return created
+      })
+    } catch (error: any) {
+      if (error?.code !== "P2002" || attempt === 4) throw error
+    }
+  }
+  if (!invoice) return res.status(500).json({ ok: false, error: "Nu am putut aloca numărul facturii." })
   return res.status(201).json({ ok: true, item: invoice })
 })
 
