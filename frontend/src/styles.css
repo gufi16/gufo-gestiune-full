@@ -103,6 +103,84 @@ table td {
   background-color: var(--erp-paper);
 }
 
+/* Dense desktop ERP: all operational controls use one compact geometry. */
+.erp-workspace main :is(input, select, textarea) {
+  min-height: 2rem;
+  border-radius: 0.4rem !important;
+  font-size: 0.8125rem;
+}
+
+.erp-workspace main button:not([class*="rounded-full"]) {
+  border-radius: 0.4rem !important;
+}
+
+.erp-workspace main [class~="rounded-2xl"] {
+  border-radius: 0.65rem !important;
+}
+
+.erp-workspace main [class~="rounded-xl"] {
+  border-radius: 0.5rem !important;
+}
+
+.erp-workspace main [class*="rounded-[28px]"],
+.erp-workspace main [class*="rounded-[24px]"] {
+  border-radius: 0.7rem !important;
+}
+
+.erp-workspace main [class*="rounded-[20px]"],
+.erp-workspace main [class*="rounded-[16px]"] {
+  border-radius: 0.55rem !important;
+}
+
+.erp-topbar [class*="rounded-[12px]"],
+.erp-topbar [class*="rounded-[14px]"],
+.erp-topbar [class*="rounded-[16px]"] {
+  border-radius: 0.45rem !important;
+}
+
+.erp-topbar [class*="border-slate-200"] {
+  border-color: #d8cbb9 !important;
+}
+
+.erp-topbar [class*="bg-[#EEF4FB]"] {
+  background-color: #e2eadc !important;
+  color: #425346 !important;
+}
+
+.erp-topbar :is(input, select) {
+  min-height: 1.8rem;
+  border-color: #ddcfbd !important;
+  border-radius: 0.35rem !important;
+  background-color: #fffaf1 !important;
+}
+
+.erp-dashboard [class*="bg-[linear-gradient"] {
+  background-image: linear-gradient(135deg, #fffdf9 0%, #f4ecdf 100%) !important;
+}
+
+.erp-dashboard [class*="shadow-[0_18px"],
+.erp-dashboard [class*="shadow-[0_20px"] {
+  box-shadow: 0 8px 18px rgba(71, 56, 38, 0.06) !important;
+}
+
+@media (min-width: 1024px) {
+  .erp-workspace main section {
+    border-radius: 0.65rem;
+  }
+
+  .erp-workspace main :is(input, select) {
+    height: 2rem;
+  }
+
+  .erp-workspace main textarea {
+    min-height: 4.5rem;
+  }
+
+  .erp-dashboard [class*="min-h-["] {
+    min-height: 0 !important;
+  }
+}
+
 /* Desktop ERP workspace: dense operational screens. Mobile layouts keep their own touch-first spacing. */
 @media (min-width: 1024px) {
   .erp-desktop-dense .space-y-6 > :not([hidden]) ~ :not([hidden]) {

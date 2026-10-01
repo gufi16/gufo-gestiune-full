@@ -384,7 +384,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#263228] bg-[linear-gradient(135deg,#334238_0%,#2a352d_100%)] text-white shadow-[0_6px_20px_rgba(41,52,45,0.16)] backdrop-blur">
+    <header className="erp-topbar sticky top-0 z-30 border-b border-[#263228] bg-[linear-gradient(135deg,#334238_0%,#2a352d_100%)] text-white shadow-[0_6px_20px_rgba(41,52,45,0.16)] backdrop-blur">
       <div className="px-3 py-2.5 md:px-3.5 md:py-2 xl:px-3.5">
         <div className="flex items-center gap-2.5 md:hidden">
           <button
