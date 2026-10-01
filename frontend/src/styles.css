@@ -1092,12 +1092,12 @@ table td {
     height: 4.25rem !important;
     margin-right: auto;
     margin-left: auto;
-    transform: translateX(-3px);
+    transform: none;
   }
 
   .erp-sidebar-brand > div {
     width: 100%;
-    padding-right: 3px;
+    padding-right: 0;
     text-align: center !important;
   }
 
