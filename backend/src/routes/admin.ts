@@ -5,11 +5,14 @@ import { z } from "zod"
 import fs from "node:fs"
 import path from "node:path"
 import PDFDocument from "pdfkit"
+import multer from "multer"
+import jwt from "jsonwebtoken"
 
 import { prisma } from "../lib/prisma"
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth"
 import { requireOwner } from "../middleware/requireOwner"
 import { hashSecret } from "../lib/auth"
+import { getJwtSecret } from "../lib/auth"
 import {
   addDays,
   buildLicenseSummary,
@@ -52,8 +55,16 @@ import { hasTenantModule } from "../lib/tenantModules"
 import { sendDeliveryAnnouncementPush } from "../lib/deliveryPush"
 import { hasSmtpConfig, sendMail } from "../lib/mailer"
 import { drawReferenceInvoicePdf } from "../lib/referenceInvoicePdf"
+import { generateInvoiceEFacturaXml, validateInvoiceForEFactura } from "../lib/efactura"
+import { anafCheckUploadStatus, anafUploadXml } from "../lib/anafClient"
+import { deleteEfacturaCertificateFile, encryptSecret, ensureEfacturaCertDir, getEfacturaCertPath } from "../lib/efacturaCertificate"
 
 const router = Router()
+const CONTROL_EFACTURA_TENANT = "control-panel"
+const controlEfacturaUpload = multer({ dest: ensureEfacturaCertDir(), limits: { fileSize: 5 * 1024 * 1024 } })
+const CONTROL_EFACTURA_OAUTH_COOKIE = "gufo_control_anaf_oauth"
+const ANAF_AUTH_URL = "https://logincert.anaf.ro/anaf-oauth2/v1/authorize"
+const ANAF_TOKEN_URL = "https://logincert.anaf.ro/anaf-oauth2/v1/token"
 
 const DeliveryAnnouncementSchema = z.object({
   title: z.string().trim().min(3).max(120),
@@ -306,6 +317,19 @@ const AddTenantCompanySchema = z.object({
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback
+}
+
+function billingEfacturaContext(config: { id: string; efacturaEnvironment?: string | null; billingEfacturaAccessToken?: string | null; billingEfacturaCertSerial?: string | null; billingEfacturaCertFilename?: string | null; billingEfacturaCertPasswordEnc?: string | null }, issuer: Record<string, unknown>) {
+  return {
+    id: config.id,
+    tenantId: CONTROL_EFACTURA_TENANT,
+    cui: String(issuer.cui || ""),
+    efacturaEnvironment: config.efacturaEnvironment || "test",
+    efacturaOauthAccessToken: config.billingEfacturaAccessToken || null,
+    efacturaCertSerial: config.billingEfacturaCertSerial || null,
+    efacturaCertFilename: config.billingEfacturaCertFilename || null,
+    efacturaCertPasswordEnc: config.billingEfacturaCertPasswordEnc || null,
+  }
 }
 
 function getTenantCompanies(tenant: { companies?: CompanyLike[] | null }) {
@@ -576,6 +600,53 @@ router.put("/api/v1/admin/platform/billing-profile", requireAuth, requireOwner, 
     data: { actorType: "OWNER", actorId: req.auth?.userId, action: "PLATFORM_BILLING_PROFILE_UPDATED", entityType: "PlatformConfig", entityId: config.id, payload: { name: parsed.data.name, cui: parsed.data.cui || null, invoiceSeries: parsed.data.invoiceSeries } },
   })
   return res.json({ ok: true, item: config.billingProfile })
+})
+
+router.get("/api/v1/admin/platform/billing-efactura", requireAuth, requireOwner, async (_req, res) => {
+  const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+  return res.json({ ok: true, item: { environment: config?.efacturaEnvironment || "test", hasToken: Boolean(config?.billingEfacturaAccessToken), hasCertificate: Boolean(config?.billingEfacturaCertFilename && config?.billingEfacturaCertPasswordEnc), certSerial: config?.billingEfacturaCertSerial || "", lastError: config?.billingEfacturaLastError || null } })
+})
+
+router.get("/api/v1/admin/platform/billing-efactura/oauth/start", requireAuth, requireOwner, async (_req, res) => {
+  const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+  if (!config?.efacturaOauthClientId || !config.efacturaOauthClientSecret || !config.efacturaOauthRedirectUri) return res.status(400).json({ ok: false, error: "Completeaza mai intai credidentialele aplicatiei ANAF din Integrari platforma." })
+  const state = jwt.sign({ scope: "control-billing", returnTo: "/control-panel/profil" }, getJwtSecret(), { expiresIn: "15m" })
+  res.cookie(CONTROL_EFACTURA_OAUTH_COOKIE, state, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/v1/admin/platform/billing-efactura/oauth/callback", maxAge: 15 * 60 * 1000 })
+  const params = new URLSearchParams({ response_type: "code", client_id: config.efacturaOauthClientId, redirect_uri: config.efacturaOauthRedirectUri, token_content_type: "jwt", scope: "", state })
+  return res.json({ ok: true, url: `${ANAF_AUTH_URL}?${params.toString()}` })
+})
+
+router.get("/api/v1/admin/platform/billing-efactura/oauth/callback", async (req, res) => {
+  const stateRaw = String(req.cookies?.[CONTROL_EFACTURA_OAUTH_COOKIE] || req.query.state || "")
+  res.clearCookie(CONTROL_EFACTURA_OAUTH_COOKIE, { path: "/api/v1/admin/platform/billing-efactura/oauth/callback" })
+  try {
+    const state = jwt.verify(stateRaw, getJwtSecret()) as { scope?: string; returnTo?: string }
+    if (state.scope !== "control-billing") throw new Error("State OAuth invalid.")
+    const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
+    const code = String(req.query.code || "")
+    const error = String(req.query.error_description || req.query.error || "")
+    if (!config?.efacturaOauthClientId || !config.efacturaOauthClientSecret || !config.efacturaOauthRedirectUri || !code || error) throw new Error(error || "Autorizarea ANAF nu a fost finalizata.")
+    const token = await fetch(ANAF_TOKEN_URL, { method: "POST", headers: { Authorization: `Basic ${Buffer.from(`${config.efacturaOauthClientId}:${config.efacturaOauthClientSecret}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: config.efacturaOauthRedirectUri, token_content_type: "jwt" }) })
+    const payload = await token.json().catch(() => ({}))
+    if (!token.ok || !payload?.access_token) throw new Error(String(payload?.error_description || payload?.error || "Nu am putut obtine tokenul ANAF."))
+    await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaAccessToken: String(payload.access_token), billingEfacturaLastError: null } })
+    return res.redirect(`${state.returnTo || "/control-panel/profil"}?efactura=success`)
+  } catch (error) { return res.redirect(`/control-panel/profil?efactura=error&message=${encodeURIComponent(getErrorMessage(error, "Eroare OAuth ANAF."))}`) }
+})
+
+router.post("/api/v1/admin/platform/billing-efactura/certificate", requireAuth, requireOwner, controlEfacturaUpload.single("certificate"), async (req: AuthedRequest, res) => {
+  const file = req.file
+  const password = String(req.body?.password || "").trim()
+  const serial = String(req.body?.serial || "").trim()
+  if (!file || !password) return res.status(400).json({ ok: false, error: "Selecteaza certificatul .p12/.pfx si parola acestuia." })
+  const ext = path.extname(file.originalname || "").toLowerCase()
+  if (ext !== ".p12" && ext !== ".pfx") { fs.unlinkSync(file.path); return res.status(400).json({ ok: false, error: "Sunt permise doar certificate .p12 sau .pfx." }) }
+  const config = await prisma.platformConfig.upsert({ where: { key: "global" }, update: {}, create: { key: "global" } })
+  if (config.billingEfacturaCertFilename) deleteEfacturaCertificateFile(CONTROL_EFACTURA_TENANT, config.id, config.billingEfacturaCertFilename)
+  const destination = getEfacturaCertPath(CONTROL_EFACTURA_TENANT, config.id, file.originalname)
+  fs.renameSync(file.path, destination)
+  const updated = await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaCertSerial: serial || null, billingEfacturaCertFilename: file.originalname, billingEfacturaCertPasswordEnc: encryptSecret(password), billingEfacturaCertUploadedAt: new Date(), billingEfacturaLastError: null } })
+  return res.json({ ok: true, item: { hasCertificate: true, certSerial: updated.billingEfacturaCertSerial || "" } })
 })
 
 router.get("/api/v1/admin/platform/overview", requireAuth, requireOwner, async (_req, res) => {
@@ -2598,10 +2669,74 @@ router.get("/api/v1/admin/invoices", requireAuth, requireOwner, async (_req, res
       amount: invoice.amount,
       currency: invoice.currency,
       status: invoice.status,
+      efacturaStatus: invoice.efacturaStatus,
+      efacturaUploadIndex: invoice.efacturaUploadIndex,
+      efacturaDownloadId: invoice.efacturaDownloadId,
+      efacturaErrorText: invoice.efacturaErrorText,
       tenant: { id: invoice.tenant.id, name: invoice.tenant.companies[0]?.name || invoice.tenant.name, cui: invoice.tenant.companies[0]?.cui || null },
       subscription: invoice.subscription ? { id: invoice.subscription.id, planName: invoice.subscription.plan.name, billingCycle: invoice.subscription.billingCycle } : null,
     })),
   })
+})
+
+async function getControlInvoiceEfacturaData(invoiceId: string) {
+  const [config, invoice] = await Promise.all([
+    prisma.platformConfig.findUnique({ where: { key: "global" } }),
+    prisma.invoice.findUnique({ where: { id: invoiceId }, include: { subscription: { include: { plan: true } }, tenant: { include: { companies: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } } } } }),
+  ])
+  if (!config || !invoice || !invoice.subscription) throw new Error("Factura sau profilul emitent nu sunt disponibile.")
+  const issuer = (config.billingProfile || {}) as Record<string, unknown>
+  const customer = pickPrimaryCompany(invoice.tenant.companies)
+  const product = SUBSCRIPTION_PRODUCT_LABELS[invoice.subscription.product]
+  const cycle = invoice.subscription.billingCycle === "MONTHLY" ? "abonament lunar" : "abonament anual"
+  const amount = Number(invoice.amount || 0)
+  const efInvoice = {
+    docNo: invoice.number, docDate: invoice.issueDate, dueDate: invoice.dueDate, currency: invoice.currency,
+    customerName: customer?.name || invoice.tenant.name, customerCif: customer?.cui || "", customerRegNo: customer?.regNo || "", customerAddress: customer?.address || "", customerCity: customer?.city || "", customerCounty: customer?.county || "", customerCountry: customer?.country || "RO", isEfacturaRequired: true, invoiceTypeCode: "380", totalNetFc: amount, totalVatFc: 0, totalGrossFc: amount, totalSgrFc: 0,
+    items: [{ productName: `${product} - ${cycle}`, productCode: invoice.subscription.product, qty: 1, unitPriceFc: amount, vatRateValue: 0, lineNetFc: amount, lineVatFc: 0, lineGrossFc: amount, uomCode: "C62" }],
+  }
+  return { config, invoice, issuer, efInvoice, context: billingEfacturaContext(config, issuer) }
+}
+
+router.post("/api/v1/admin/invoices/:invoiceId/efactura/prepare", requireAuth, requireOwner, async (req, res) => {
+  try {
+    const { invoice, issuer, efInvoice } = await getControlInvoiceEfacturaData(req.params.invoiceId)
+    const validation = validateInvoiceForEFactura(efInvoice, issuer)
+    if (!validation.ok) {
+      await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "NOT_READY", efacturaErrorText: validation.errors.map((item) => item.message).join(" ") } })
+      return res.status(400).json({ ok: false, error: validation.errors.map((item) => item.message).join(" "), validation })
+    }
+    const xml = generateInvoiceEFacturaXml(efInvoice, issuer)
+    const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "PREPARED", efacturaXmlText: xml, efacturaPreparedAt: new Date(), efacturaErrorText: validation.warnings.map((item) => item.message).join(" ") || null } })
+    return res.json({ ok: true, validation, item: updated })
+  } catch (error) { return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut pregati e-Factura.") }) }
+})
+
+router.post("/api/v1/admin/invoices/:invoiceId/efactura/send", requireAuth, requireOwner, async (req, res) => {
+  try {
+    const { config, invoice, context } = await getControlInvoiceEfacturaData(req.params.invoiceId)
+    if (!invoice.efacturaXmlText) return res.status(400).json({ ok: false, error: "Pregateste mai intai e-Factura." })
+    if (!config.billingEfacturaAccessToken) return res.status(400).json({ ok: false, error: "Conecteaza tokenul ANAF al firmei emitente din Profil." })
+    const result = await anafUploadXml(context, invoice.efacturaXmlText)
+    if (!result.response.ok || !result.uploadIndex) {
+      const message = result.summary || "ANAF a respins factura."
+      await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "ERROR", efacturaErrorText: message, efacturaLastCheckAt: new Date() } })
+      return res.status(400).json({ ok: false, error: message })
+    }
+    const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "SENT", efacturaUploadIndex: result.uploadIndex, efacturaSentAt: new Date(), efacturaLastCheckAt: new Date(), efacturaErrorText: result.summary || null } })
+    return res.json({ ok: true, item: updated, message: result.summary || "Factura a fost transmisa la ANAF." })
+  } catch (error) { return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut trimite factura la ANAF.") }) }
+})
+
+router.post("/api/v1/admin/invoices/:invoiceId/efactura/status", requireAuth, requireOwner, async (req, res) => {
+  try {
+    const { invoice, context } = await getControlInvoiceEfacturaData(req.params.invoiceId)
+    if (!invoice.efacturaUploadIndex) return res.status(400).json({ ok: false, error: "Factura nu a fost transmisa inca." })
+    const result = await anafCheckUploadStatus(context, invoice.efacturaUploadIndex)
+    if (!result.response.ok) return res.status(400).json({ ok: false, error: result.summary || "ANAF nu a raspuns." })
+    const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: result.downloadId ? "ACCEPTED" : "SENT", efacturaDownloadId: result.downloadId || invoice.efacturaDownloadId, efacturaLastCheckAt: new Date(), efacturaErrorText: result.summary || null } })
+    return res.json({ ok: true, item: updated, message: result.summary || "Starea ANAF a fost actualizata." })
+  } catch (error) { return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut verifica ANAF.") }) }
 })
 
 router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, async (req, res) => {
@@ -2633,6 +2768,7 @@ router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, a
     totalNet: invoice.amount,
     totalVat: 0,
     totalGross: invoice.amount,
+    spvDownloadId: invoice.efacturaDownloadId,
   })
   doc.end()
 })

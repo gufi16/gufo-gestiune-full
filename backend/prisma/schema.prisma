@@ -321,6 +321,12 @@ model PlatformConfig {
   efacturaOauthRedirectUri  String?
   efacturaEnvironment       String? @default("test")
   billingProfile            Json?
+  billingEfacturaAccessToken String?
+  billingEfacturaCertSerial String?
+  billingEfacturaCertPasswordEnc String?
+  billingEfacturaCertFilename String?
+  billingEfacturaCertUploadedAt DateTime?
+  billingEfacturaLastError String?
 }
 
 model Company {
@@ -2687,6 +2693,14 @@ model Invoice {
   status         InvoiceStatus @default(DRAFT)
   externalRef    String?
   downloadUrl    String?
+  efacturaStatus EFacturaStatus @default(NOT_READY)
+  efacturaUploadIndex String?
+  efacturaDownloadId String?
+  efacturaPreparedAt DateTime?
+  efacturaSentAt DateTime?
+  efacturaLastCheckAt DateTime?
+  efacturaXmlText String?
+  efacturaErrorText String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
