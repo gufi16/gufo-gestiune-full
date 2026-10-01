@@ -135,7 +135,7 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; 
       onClick={onNavigate}
       className={({ isActive }) =>
         clsx(
-          "group relative flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-200",
+          "group relative flex items-center px-3 py-2 text-sm transition-all duration-200",
           nested ? "rounded-lg" : "rounded-xl",
           isActive
             ? "bg-[#526252] font-semibold text-white shadow-sm"
@@ -145,26 +145,18 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; 
     >
       {({ isActive }) => (
         <>
-          <span
-            className={clsx(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
-              isActive ? "bg-[#f1b978] text-[#29342d]" : "bg-white/10 text-[#c8d3c2] group-hover:bg-white/15"
-            )}
-          >
-            <Icon size={16} />
-          </span>
-
+          {!nested ? <span className={clsx("mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-all duration-200", isActive ? "bg-white/15 text-[#a7c7c1]" : "text-[#aebdc3] group-hover:text-white")}><Icon size={16} /></span> : null}
           <span className="flex-1 truncate">{item.label}</span>
 
           <ChevronRight
             size={14}
             className={clsx(
               "transition-all duration-200",
-              isActive ? "translate-x-0 text-[#f1b978]" : "translate-x-1 opacity-0 text-[#aebba8] group-hover:translate-x-0 group-hover:opacity-100"
+              isActive ? "translate-x-0 text-[#a7c7c1]" : "translate-x-1 opacity-0 text-[#aebdc3] group-hover:translate-x-0 group-hover:opacity-100"
             )}
           />
 
-          {isActive ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#f1b978]" /> : null}
+          {isActive ? <span className="absolute inset-y-2 left-0 w-0.5 bg-[#a7c7c1]" /> : null}
         </>
       )}
     </NavLink>
@@ -239,7 +231,7 @@ function SidebarAccordion({
           {flyout ? <ChevronRight size={15} className={clsx(isOpen ? "text-[#f1b978]" : "")} /> : isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
         </span>
 
-        {hasActiveChild ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#f1b978]" /> : null}
+        {hasActiveChild ? <span className="absolute inset-y-2 left-0 w-0.5 bg-[#a7c7c1]" /> : null}
       </button>
 
       {flyout ? (
@@ -323,9 +315,6 @@ function SidebarContent({
             {visibleSections.map((section) =>
               section.collapsible && section.icon ? (
                 <div key={section.title}>
-                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9dad97]">
-                    {section.title}
-                  </div>
                   <SidebarAccordion
                     title={section.title}
                     icon={section.icon}
@@ -346,9 +335,6 @@ function SidebarContent({
                 </div>
               ) : (
                 <div key={section.title}>
-                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9dad97]">
-                    {section.title}
-                  </div>
                   {section.items.map((item) => (
                     <SidebarLink
                       key={`${section.title}-${item.label}`}

@@ -62,8 +62,8 @@ type GuideMarker = {
 }
 
 const POSITION_STORAGE_KEY = "gufo-ai-widget-position"
-const FAB_WIDTH = 92
-const FAB_HEIGHT = 92
+const FAB_WIDTH = 56
+const FAB_HEIGHT = 56
 const FAB_MARGIN = 20
 const CHAT_GAP = 20
 const CHAT_WIDTH = 420
@@ -1139,7 +1139,7 @@ export default function GufoAiWidget() {
                 <div className="mt-1 text-sm leading-5 text-slate-700 break-words">{robotBubble.text}</div>
                 <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#17324D]">
                   <ArrowRight size={12} />
-                  Apasa robotul pentru chat
+                  Deschide asistentul
                 </div>
                 <div className="gufo-ai-cloud-tail gufo-ai-cloud-tail--center" />
                 <div className="gufo-ai-cloud-tail-secondary gufo-ai-cloud-tail-secondary--center" />
@@ -1162,7 +1162,7 @@ export default function GufoAiWidget() {
                 pointerEvents: "auto",
               }}
             >
-              <GufoAiAvatar size={84} thinking={loading} mode={loading ? "thinking" : open ? "active" : "idle"} className="shrink-0" />
+              <GufoAiAvatar size={46} thinking={loading} mode={loading ? "thinking" : open ? "active" : "idle"} className="shrink-0" />
             </button>
           </div>
         </>
