@@ -215,11 +215,17 @@ function SalesChart({
   loading,
   total,
   average,
+  cash,
+  card,
+  receipts,
 }: {
   data: SalesPoint[]
   loading?: boolean
   total: number
   average: number
+  cash: number
+  card: number
+  receipts: number
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number>(data.length ? data.length - 1 : 0)
   const hovered = data[Math.min(hoveredIndex, Math.max(data.length - 1, 0))]
@@ -227,26 +233,32 @@ function SalesChart({
   const chartData = data.map((item) => ({
     ...item,
     amount: Number(item.value || 0),
+    average,
   }))
 
   return (
-    <div className="rounded-2xl border border-[#D9E4EE] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-3.5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
-      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-950">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#e2eadc] text-[#334036]"><BarChart3 size={15} /></span>
-            Vanzari pe interval
+    <div className="rounded-2xl border border-[#d7cbb9] bg-[linear-gradient(135deg,#fffdf9_0%,#f4ecdf_100%)] p-3 shadow-[0_12px_28px_rgba(71,56,38,0.08)]">
+      <div className="mb-3 grid gap-2 xl:grid-cols-[1.35fr_1fr]">
+        <div className="bg-[#334238] px-4 py-3 text-white">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d6e1cf]">
+            <span className="flex h-7 w-7 items-center justify-center bg-[#c97a43] text-white"><BarChart3 size={15} /></span>
+            Vânzări pe interval
           </div>
-          <div className="mt-1 text-xs text-slate-500">Evoluție zilnică și ritm de vânzare pentru perioada selectată</div>
+          <div className="mt-3 text-3xl font-bold tracking-tight">{formatRon(total)}</div>
+          <div className="mt-1 text-xs text-[#d6e1cf]">Totalul real al perioadei selectate</div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Total</div>
-            <div className="mt-0.5 text-sm font-bold text-[#334036]">{formatRon(total)}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Bonuri</div>
+            <div className="mt-0.5 text-sm font-bold text-[#334036]">{receipts}</div>
           </div>
           <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Medie / zi</div>
             <div className="mt-0.5 text-sm font-bold text-[#334036]">{formatRon(average)}</div>
+          </div>
+          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Cash / Card</div>
+            <div className="mt-0.5 text-xs font-bold text-[#334036]">{formatRon(cash)} / {formatRon(card)}</div>
           </div>
         </div>
       </div>
@@ -260,17 +272,10 @@ function SalesChart({
 
         {hasData ? (
           <>
-            {hovered ? (
-              <div className="mb-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.95)_100%)] px-2.5 py-1.5 shadow-lg shadow-slate-900/10">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(180deg,#47C2B1_0%,#17324D_100%)] text-white">
-                  <BarChart3 size={16} />
-                </div>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{hovered.label}</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">{formatRon(hovered.value)}</div>
-                </div>
-              </div>
-            ) : null}
+            <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-[#6d765f]">
+              <div className="flex items-center gap-3"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 bg-[#425346]" />Vânzări zilnice</span><span className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3 bg-[#c97a43]" />Medie zilnică</span></div>
+              {hovered ? <span>{hovered.label}: <strong className="text-[#334036]">{formatRon(hovered.value)}</strong></span> : null}
+            </div>
 
             <div className="rounded-lg border border-[#e5dccd] bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e7_100%)] px-3 py-2.5">
               <div className="h-[156px]">
@@ -286,9 +291,9 @@ function SalesChart({
                   >
                     <defs>
                       <linearGradient id="dashboard-sales-area" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#4FD1C5" stopOpacity={0.28} />
-                        <stop offset="55%" stopColor="#4FD1C5" stopOpacity={0.12} />
-                        <stop offset="100%" stopColor="#4FD1C5" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor="#6f9270" stopOpacity={0.42} />
+                        <stop offset="55%" stopColor="#91b58c" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="#91b58c" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid vertical={false} stroke="#dfd5c6" strokeDasharray="3 5" />
@@ -332,6 +337,7 @@ function SalesChart({
                         strokeWidth: 3,
                       }}
                     />
+                    <Area type="monotone" dataKey="average" stroke="#c97a43" strokeWidth={1.5} strokeDasharray="5 5" fill="transparent" dot={false} activeDot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -436,7 +442,6 @@ export default function Dashboard() {
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState("")
   const [receiptsOpen, setReceiptsOpen] = useState(false)
-  const [desktopView, setDesktopView] = useState<"overview" | "actions" | "insights" | "stock">("overview")
 
   const [salesTotal, setSalesTotal] = useState(0)
   const [receiptsCount, setReceiptsCount] = useState(0)
@@ -897,33 +902,25 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden items-center gap-1 border border-[#e5dccd] bg-[#fffaf1] p-1 xl:flex">
-        {[
-          ["overview", "Privire de ansamblu"],
-          ["actions", "Acțiuni"],
-          ["insights", "Produse și activitate"],
-          ["stock", "Stoc critic"],
-        ].map(([id, label]) => (
-          <button key={id} type="button" onClick={() => setDesktopView(id as typeof desktopView)} className={desktopView === id ? "bg-[#425346] px-3 py-1.5 text-xs font-bold text-white" : "px-3 py-1.5 text-xs font-semibold text-[#5d675c] hover:bg-[#efe7da]"}>{label}</button>
-        ))}
-      </div>
-
-      <div className={desktopView === "overview" ? "hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5" : "hidden"}>
+      <div className="hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5">
         {stats.map((stat) => (
           <MetricCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      <div className={desktopView === "overview" ? "hidden grid-cols-1 gap-3 xl:grid" : "hidden"}>
+      <div className="hidden grid-cols-1 gap-3 xl:grid">
         <SalesChart
           data={safeSales}
           loading={dashboardLoading}
           total={salesTotal}
           average={filteredSales.length ? salesTotal / filteredSales.length : 0}
+          cash={cashTotal}
+          card={cardTotal}
+          receipts={receiptsCount}
         />
       </div>
 
-      <div className={desktopView === "actions" ? "hidden xl:block" : "hidden"}>
+      <div className="hidden xl:block">
         <QuickActions onOpenReceipts={() => setReceiptsOpen(true)} />
       </div>
 
@@ -948,7 +945,7 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className={desktopView === "insights" ? "hidden grid-cols-1 gap-3 xl:grid xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]" : "hidden"}>
+      <div className="hidden grid-cols-1 gap-3 xl:grid xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]">
         <SectionCard
           title="Top produse"
           action={
@@ -1027,7 +1024,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      <div className={desktopView === "stock" ? "hidden xl:block" : "hidden"}>
+      <div className="hidden xl:block">
         <SectionCard
           title="Stoc critic automat"
         >
