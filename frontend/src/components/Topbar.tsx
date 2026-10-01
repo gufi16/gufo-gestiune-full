@@ -512,11 +512,11 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
 
         <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="erp-workspace-title hidden shrink-0 border-r border-white/10 pr-5 2xl:block">
+            <div className="erp-workspace-title shrink-0 border-r border-white/10 pr-5">
               <div className="text-sm font-semibold text-[#17324D]">{currentWorkspaceTitle}</div>
             </div>
             {companyChoices.length > 1 ? (
-              <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-context-field erp-company-context flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                   <Building2 size={16} />
                 </div>
@@ -541,7 +541,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               </div>
             ) : null}
 
-            <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+            <div className="erp-context-field erp-location-context flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
               <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                 <MapPin size={16} />
               </div>
@@ -566,7 +566,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
             </div>
 
             {warehouseConfig.multiWarehouseEnabled && warehouseConfig.warehouseFilterEnabled ? (
-              <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-context-field erp-warehouse-context flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                   <Warehouse size={16} />
                 </div>
@@ -619,7 +619,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               <div className="erp-date-range flex shrink-0 items-end gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div>
                   <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6C7A89]">
-                    De la
+                    Interval: de la
                   </div>
                   <input
                     type="date"
@@ -630,7 +630,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
                 </div>
                 <div>
                   <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6C7A89]">
-                    Pana la
+                    Până la
                   </div>
                   <input
                     type="date"

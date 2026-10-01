@@ -235,6 +235,13 @@ table td {
   padding: 0 0.75rem 0 0 !important;
 }
 
+.erp-topbar .erp-workspace-title { order: 0; }
+.erp-topbar .erp-company-context { order: 1; }
+.erp-topbar .erp-date-range { order: 2; }
+.erp-topbar .erp-location-context { order: 3; }
+.erp-topbar .erp-warehouse-context { order: 4; }
+.erp-topbar .erp-context-field--device { order: 5; }
+
 .erp-topbar .erp-context-field > :first-child {
   display: none;
 }

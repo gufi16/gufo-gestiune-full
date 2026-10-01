@@ -19,6 +19,7 @@
   PackageSearch,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   Area,
@@ -905,7 +906,7 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      {topProductsOpen ? (
+      {topProductsOpen ? createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
           <div className="flex max-h-[82vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
@@ -933,7 +934,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
 
       <div className="dashboard-secondary hidden gap-3 xl:grid xl:grid-cols-3">
       <div className="contents">
