@@ -142,30 +142,6 @@ export async function handleAnafOauthCallback(req: Request, res: Response) {
     return res.status(400).send("State OAuth invalid sau expirat.")
   }
 
-  // Control Panel uses the same registered ANAF callback, while keeping its token
-  // isolated from every tenant/company credential used by ERP.
-  if ((state as AnafOauthStatePayload & { scope?: string }).scope === "control-billing") {
-    const returnTo = String(state.returnTo || "/control-panel/profil")
-    try {
-      const config = await prisma.platformConfig.findUnique({ where: { key: "global" } })
-      if (!config?.efacturaOauthClientId || !config.efacturaOauthClientSecret || !config.efacturaOauthRedirectUri) throw new Error("Configuratia ANAF a platformei nu este completa.")
-      if (error || !code) throw new Error(errorDescription || error || "Autorizarea ANAF nu a fost finalizata.")
-      const tokenRes = await fetch(ANAF_TOKEN_URL, {
-        method: "POST",
-        headers: { Authorization: `Basic ${Buffer.from(`${config.efacturaOauthClientId}:${config.efacturaOauthClientSecret}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: config.efacturaOauthRedirectUri, token_content_type: "jwt" }),
-      })
-      const payload = await tokenRes.json().catch(() => ({}))
-      if (!tokenRes.ok || !payload?.access_token) throw new Error(String(payload?.error_description || payload?.error || "Nu am putut obtine tokenul ANAF."))
-      await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaAccessToken: String(payload.access_token), billingEfacturaLastError: null } })
-      return res.redirect(`${returnTo}?efactura=success`)
-    } catch (callbackError: unknown) {
-      const message = getCompanyRouteErrorMessage(callbackError, "Eroare OAuth ANAF.")
-      await prisma.platformConfig.updateMany({ where: { key: "global" }, data: { billingEfacturaLastError: message } })
-      return res.redirect(`${returnTo}?efactura=error&message=${encodeURIComponent(message)}`)
-    }
-  }
-
   try {
     await requireExplicitAnafCompanyContext(prisma, state.tenantId, state.activeCompanyId || null)
   } catch (error: unknown) {
