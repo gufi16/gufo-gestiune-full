@@ -1313,6 +1313,60 @@ table td {
   box-shadow: 0 2px 8px rgba(23, 44, 69, 0.035) !important;
 }
 
+.workspace-pos-register {
+  border-color: var(--workspace-line) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(23, 44, 69, 0.035) !important;
+}
+
+.workspace-pos-register > div:first-child {
+  border-bottom: 1px solid #edf1f5;
+  padding-bottom: 0.9rem;
+}
+
+.workspace-pos-register > div:first-child > div:first-child > div:first-child {
+  color: var(--workspace-ink) !important;
+  font-size: 1.05rem !important;
+}
+
+.workspace-pos-register label {
+  color: #718198 !important;
+  font-size: 0.65rem !important;
+}
+
+.workspace-pos-register input[type="date"] {
+  height: 2.25rem;
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+
+.workspace-pos-register > div:nth-child(2) > div {
+  border: 1px solid #e3e9f0;
+  border-left: 3px solid #0b888a;
+  border-radius: 5px !important;
+  background: #f8fafc !important;
+}
+
+.workspace-pos-register > div:nth-child(2) > div > div:first-child {
+  color: #718198 !important;
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+}
+
+.workspace-pos-register > div:last-child {
+  border-color: #dfe7ef !important;
+  border-radius: 5px !important;
+}
+
+.workspace-pos-register summary:hover {
+  background: #f2f9f9 !important;
+}
+
+.workspace-pos-register details[open] summary {
+  border-left: 3px solid #0b888a;
+  padding-left: 0.8rem !important;
+}
+
 .workspace-document-section h2 {
   color: var(--workspace-ink) !important;
   font-size: 0.98rem !important;

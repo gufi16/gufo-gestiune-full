@@ -151,7 +151,7 @@ export default function PosReceiptsView({ compact = false }: Props) {
   }, [dateFrom, dateTo, activeLocationId, activeTerminalId])
 
   return (
-    <div className={compact ? "space-y-4" : "rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"}>
+    <div className={compact ? "space-y-4" : "workspace-pos-register border border-slate-200 bg-white p-5"}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="text-lg font-semibold text-slate-900">Bonuri emise in Android POS</div>

@@ -147,7 +147,7 @@ export default function PosClosuresView() {
   }, [dateFrom, dateTo, activeLocationId, activeTerminalId])
 
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="workspace-pos-register border border-slate-200 bg-white p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="text-lg font-semibold text-slate-900">Inchideri zilnice POS</div>
