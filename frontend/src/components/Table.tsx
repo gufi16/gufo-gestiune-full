@@ -6,7 +6,7 @@ type Props = {
 export default function Table({ columns, children }: Props) {
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
+    <div className="workspace-simple-table overflow-x-auto border border-slate-200">
 
       <table className="w-full text-sm">
 

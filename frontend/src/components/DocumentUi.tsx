@@ -12,7 +12,7 @@ export function DocumentSection({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-[#dce3e8] bg-white px-3.5 py-3 shadow-[0_10px_28px_rgba(37,58,70,0.05)] md:px-4">
+    <section className="workspace-document-section border border-[#dce3e8] bg-white px-3.5 py-3 md:px-4">
       <div className="mb-2.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[#294b5a]">{title}</h2>
@@ -58,7 +58,7 @@ export function DocumentMetric({
   }
 
   return (
-    <div className={`rounded-xl border border-slate-200 px-3 py-2.5 ${toneClasses[tone] || toneClasses.slate}`}>
+    <div className={`workspace-document-metric border border-slate-200 px-3 py-2.5 ${toneClasses[tone] || toneClasses.slate}`}>
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75">{title}</div>
       <div className="mt-0.5 text-base font-semibold text-[#17324D]">{value}</div>
     </div>
@@ -110,7 +110,7 @@ export function DocumentPageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="rounded border border-[#d8e0e7] bg-white px-4 py-3 shadow-sm md:px-5 md:py-3.5">
+    <header className="workspace-page-header border border-[#d8e0e7] bg-white px-4 py-3 md:px-5 md:py-3.5">
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="inline-flex rounded-full border border-[#d7e4e7] bg-[#f2f8f8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#3d6875] shadow-sm shadow-slate-900/[0.02]">
@@ -122,7 +122,7 @@ export function DocumentPageHeader({
 
         {actions ? <div className="flex flex-wrap justify-end gap-2">{actions}</div> : null}
       </div>
-    </div>
+    </header>
   )
 }
 
@@ -170,16 +170,16 @@ export function DocumentTabs<T extends string>({
 }
 
 export const documentInputClass =
-  "h-9 w-full rounded-xl border border-slate-300 bg-white px-3 text-[13px] text-[#17324D] outline-none transition focus:border-[#244A7C] focus:bg-white focus:ring-2 focus:ring-[#DCE7F5]"
+  "h-9 w-full border border-slate-300 bg-white px-3 text-[13px] text-[#17324D] outline-none transition focus:border-[#0b888a] focus:bg-white focus:ring-2 focus:ring-[#d9f2f1]"
 
 export const documentTextareaClass =
-  "w-full rounded-[12px] border border-slate-300 bg-white px-3 py-2.5 text-[13px] text-[#17324D] outline-none transition focus:border-[#244A7C] focus:bg-white focus:ring-2 focus:ring-[#DCE7F5]"
+  "w-full border border-slate-300 bg-white px-3 py-2.5 text-[13px] text-[#17324D] outline-none transition focus:border-[#0b888a] focus:bg-white focus:ring-2 focus:ring-[#d9f2f1]"
 
 export const documentButtonPrimaryClass =
-  "inline-flex h-9 items-center justify-center rounded-xl bg-[#17324D] px-3 text-[13px] font-semibold text-white transition hover:bg-[#133B5C] disabled:cursor-not-allowed disabled:opacity-60"
+  "inline-flex h-9 items-center justify-center bg-[#123d59] px-3 text-[13px] font-semibold text-white transition hover:bg-[#0b888a] disabled:cursor-not-allowed disabled:opacity-60"
 
 export const documentButtonSecondaryClass =
-  "inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+  "inline-flex h-9 items-center justify-center border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
 
 export const documentButtonDangerClass =
   "inline-flex h-9 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 text-[13px] font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"

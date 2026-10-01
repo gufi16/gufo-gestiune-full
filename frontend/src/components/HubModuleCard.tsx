@@ -29,7 +29,7 @@ export default function HubModuleCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"} ${className}`.trim()}
+      className={`workspace-hub-card group border border-slate-200 bg-white p-3 text-left transition-all duration-200 ${disabled ? "cursor-not-allowed opacity-70" : "hover:-translate-y-0.5"} ${className}`.trim()}
     >
       <div className="flex items-start justify-between gap-3">
         <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconClassName}`}>

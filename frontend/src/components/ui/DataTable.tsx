@@ -118,7 +118,7 @@ export default function DataTable<T>({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-900/[0.03] md:p-3.5">
+    <div className="workspace-data-table border border-slate-200/90 bg-white p-3 md:p-3.5">
       {(title || subtitle) && (
         <div className="mb-3 border-b border-slate-100 pb-2.5">
           {title ? <div className="text-base font-semibold tracking-[-0.01em] text-[#17324D]">{title}</div> : null}
@@ -165,7 +165,7 @@ export default function DataTable<T>({
         </div>
       ) : (
         <>
-          <div className="max-h-[58vh] overflow-auto rounded-xl border border-slate-200">
+          <div className="max-h-[58vh] overflow-auto border border-slate-200">
             <table className="w-full text-[13px]">
               <thead className="bg-slate-50/90 text-slate-500">
                 <tr>

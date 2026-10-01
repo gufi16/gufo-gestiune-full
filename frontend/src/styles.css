@@ -1196,3 +1196,147 @@ table td {
   .erp-dashboard .dashboard-sales-summary > div { padding: 0 !important; border: 0 !important; background: transparent !important; }
   .erp-dashboard .dashboard-sales-summary > div > div:first-child { color: #12213e !important; }
 }
+
+/* Shared professional workspace primitives used by documents, inventory,
+   nomenclature, finance, reports and settings. */
+.erp-workspace {
+  --workspace-ink: #17253b;
+  --workspace-muted: #6e8098;
+  --workspace-line: #dce5ee;
+  --workspace-canvas: #f4f7fa;
+  --workspace-teal: #0b888a;
+}
+
+.workspace-page-header {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px !important;
+  border-color: var(--workspace-line) !important;
+  box-shadow: 0 2px 8px rgba(23, 44, 69, 0.035) !important;
+}
+
+.workspace-page-header::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--workspace-teal);
+  content: "";
+}
+
+.workspace-page-header h1 {
+  color: var(--workspace-ink) !important;
+  font-size: 1.45rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.workspace-page-header p {
+  color: var(--workspace-muted) !important;
+}
+
+.workspace-hub-card,
+.workspace-document-section,
+.workspace-data-table,
+.workspace-simple-table,
+.workspace-document-metric {
+  border-color: var(--workspace-line) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(23, 44, 69, 0.035) !important;
+}
+
+.workspace-hub-card {
+  min-height: 11.25rem;
+  box-shadow: none !important;
+}
+
+.workspace-hub-card:hover:not(:disabled) {
+  border-color: #9acccc !important;
+  box-shadow: 0 8px 20px rgba(18, 61, 89, 0.09) !important;
+}
+
+.workspace-hub-card > div:first-child > span:first-child {
+  border-radius: 5px !important;
+}
+
+.workspace-data-table > div:first-child {
+  border-color: var(--workspace-line) !important;
+}
+
+.workspace-data-table input,
+.workspace-data-table select {
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+
+.workspace-data-table table,
+.workspace-simple-table table {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.workspace-data-table thead,
+.workspace-simple-table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-data-table th,
+.workspace-simple-table th {
+  height: 2.5rem;
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+}
+
+.workspace-data-table td,
+.workspace-simple-table td {
+  height: 2.8rem;
+  color: #24344e;
+}
+
+.workspace-data-table tbody tr:hover,
+.workspace-simple-table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
+.workspace-document-section > div:first-child {
+  border-bottom: 1px solid #edf1f5;
+  padding-bottom: 0.7rem;
+}
+
+.workspace-document-section h2 {
+  color: var(--workspace-ink) !important;
+  font-size: 0.98rem !important;
+}
+
+.workspace-document-metric {
+  min-height: 4.85rem;
+  border-left: 3px solid #0b888a !important;
+}
+
+.workspace-document-metric > div:last-child {
+  color: var(--workspace-ink) !important;
+}
+
+.erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border-color: #cfd9e4 !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+}
+
+.erp-workspace main :is(input, select, textarea):focus {
+  border-color: var(--workspace-teal) !important;
+  outline-color: rgba(11, 136, 138, 0.16) !important;
+}
+
+@media (min-width: 1280px) {
+  .erp-desktop-dense {
+    padding: 1.15rem 1.5rem 1.5rem !important;
+  }
+
+  .erp-desktop-dense > div {
+    gap: 0.85rem !important;
+  }
+}
