@@ -1092,11 +1092,24 @@ table td {
     height: 4.25rem !important;
     margin-right: auto;
     margin-left: auto;
+    transform: translateX(-3px);
   }
 
   .erp-sidebar-brand > div {
     width: 100%;
+    padding-right: 3px;
     text-align: center !important;
+  }
+
+  .erp-sidebar-brand > div:nth-of-type(1) {
+    font-size: 0.92rem !important;
+    line-height: 1.1;
+  }
+
+  .erp-sidebar-brand > div:nth-of-type(2) {
+    margin-top: 0.3rem !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.1em !important;
   }
 
   .erp-topbar--dashboard .erp-workspace-title {
