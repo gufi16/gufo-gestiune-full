@@ -382,7 +382,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   }
 
   return (
-    <header className="erp-topbar sticky top-0 z-30 border-b border-black/20 bg-[#34353d] text-white shadow-sm">
+    <header className={`erp-topbar sticky top-0 z-30 border-b border-black/20 bg-[#34353d] text-white shadow-sm${isDashboard ? " erp-topbar--dashboard" : ""}`}>
       <div className="px-3 md:px-5 xl:px-6">
         <div className="flex items-center gap-2.5 md:hidden">
           <button

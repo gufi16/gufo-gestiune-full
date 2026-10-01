@@ -336,8 +336,8 @@ table td {
 @media (min-width: 1280px) and (min-height: 760px) {
   .erp-dashboard {
     display: grid;
-    height: calc(100vh - 5.75rem);
-    grid-template-rows: auto minmax(0, 1.18fr) minmax(0, 0.92fr);
+    height: calc(100vh - 5.1rem);
+    grid-template-rows: 6.55rem minmax(20.75rem, 1.22fr) minmax(18.65rem, 0.98fr);
     gap: 0.75rem;
     overflow: hidden;
   }
@@ -349,7 +349,7 @@ table td {
   }
 
   .erp-dashboard .dashboard-stats > * {
-    min-height: 6.15rem;
+    min-height: 6.55rem;
   }
 
   .erp-dashboard .dashboard-primary > *,
@@ -366,5 +366,147 @@ table td {
   .erp-dashboard .dashboard-secondary [class*="space-y-"] {
     max-height: calc(100% - 2.75rem);
     overflow: hidden;
+  }
+}
+
+/* Dashboard desktop follows the fixed backoffice grid: a single information
+   hierarchy with five metrics, the operational chart, and three data panels. */
+@media (min-width: 1280px) {
+  .erp-topbar--dashboard .erp-location-context,
+  .erp-topbar--dashboard .erp-warehouse-context {
+    display: none !important;
+  }
+
+  .erp-topbar--dashboard .erp-workspace-title {
+    border-right: 0 !important;
+    padding-right: 1.1rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-workspace-title > div {
+    font-size: 1.55rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .erp-topbar--dashboard .erp-company-context {
+    min-width: 12.8rem;
+    padding-right: 0.9rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-company-context > div:last-child,
+  .erp-topbar--dashboard .erp-company-context select {
+    width: 11.25rem !important;
+    min-width: 11.25rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-date-range {
+    order: 2;
+    gap: 0.55rem !important;
+    padding-right: 0.9rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-date-range > div > div {
+    display: none;
+  }
+
+  .erp-topbar--dashboard .erp-date-range > div + div::before {
+    content: "–";
+    display: inline-block;
+    margin: 0 0.25rem;
+    color: #7b8794;
+    font-size: 1rem;
+    vertical-align: middle;
+  }
+
+  .erp-topbar--dashboard .erp-date-range input {
+    min-width: 6.8rem !important;
+    font-weight: 600;
+  }
+
+  .erp-topbar--dashboard .erp-context-field--device {
+    order: 4;
+    border-right: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .erp-topbar--dashboard .erp-context-field--device > div:last-child,
+  .erp-topbar--dashboard .erp-context-field--device select {
+    width: 10.8rem !important;
+    min-width: 10.8rem !important;
+  }
+
+  .erp-dashboard .dashboard-metric {
+    padding: 0.95rem 1rem !important;
+  }
+
+  .erp-dashboard .dashboard-metric > div {
+    align-items: center;
+  }
+
+  .erp-dashboard .dashboard-metric span:first-child {
+    width: 3.35rem;
+    height: 3.35rem;
+  }
+
+  .erp-dashboard .dashboard-metric [class*="text-xl"] {
+    font-size: 1.42rem !important;
+    line-height: 1.15;
+  }
+
+  .erp-dashboard .dashboard-sales-panel {
+    padding: 0.9rem 1rem !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel > div:first-child {
+    grid-template-columns: minmax(0, 1.24fr) minmax(26rem, 1fr) !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel > div:first-child > div:first-child {
+    padding: 0.15rem 0.1rem !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel > div:first-child > div:first-child > div:nth-child(2) {
+    font-size: 2rem !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel > div:first-child > div:last-child > div {
+    padding: 0.85rem 0.95rem !important;
+    background: #fffaf3 !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel > div:last-child {
+    padding: 0.8rem 0.9rem !important;
+  }
+
+  .erp-dashboard .dashboard-quick-actions > div {
+    padding: 0.9rem !important;
+  }
+
+  .erp-dashboard .dashboard-quick-actions button {
+    min-height: 0 !important;
+    padding: 0.85rem !important;
+  }
+
+  .erp-dashboard .dashboard-secondary > div,
+  .erp-dashboard .dashboard-secondary > .contents > div {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .erp-dashboard .dashboard-secondary table th,
+  .erp-dashboard .dashboard-secondary table td {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .erp-dashboard .dashboard-activity > div {
+    padding-top: 0.48rem !important;
+    padding-bottom: 0.48rem !important;
+  }
+
+  .erp-dashboard .dashboard-stock-table > div {
+    padding-top: 0.28rem;
+    padding-bottom: 0.28rem;
   }
 }

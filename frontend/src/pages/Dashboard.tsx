@@ -728,7 +728,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="erp-dashboard w-full space-y-3">
+    <div className="erp-dashboard w-full">
       <div className="space-y-4 xl:hidden">
         <section className="overflow-hidden rounded-[28px] border border-[#D8E4F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#EEF5FB_100%)] p-4 shadow-[0_20px_40px_rgba(15,23,42,0.08)]">
           <div className="flex items-start justify-between gap-3">
@@ -883,7 +883,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="dashboard-primary hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <div className="dashboard-primary hidden gap-3 xl:grid xl:grid-cols-[minmax(0,2.35fr)_minmax(360px,1fr)]">
         <SalesChart data={safeSales} loading={dashboardLoading} total={salesTotal} average={filteredSales.length ? salesTotal / filteredSales.length : 0} cash={cashTotal} card={cardTotal} receipts={receiptsCount} />
         <div className="dashboard-quick-actions"><QuickActions compact onOpenReceipts={() => setReceiptsOpen(true)} /></div>
       </div>
