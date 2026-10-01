@@ -37,7 +37,7 @@ function workspaceTitle(pathname: string) {
   if (pathname.startsWith("/rapoarte")) return "Rapoarte"
   if (pathname.startsWith("/setari")) return "Setări"
   if (pathname.startsWith("/e-transport")) return "ANAF și SPV"
-  return "Dashboard"
+  return "Privire generală"
 }
 
 export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {

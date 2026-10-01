@@ -242,106 +242,47 @@ function SalesChart({
 
   return (
     <div className="dashboard-sales-panel flex h-full min-h-0 flex-col border border-[#d8e0e7] bg-white p-3 shadow-sm">
-      <div className="mb-3 grid shrink-0 gap-2 xl:grid-cols-[1.35fr_1fr]">
-        <div className="px-3 py-1 text-[#17324D]">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
-            <span className="flex h-8 w-8 items-center justify-center bg-[#f39c12] text-white"><BarChart3 size={16} /></span>
-            Evoluția vânzărilor
-          </div>
-          <div className="mt-2 text-[27px] font-bold tracking-tight text-slate-950">{formatRon(total)}</div>
-          <div className="mt-0.5 text-xs text-slate-500">Total real pentru perioada selectată</div>
+      <div className="dashboard-sales-heading shrink-0">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">
+          <span className="flex h-8 w-8 items-center justify-center bg-[#0d9b98] text-white"><BarChart3 size={16} /></span>
+          Evoluția vânzărilor
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Bonuri</div>
-            <div className="mt-0.5 text-sm font-bold text-slate-900">{receipts}</div>
-          </div>
-          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Medie / zi</div>
-            <div className="mt-0.5 text-sm font-bold text-slate-900">{formatRon(average)}</div>
-          </div>
-          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Cash / Card</div>
-            <div className="mt-0.5 text-xs font-bold text-slate-900">{formatRon(cash)} / {formatRon(card)}</div>
-          </div>
-        </div>
+        <div className="mt-2 text-[29px] font-bold tracking-tight text-slate-950">{formatRon(total)}</div>
+        <div className="mt-0.5 text-xs text-slate-500">Total real pentru perioada selectată</div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden border border-[#e6ebef] bg-white px-3 py-3">
-        {hasData ? (
-          <>
-            <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-500">
-              <div className="flex items-center gap-3"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-700" />Vânzări zilnice</span><span className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3 bg-[#f39c12]" />Medie zilnică</span></div>
-              {hovered ? <span>{hovered.label}: <strong className="text-slate-800">{formatRon(hovered.value)}</strong></span> : null}
-            </div>
-
-            <div className="h-[calc(100%-1.7rem)] border-t border-dashed border-slate-200 px-3 pt-2">
-              <div className="h-full min-h-[155px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 12, right: 12, left: -18, bottom: 0 }}
-                    onMouseMove={(state) => {
-                      if (typeof state?.activeTooltipIndex === "number") {
-                        setHoveredIndex(state.activeTooltipIndex)
-                      }
-                    }}
-                  >
-                    <defs>
-                      <linearGradient id="dashboard-sales-area" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#20a486" stopOpacity={0.34} />
-                        <stop offset="55%" stopColor="#20a486" stopOpacity={0.11} />
-                        <stop offset="100%" stopColor="#20a486" stopOpacity={0.01} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#dce5ea" strokeDasharray="3 5" />
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#728092", fontSize: 11, fontWeight: 600 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      width={62}
-                      tick={{ fill: "#8794a3", fontSize: 10 }}
-                      tickFormatter={(value) => `${Math.round(Number(value || 0))}`}
-                    />
-                    <Tooltip
-                      cursor={{ stroke: "#f39c12", strokeWidth: 1.5, strokeDasharray: "3 5" }}
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null
-                        const value = Number(payload[0]?.value || 0)
-                        return (
-                          <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-2 shadow-[0_16px_32px_rgba(15,23,42,0.12)]">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
-                            <div className="mt-1 text-base font-semibold text-slate-950">{formatRon(value)}</div>
-                          </div>
-                        )
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#08765e"
-                      strokeWidth={3}
-                      fill="url(#dashboard-sales-area)"
-                      dot={{ r: 0 }}
-                      activeDot={{
-                        r: 6,
-                        fill: "#ffffff",
-                        stroke: "#08765e",
-                        strokeWidth: 3,
-                      }}
-                    />
-                    <Area type="monotone" dataKey="average" stroke="#f39c12" strokeWidth={1.5} strokeDasharray="5 5" fill="transparent" dot={false} activeDot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+      <div className="dashboard-sales-content mt-3 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_180px] gap-5">
+        <div className="relative min-h-0 overflow-hidden border border-[#e6ebef] bg-[#fcfdfd] px-3 py-3">
+          {hasData ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-500">
+                <div className="flex items-center gap-3"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-700" />Vânzări zilnice</span><span className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3 bg-[#f39c12]" />Medie zilnică</span></div>
+                {hovered ? <span>{hovered.label}: <strong className="text-slate-800">{formatRon(hovered.value)}</strong></span> : null}
               </div>
-            </div>
-          </>
-        ) : null}
+              <div className="h-[calc(100%-1.7rem)] border-t border-dashed border-slate-200 px-3 pt-2">
+                <div className="h-full min-h-[155px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 12, right: 12, left: -18, bottom: 0 }} onMouseMove={(state) => { if (typeof state?.activeTooltipIndex === "number") setHoveredIndex(state.activeTooltipIndex) }}>
+                      <defs><linearGradient id="dashboard-sales-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#20a486" stopOpacity={0.34} /><stop offset="55%" stopColor="#20a486" stopOpacity={0.11} /><stop offset="100%" stopColor="#20a486" stopOpacity={0.01} /></linearGradient></defs>
+                      <CartesianGrid vertical={false} stroke="#dce5ea" strokeDasharray="3 5" />
+                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#728092", fontSize: 11, fontWeight: 600 }} />
+                      <YAxis axisLine={false} tickLine={false} width={62} tick={{ fill: "#8794a3", fontSize: 10 }} tickFormatter={(value) => `${Math.round(Number(value || 0))}`} />
+                      <Tooltip cursor={{ stroke: "#f39c12", strokeWidth: 1.5, strokeDasharray: "3 5" }} content={({ active, payload, label }) => { if (!active || !payload?.length) return null; const value = Number(payload[0]?.value || 0); return <div className="border border-slate-200 bg-white px-3 py-2 shadow-[0_16px_32px_rgba(15,23,42,0.12)]"><div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div><div className="mt-1 text-base font-semibold text-slate-950">{formatRon(value)}</div></div> }} />
+                      <Area type="monotone" dataKey="amount" stroke="#08765e" strokeWidth={3} fill="url(#dashboard-sales-area)" dot={{ r: 0 }} activeDot={{ r: 6, fill: "#ffffff", stroke: "#08765e", strokeWidth: 3 }} />
+                      <Area type="monotone" dataKey="average" stroke="#f39c12" strokeWidth={1.5} strokeDasharray="5 5" fill="transparent" dot={false} activeDot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+        <aside className="dashboard-sales-summary border-l border-slate-100 pl-5">
+          <div><div className="text-lg font-bold text-slate-950">{receipts}</div><div className="text-xs text-slate-500">Bonuri emise</div></div>
+          <div><div className="text-lg font-bold text-slate-950">{formatRon(average)}</div><div className="text-xs text-slate-500">Vânzare medie / zi</div></div>
+          <div><div className="text-sm font-bold text-slate-950">{formatRon(cash)} / {formatRon(card)}</div><div className="text-xs text-slate-500">Cash / Card</div></div>
+        </aside>
+      </div>
         {loading ? (
           <div className="animate-pulse rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-4">
             <div className="h-3 w-16 rounded bg-slate-200" />
@@ -350,7 +291,6 @@ function SalesChart({
           </div>
         ) : null}
       </div>
-    </div>
   )
 }
 

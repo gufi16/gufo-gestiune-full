@@ -1019,3 +1019,52 @@ table td {
   .erp-dashboard .dashboard-stock-table > div:not(:first-child) { min-height: 2.05rem; }
   .erp-dashboard .dashboard-activity > div { min-height: 2.75rem; }
 }
+
+@media (min-width: 1280px) {
+  .erp-dashboard .dashboard-sales-panel {
+    display: flex !important;
+    padding: 1.15rem 1.3rem !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel .dashboard-sales-heading {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel .dashboard-sales-heading > div:nth-child(2) {
+    font-size: 2.15rem !important;
+    color: #12213e !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel .dashboard-sales-content {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 180px !important;
+    gap: 1.25rem !important;
+    margin-top: 0.85rem !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .erp-dashboard .dashboard-sales-panel .dashboard-sales-content > div:first-child {
+    min-height: 0;
+    padding: 0.8rem 0.9rem !important;
+    border: 1px solid #e6ebef !important;
+    background: #fcfdfd !important;
+  }
+
+  .erp-dashboard .dashboard-sales-summary {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.15rem;
+    padding: 0 0 0 1.15rem !important;
+    border-left: 1px solid #edf1f5 !important;
+  }
+
+  .erp-dashboard .dashboard-sales-summary > div { padding: 0 !important; border: 0 !important; background: transparent !important; }
+  .erp-dashboard .dashboard-sales-summary > div > div:first-child { color: #12213e !important; }
+}

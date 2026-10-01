@@ -43,9 +43,9 @@ type NavGroup = {
 }
 
 const navigation: NavGroup[] = [
-  { label: "PANOU", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" }] },
+  { label: "PANOU", items: [{ to: "/dashboard", label: "Privire generală", icon: LayoutDashboard, module: "dashboard" }] },
   {
-    label: "OPERARE",
+    label: "Operațiuni",
     icon: FilePlus2,
     items: [
       { to: "/inregistrare-document", label: "Înregistrare documente", icon: FilePlus2, module: "documents" },
@@ -53,7 +53,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "STOC ȘI PRODUCȚIE",
+    label: "Inventar",
     icon: Warehouse,
     items: [
       { to: "/gestiune/stoc", label: "Stoc", icon: Warehouse, module: "inventory" },
@@ -62,7 +62,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "ANAF ȘI SPV",
+    label: "Documente",
     icon: Truck,
     items: [
       { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "documents" },
@@ -70,7 +70,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "RAPOARTE",
+    label: "Rapoarte",
     icon: BarChart3,
     items: [
       { to: "/rapoarte", label: "Rapoarte", icon: BarChart3, module: "reports" },
@@ -78,7 +78,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "FINANCIAR",
+    label: "Financiar",
     icon: CalendarCheck,
     items: [
       { to: "/financiar/vanzari-bon", label: "Vânzări / Bon", icon: Receipt },
@@ -86,7 +86,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "NOMENCLATOR",
+    label: "Catalog",
     icon: BookOpen,
     items: [
       { to: "/nomenclator/produse", label: "Produse", icon: Package2, module: "nomenclature" },
@@ -102,7 +102,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "SETĂRI",
+    label: "Setări",
     icon: Settings,
     items: [
       { to: "/setari", label: "Setări", icon: Settings, module: "settings" },
@@ -167,8 +167,8 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
     <div className="erp-sidebar erp-sidebar--backoffice flex h-full flex-col bg-[#172534] text-slate-100">
       <div className="erp-sidebar-brand relative flex flex-col items-center border-b border-white/10 px-5 py-5 text-center">
         <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-12 w-12 object-contain" />
-        <div className="mt-1.5 text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
-        <div className="mt-0.5 text-xs font-medium text-[#a8b8cf]">Backoffice</div>
+        <div className="mt-1.5 text-sm font-bold tracking-[0.08em] text-white">GUFO</div>
+        <div className="mt-0.5 text-xs font-medium text-[#a8b8cf]">BACKOFFICE</div>
         {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
