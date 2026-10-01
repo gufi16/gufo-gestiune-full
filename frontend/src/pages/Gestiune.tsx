@@ -35,7 +35,7 @@ export default function Gestiune() {
         subtitle="Controlezi stocul, transferurile, inventarele si productia dintr-un singur modul operational, cu intrare rapida in actiunile care misca marfa."
       />
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => {
           return (
             <HubModuleCard

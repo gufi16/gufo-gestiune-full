@@ -9,9 +9,9 @@ export default function FinanceReceipts() {
         title="Vanzari / Bon"
         subtitle="Monitorizezi bonurile emise din Android POS intr-un registru clar, potrivit pentru verificarea rapida a incasarilor, produselor si documentelor fiscale."
       />
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03] md:p-3.5">
+      <section className="workspace-registry-panel border border-slate-200 bg-white p-3 md:p-3.5">
         <PosReceiptsView />
-      </div>
+      </section>
     </div>
   )
 }

@@ -1238,6 +1238,7 @@ table td {
 
 .workspace-hub-card,
 .workspace-document-section,
+.workspace-registry-panel,
 .workspace-data-table,
 .workspace-simple-table,
 .workspace-document-metric {
@@ -1304,6 +1305,12 @@ table td {
 .workspace-document-section > div:first-child {
   border-bottom: 1px solid #edf1f5;
   padding-bottom: 0.7rem;
+}
+
+.workspace-registry-panel {
+  border-radius: 6px !important;
+  border-color: var(--workspace-line) !important;
+  box-shadow: 0 2px 8px rgba(23, 44, 69, 0.035) !important;
 }
 
 .workspace-document-section h2 {
