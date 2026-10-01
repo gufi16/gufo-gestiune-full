@@ -2804,12 +2804,52 @@ router.get("/api/v1/admin/invoices", requireAuth, requireOwner, async (_req, res
   })
 })
 
+router.post("/api/v1/admin/invoices/:invoiceId/cancel", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const invoice = await prisma.invoice.findUnique({ where: { id: req.params.invoiceId } })
+  if (!invoice) return res.status(404).json({ ok: false, error: "Factura inexistenta." })
+  if (invoice.status === "CANCELLED") return res.json({ ok: true, item: invoice, message: "Factura este deja anulata." })
+  if (invoice.status === "PAID") return res.status(400).json({ ok: false, error: "Factura este marcata ca platita. Emite storno, nu o anula." })
+  if (invoice.efacturaUploadIndex || invoice.efacturaStatus === "SENT" || invoice.efacturaStatus === "ACCEPTED") {
+    return res.status(400).json({ ok: false, error: "Factura a fost transmisa in SPV. Emite o factura storno, nu o anula." })
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const cancelled = await tx.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        status: "CANCELLED",
+        efacturaStatus: "NOT_READY",
+        efacturaXmlText: null,
+        efacturaPreparedAt: null,
+        efacturaSentAt: null,
+        efacturaLastCheckAt: new Date(),
+        efacturaErrorText: "Factura anulata din Control Panel.",
+      },
+    })
+    await tx.auditLog.create({
+      data: {
+        tenantId: invoice.tenantId,
+        actorType: "OWNER",
+        actorId: req.auth?.userId,
+        action: "SUBSCRIPTION_INVOICE_CANCELLED",
+        entityType: "Invoice",
+        entityId: invoice.id,
+        payload: { number: invoice.number, amount: toMoneyNumber(invoice.amount), currency: invoice.currency },
+      },
+    })
+    return cancelled
+  })
+
+  return res.json({ ok: true, item: updated, message: "Factura a fost anulata. Numarul ramane rezervat in istoric." })
+})
+
 async function getControlInvoiceEfacturaData(invoiceId: string) {
   const [config, invoice] = await Promise.all([
     prisma.platformConfig.findUnique({ where: { key: "global" } }),
     prisma.invoice.findUnique({ where: { id: invoiceId }, include: { subscription: { include: { plan: true } }, tenant: { include: { companies: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } } } } }),
   ])
   if (!config || !invoice || !invoice.subscription) throw new Error("Factura sau profilul emitent nu sunt disponibile.")
+  if (invoice.status === "CANCELLED") throw new Error("Factura este anulata si nu poate fi transmisa la ANAF.")
   const issuer = (config.billingProfile || {}) as Record<string, unknown>
   const customer = pickPrimaryCompany(invoice.tenant.companies)
   const product = SUBSCRIPTION_PRODUCT_LABELS[invoice.subscription.product]
