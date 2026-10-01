@@ -1033,6 +1033,31 @@ table td {
     gap: 0.65rem !important;
   }
 
+  .erp-topbar--dashboard .erp-company-context,
+  .erp-topbar--dashboard .erp-company-context > div:last-child,
+  .erp-topbar--dashboard .erp-company-context select {
+    min-width: clamp(15rem, 18vw, 19rem) !important;
+    width: clamp(15rem, 18vw, 19rem) !important;
+  }
+
+  .erp-topbar--dashboard .erp-location-context,
+  .erp-topbar--dashboard .erp-location-context > div:last-child,
+  .erp-topbar--dashboard .erp-location-context select {
+    min-width: clamp(11rem, 14vw, 15.5rem) !important;
+    width: clamp(11rem, 14vw, 15.5rem) !important;
+  }
+
+  .erp-topbar--dashboard .erp-date-range input {
+    min-width: 7.15rem !important;
+    width: 7.15rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-date-range > div + div::before {
+    content: "|" !important;
+    color: #9aa8b9 !important;
+    font-weight: 600;
+  }
+
   .erp-dashboard .dashboard-sales-panel {
     display: flex !important;
     padding: 1.15rem 1.3rem !important;
