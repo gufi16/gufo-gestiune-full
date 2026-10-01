@@ -33,7 +33,7 @@ export default function AppShell() {
       </div>
 
       <MobileBottomNav onOpenMenu={() => setMobileSidebarOpen(true)} />
-      <GufoAiWidget />
+      {!isDashboard ? <GufoAiWidget /> : null}
     </div>
   )
 }
