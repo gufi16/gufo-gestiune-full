@@ -169,7 +169,7 @@ table td {
 .erp-workspace [class*="bg-[#29342d]"],
 .erp-workspace [class*="bg-[#354238]"],
 .erp-workspace [class*="bg-[#334238]"] {
-  background-color: var(--erp-ink) !important;
+  background-color: #172534 !important;
 }
 
 .erp-workspace [class*="bg-[#425346]"] {
@@ -376,6 +376,30 @@ table td {
 /* Dashboard desktop follows the fixed backoffice grid: a single information
    hierarchy with five metrics, the operational chart, and three data panels. */
 @media (min-width: 1280px) {
+  .erp-workspace,
+  .erp-dashboard-shell {
+    background: #f4f7fb;
+  }
+
+  .erp-dashboard-shell {
+    padding: 0.9rem 1.1rem !important;
+  }
+
+  .erp-sidebar nav {
+    padding: 0.85rem 0.55rem !important;
+  }
+
+  .erp-sidebar nav a,
+  .erp-sidebar nav button {
+    min-height: 2.8rem;
+    border-radius: 4px !important;
+  }
+
+  .erp-sidebar nav a[class*="bg-[#3b3d47]"],
+  .erp-sidebar nav button[class*="bg-[#3b3d47]"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
   .erp-topbar--dashboard .erp-location-context,
   .erp-topbar--dashboard .erp-warehouse-context {
     display: none !important;
@@ -441,6 +465,8 @@ table td {
 
   .erp-dashboard .dashboard-metric {
     padding: 0.95rem 1rem !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 2px 10px rgba(33, 50, 79, 0.04) !important;
   }
 
   .erp-dashboard .dashboard-metric > div {
@@ -459,6 +485,8 @@ table td {
 
   .erp-dashboard .dashboard-sales-panel {
     padding: 0.9rem 1rem !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 2px 10px rgba(33, 50, 79, 0.04) !important;
   }
 
   .erp-dashboard .dashboard-sales-panel > div:first-child {
@@ -496,6 +524,13 @@ table td {
   .erp-dashboard .dashboard-secondary > .contents > div {
     height: 100%;
     min-height: 0;
+  }
+
+  .erp-dashboard .dashboard-secondary > div > div,
+  .erp-dashboard .dashboard-secondary .contents > div > div,
+  .erp-dashboard .dashboard-quick-actions > div {
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 2px 10px rgba(33, 50, 79, 0.04) !important;
   }
 
   .erp-dashboard .dashboard-secondary table th,

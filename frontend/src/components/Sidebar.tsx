@@ -164,11 +164,11 @@ function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () 
 
 function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[]; mobile?: boolean; onCloseMobile?: () => void }) {
   return (
-    <div className="flex h-full flex-col bg-[#292a31] text-slate-100">
-      <div className="relative flex flex-col items-center border-b border-white/10 px-5 py-4 text-center">
-        <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-11 w-11 object-contain" />
-        <div className="mt-2 text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
-        <div className="mt-0.5 text-xs font-medium text-slate-400">Backoffice</div>
+    <div className="erp-sidebar flex h-full flex-col bg-[#172534] text-slate-100">
+      <div className="relative flex flex-col items-center border-b border-white/10 px-5 py-3.5 text-center">
+        <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-12 w-12 object-contain" />
+        <div className="mt-1.5 text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
+        <div className="mt-0.5 text-xs font-medium text-[#a8b8cf]">Backoffice</div>
         {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
@@ -193,7 +193,7 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }: { mobileO
   return (
     <>
       {mobileOpen ? <div className="fixed inset-0 z-50 bg-slate-950/60 xl:hidden" onClick={onCloseMobile} /> : null}
-      <aside className="hidden xl:block xl:w-64 xl:shrink-0"><div className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-black/30 xl:block"><SidebarContent groups={groups} /></div></aside>
+      <aside className="hidden xl:block xl:w-[230px] xl:shrink-0"><div className="fixed left-0 top-0 z-40 hidden h-screen w-[230px] border-r border-black/30 xl:block"><SidebarContent groups={groups} /></div></aside>
       <div className={clsx("fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-64 border-r border-black/30 shadow-2xl transition-transform xl:hidden", mobileOpen ? "translate-x-0" : "-translate-x-full")}><SidebarContent groups={groups} mobile onCloseMobile={onCloseMobile} /></div>
     </>
   )
