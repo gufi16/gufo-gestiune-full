@@ -69,6 +69,7 @@ type DashboardApiResponse = {
     name: string
     qty: number | string
     profit?: number | string
+    sales?: number | string
   }>
   lowStock?: Array<{
     product: string
@@ -89,6 +90,7 @@ type TopProductItem = {
   name: string
   qty: number
   profit: number
+  sales: number
 }
 
 type RecentActivityItem = {
@@ -593,6 +595,7 @@ export default function Dashboard() {
               name: item.name,
               qty: Number(item.qty || 0),
               profit: Number(item.profit || 0),
+              sales: Number(item.sales || 0),
             }))
           : []
       )
@@ -941,12 +944,10 @@ export default function Dashboard() {
         <SectionCard
           title="Top produse"
           action={
-            <button type="button" onClick={() => setTopProductsOpen(true)} className="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#B66A00] hover:bg-[#ffe5b6]">
-              Vezi toate
-            </button>
+            <span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">Top 5</span>
           }
         >
-          <div className="space-y-2.5">
+          <div className="flex h-full min-h-0 flex-col">
             {dashboardLoading ? (
               <div className="text-sm text-slate-500">Se incarca top produse...</div>
             ) : topProducts.length === 0 ? (
@@ -954,31 +955,18 @@ export default function Dashboard() {
                 Nu exista produse vandute in intervalul selectat.
               </div>
             ) : (
-              topProducts.slice(0, 4).map((item, index) => (
-                <div
-                  key={`${item.name}-${index}`}
-                  className={[
-                "grid grid-cols-1 gap-2 rounded-[18px] border px-3 py-2.5 sm:grid-cols-[minmax(150px,1.4fr)_90px_130px] sm:items-center sm:gap-3",
-                    item.profit <= 0
-                      ? "border-red-200 bg-red-50"
-                      : "border-slate-200 bg-slate-50",
-                  ].join(" ")}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate pr-3 text-sm font-semibold text-slate-800">{item.name}</div>
-                    {item.profit <= 0 ? (
-                      <div className="mt-1 text-xs font-semibold text-red-600">neprofitabil</div>
-                    ) : null}
-                  </div>
-                  <div className="w-fit rounded-full bg-[#17324D] px-3 py-1 text-center text-xs font-semibold text-white sm:justify-self-center">
-                    {formatQtyRo(item.qty || 0)}
-                  </div>
-                  <div className={["text-sm font-semibold sm:text-right", item.profit <= 0 ? "text-red-600" : "text-emerald-700"].join(" ")}>
-                    {formatRon(item.profit)}
-                  </div>
-                </div>
-              ))
+              <table className="dashboard-mini-table w-full text-left text-xs">
+                <thead><tr><th>#</th><th>Produs</th><th className="text-right">Cantitate</th><th className="text-right">Vânzări</th></tr></thead>
+                <tbody>{topProducts.slice(0, 5).map((item, index) => (
+                  <tr key={`${item.name}-${index}`}>
+                    <td>{index + 1}</td><td className="max-w-0 truncate font-semibold text-slate-800">{item.name}</td>
+                    <td className="text-right"><span className="inline-flex rounded-full bg-[#17324d] px-2 py-0.5 font-semibold text-white">{formatQtyRo(item.qty || 0)}</span></td>
+                    <td className="text-right font-semibold text-emerald-700">{formatRon(item.sales)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
             )}
+            {topProducts.length > 5 ? <button type="button" onClick={() => setTopProductsOpen(true)} className="mt-auto self-end pt-2 text-xs font-semibold text-[#2563eb] hover:underline">Vezi toate produsele →</button> : null}
           </div>
         </SectionCard>
 
@@ -990,7 +978,7 @@ export default function Dashboard() {
             </div>
           }
         >
-          <div className="divide-y divide-slate-100">
+          <div className="dashboard-activity divide-y divide-slate-100">
             {dashboardLoading ? (
               <div className="text-sm text-slate-500">Se incarca activitatea recenta...</div>
             ) : recentActivity.length === 0 ? (
@@ -1001,7 +989,8 @@ export default function Dashboard() {
               recentActivity.slice(0, 5).map((item, index) => {
                 const Icon = ACTIVITY_ICON_MAP[item.type] || FileText
                 return (
-                  <div key={`${item.type}-${item.at}-${index}`} className="flex items-center gap-3 py-2.5">
+                  <div key={`${item.type}-${item.at}-${index}`} className="relative flex items-center gap-3 py-2.5 pl-5">
+                    <span className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#5e7498]" />
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-700">
                       <Icon size={18} />
                     </div>
@@ -1021,21 +1010,21 @@ export default function Dashboard() {
       <div>
         <SectionCard
           title="Stoc critic automat"
+          action={<span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">{criticalStockCount} produse</span>}
         >
-          <div className="divide-y divide-slate-100">
+          <div className="dashboard-stock-table h-full overflow-hidden">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto] gap-2 border-b border-slate-200 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400"><span>Produs</span><span>Locație</span><span>Diferență</span></div>
             {dashboardLoading || criticalLoading ? (
               <div className="text-sm text-slate-500">Se incarca produsele cu stoc mic...</div>
             ) : lowStock.length > 0 ? (
               lowStock.slice(0, 8).map((item, index) => (
                 <div
                   key={`${item.product}-${item.location}-${index}`}
-                  className="flex items-center justify-between gap-3 py-1.5"
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto] items-center gap-2 border-b border-slate-100 py-1.5"
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-800">{item.product}</div>
-                    <div className="text-xs text-slate-500">{item.location}</div>
-                  </div>
-                  <div className="ml-3 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600">
+                  <div className="min-w-0 truncate text-xs font-semibold text-slate-800">{item.product}</div>
+                  <div className="min-w-0 truncate text-[10px] text-slate-500">{item.location}</div>
+                  <div className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600">
                     {formatQtyRo(item.qty || 0)}
                   </div>
                 </div>
@@ -1048,13 +1037,11 @@ export default function Dashboard() {
               criticalStock.slice(0, 8).map((product, index) => (
                 <div
                   key={`${product.productId || product.id || index}`}
-                  className="flex items-center justify-between gap-3 py-1.5"
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto] items-center gap-2 border-b border-slate-100 py-1.5"
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-800">{product.name || "Produs fara nume"}</div>
-                    <div className="text-xs text-slate-500">{product.sku || "fara SKU"}</div>
-                  </div>
-                  <div className="ml-3 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600">
+                  <div className="min-w-0 truncate text-xs font-semibold text-slate-800">{product.name || "Produs fara nume"}</div>
+                  <div className="min-w-0 truncate text-[10px] text-slate-500">{product.sku || "-"}</div>
+                  <div className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600">
                     {formatQtyRo(activeLocationId ? product.qty : product.totalQty || 0)} {product.uom || ""}
                   </div>
                 </div>

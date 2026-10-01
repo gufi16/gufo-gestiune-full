@@ -167,7 +167,8 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
     <div className="flex h-full flex-col bg-[#292a31] text-slate-100">
       <div className="relative flex flex-col items-center border-b border-white/10 px-5 py-4 text-center">
         <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-11 w-11 object-contain" />
-        <div className="mt-2 text-sm font-bold tracking-[0.08em] text-white">GUFO BACKOFFICE</div>
+        <div className="mt-2 text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
+        <div className="mt-0.5 text-xs font-medium text-slate-400">Backoffice</div>
         {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 

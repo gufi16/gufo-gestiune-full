@@ -136,10 +136,11 @@ router.get("/api/v1/dashboard", requireAuth, async (req: AuthedRequest, res: Res
         GROUP BY day
         ORDER BY day
       `),
-      prisma.$queryRaw<Array<{ name: string; qty: number; profit: number }>>(Prisma.sql`
+      prisma.$queryRaw<Array<{ name: string; qty: number; profit: number; sales: number }>>(Prisma.sql`
         SELECT
           p.name,
           SUM(si.qty) as qty,
+          SUM(COALESCE(si."unitPrice", 0) * COALESCE(si.qty, 0)) as sales,
           SUM(
             (
               (COALESCE(si."unitPrice", 0) / NULLIF(1 + (COALESCE(si."vatRate", 0) / 100.0), 0))
@@ -385,6 +386,7 @@ router.get("/api/v1/dashboard", requireAuth, async (req: AuthedRequest, res: Res
             name: item.name,
             qty: Number(item.qty || 0),
             profit: Number(item.profit || 0),
+            sales: Number(item.sales || 0),
           }))
         : [],
       lowStock: lowStock.map((item) => ({
