@@ -213,9 +213,13 @@ async function getTenantIdFromSession(token: string): Promise<string> {
 function SalesChart({
   data,
   loading,
+  total,
+  average,
 }: {
   data: SalesPoint[]
   loading?: boolean
+  total: number
+  average: number
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number>(data.length ? data.length - 1 : 0)
   const hovered = data[Math.min(hoveredIndex, Math.max(data.length - 1, 0))]
@@ -227,20 +231,29 @@ function SalesChart({
 
   return (
     <div className="rounded-2xl border border-[#D9E4EE] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-3.5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
-      <div className="mb-2 flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <div className="flex items-center gap-2 text-[15px] font-semibold text-slate-950">
-            <BarChart3 size={17} className="text-[#17324D]" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#e2eadc] text-[#334036]"><BarChart3 size={15} /></span>
             Vanzari pe interval
           </div>
-          <div className="mt-1 text-sm text-slate-500">Evolutie zilnica pentru perioada selectata</div>
+          <div className="mt-1 text-xs text-slate-500">Evoluție zilnică și ritm de vânzare pentru perioada selectată</div>
         </div>
-
+        <div className="grid grid-cols-2 gap-2">
+          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Total</div>
+            <div className="mt-0.5 text-sm font-bold text-[#334036]">{formatRon(total)}</div>
+          </div>
+          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Medie / zi</div>
+            <div className="mt-0.5 text-sm font-bold text-[#334036]">{formatRon(average)}</div>
+          </div>
+        </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/80 px-3 py-3">
+      <div className="relative overflow-hidden rounded-lg border border-[#e5dccd] bg-[#fffdf9] px-3 py-3">
         {!hasData && !loading ? (
-          <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/90 px-4 py-5 text-center text-sm text-slate-500">
+          <div className="border border-dashed border-[#d8cbb9] bg-[#f8f3ea] px-4 py-4 text-center text-sm text-slate-500">
             Nu exista vanzari pentru intervalul selectat.
           </div>
         ) : null}
@@ -259,8 +272,8 @@ function SalesChart({
               </div>
             ) : null}
 
-            <div className="rounded-xl border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,248,251,0.92)_100%)] px-3 py-2.5">
-              <div className="h-[190px]">
+            <div className="rounded-lg border border-[#e5dccd] bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e7_100%)] px-3 py-2.5">
+              <div className="h-[156px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
@@ -278,22 +291,22 @@ function SalesChart({
                         <stop offset="100%" stopColor="#4FD1C5" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="4 6" />
+                    <CartesianGrid vertical={false} stroke="#dfd5c6" strokeDasharray="3 5" />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#7C8DA5", fontSize: 12, fontWeight: 600 }}
+                      tick={{ fill: "#7e765f", fontSize: 11, fontWeight: 600 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       width={62}
-                      tick={{ fill: "#A0AEC0", fontSize: 11 }}
+                      tick={{ fill: "#9b907e", fontSize: 10 }}
                       tickFormatter={(value) => `${Math.round(Number(value || 0))}`}
                     />
                     <Tooltip
-                      cursor={{ stroke: "#47C2B1", strokeWidth: 1.5, strokeDasharray: "4 6" }}
+                      cursor={{ stroke: "#c97a43", strokeWidth: 1.5, strokeDasharray: "3 5" }}
                       content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null
                         const value = Number(payload[0]?.value || 0)
@@ -308,14 +321,14 @@ function SalesChart({
                     <Area
                       type="monotone"
                       dataKey="amount"
-                      stroke="#17324D"
+                      stroke="#425346"
                       strokeWidth={3}
                       fill="url(#dashboard-sales-area)"
                       dot={{ r: 0 }}
                       activeDot={{
                         r: 6,
                         fill: "#ffffff",
-                        stroke: "#17324D",
+                        stroke: "#425346",
                         strokeWidth: 3,
                       }}
                     />
@@ -423,6 +436,7 @@ export default function Dashboard() {
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState("")
   const [receiptsOpen, setReceiptsOpen] = useState(false)
+  const [desktopView, setDesktopView] = useState<"overview" | "actions" | "insights" | "stock">("overview")
 
   const [salesTotal, setSalesTotal] = useState(0)
   const [receiptsCount, setReceiptsCount] = useState(0)
@@ -883,20 +897,33 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5">
+      <div className="hidden items-center gap-1 border border-[#e5dccd] bg-[#fffaf1] p-1 xl:flex">
+        {[
+          ["overview", "Privire de ansamblu"],
+          ["actions", "Acțiuni"],
+          ["insights", "Produse și activitate"],
+          ["stock", "Stoc critic"],
+        ].map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setDesktopView(id as typeof desktopView)} className={desktopView === id ? "bg-[#425346] px-3 py-1.5 text-xs font-bold text-white" : "px-3 py-1.5 text-xs font-semibold text-[#5d675c] hover:bg-[#efe7da]"}>{label}</button>
+        ))}
+      </div>
+
+      <div className={desktopView === "overview" ? "hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5" : "hidden"}>
         {stats.map((stat) => (
           <MetricCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      <div className="hidden grid-cols-1 gap-3 xl:grid">
+      <div className={desktopView === "overview" ? "hidden grid-cols-1 gap-3 xl:grid" : "hidden"}>
         <SalesChart
           data={safeSales}
           loading={dashboardLoading}
+          total={salesTotal}
+          average={filteredSales.length ? salesTotal / filteredSales.length : 0}
         />
       </div>
 
-      <div className="hidden xl:block">
+      <div className={desktopView === "actions" ? "hidden xl:block" : "hidden"}>
         <QuickActions onOpenReceipts={() => setReceiptsOpen(true)} />
       </div>
 
@@ -921,7 +948,7 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden grid-cols-1 gap-3 xl:grid xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]">
+      <div className={desktopView === "insights" ? "hidden grid-cols-1 gap-3 xl:grid xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]" : "hidden"}>
         <SectionCard
           title="Top produse"
           action={
@@ -1000,7 +1027,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      <div className="hidden xl:block">
+      <div className={desktopView === "stock" ? "hidden xl:block" : "hidden"}>
         <SectionCard
           title="Stoc critic automat"
         >
