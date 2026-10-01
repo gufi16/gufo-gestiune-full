@@ -52,18 +52,20 @@ export default function ControlPanelProfile() {
       const response = await api<{ company?: Partial<Profile>; error?: string }>(`/api/v1/company/cui-lookup?cui=${encodeURIComponent(form.cui)}`)
       if (!response.company) throw new Error(response.error || "Firma nu a fost găsită după CUI.")
       const company = response.company
-      setForm((current) => ({
-        ...current,
-        name: company.name || current.name,
-        cui: company.cui || current.cui,
-        regNo: company.regNo || current.regNo,
-        address: company.address || current.address,
-        city: company.city || current.city,
-        county: company.county || current.county,
-        country: company.country || current.country,
-        postalCode: company.postalCode || current.postalCode,
-      }))
-      setMessage(company.postalCode ? "Datele firmei, inclusiv codul poștal, au fost preluate după CUI." : "Datele firmei au fost preluate. ANAF nu a returnat cod poștal pentru acest CUI; completează-l manual.")
+      const nextProfile: Profile = {
+        ...form,
+        name: company.name || form.name,
+        cui: company.cui || form.cui,
+        regNo: company.regNo || form.regNo,
+        address: company.address || form.address,
+        city: company.city || form.city,
+        county: company.county || form.county,
+        country: company.country || form.country,
+        postalCode: company.postalCode || form.postalCode,
+      }
+      setForm(nextProfile)
+      await api("/api/v1/admin/platform/billing-profile", { method: "PUT", body: JSON.stringify(nextProfile) })
+      setMessage(company.postalCode ? "Datele firmei, inclusiv codul poștal, au fost preluate și salvate automat." : "Datele firmei au fost preluate și salvate. ANAF nu a returnat cod poștal pentru acest CUI; completează-l manual.")
     } catch (cause: any) {
       setError(cause.message || "Nu am putut prelua firma după CUI.")
     } finally {
