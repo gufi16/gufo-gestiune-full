@@ -850,7 +850,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="hidden border border-[#d8e0e7] bg-white px-4 py-3 shadow-sm xl:block">
+      <div className="hidden">
         <div className="flex items-center justify-between gap-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#176b87]">
@@ -876,13 +876,13 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5">
+      <div className="dashboard-stats hidden grid-cols-1 gap-3 md:grid-cols-2 xl:grid xl:grid-cols-5">
         {stats.map((stat) => (
           <MetricCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      <div className="hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <div className="dashboard-primary hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <SalesChart data={safeSales} loading={dashboardLoading} total={salesTotal} average={filteredSales.length ? salesTotal / filteredSales.length : 0} cash={cashTotal} card={cardTotal} receipts={receiptsCount} />
         <div className="dashboard-quick-actions"><QuickActions compact onOpenReceipts={() => setReceiptsOpen(true)} /></div>
       </div>
@@ -908,8 +908,8 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="hidden gap-3 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.1fr)]">
+      <div className="dashboard-secondary hidden gap-3 xl:grid xl:grid-cols-3">
+      <div className="contents">
         <SectionCard
           title="Top produse"
           action={

@@ -323,3 +323,40 @@ table td {
     min-height: 2.1rem;
   }
 }
+
+/* Desktop dashboard is an operational canvas, not a scrolling landing page. */
+@media (min-width: 1280px) and (min-height: 760px) {
+  .erp-dashboard {
+    display: grid;
+    height: calc(100vh - 5.75rem);
+    grid-template-rows: auto minmax(0, 1.18fr) minmax(0, 0.92fr);
+    gap: 0.75rem;
+    overflow: hidden;
+  }
+
+  .erp-dashboard > .dashboard-stats,
+  .erp-dashboard > .dashboard-primary,
+  .erp-dashboard > .dashboard-secondary {
+    min-height: 0;
+  }
+
+  .erp-dashboard .dashboard-stats > * {
+    min-height: 6.15rem;
+  }
+
+  .erp-dashboard .dashboard-primary > *,
+  .erp-dashboard .dashboard-secondary > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .erp-dashboard .dashboard-primary > * > div,
+  .erp-dashboard .dashboard-secondary > * > div {
+    min-height: 0;
+  }
+
+  .erp-dashboard .dashboard-secondary [class*="space-y-"] {
+    max-height: calc(100% - 2.75rem);
+    overflow: hidden;
+  }
+}
