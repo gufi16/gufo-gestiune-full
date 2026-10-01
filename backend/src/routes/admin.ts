@@ -299,6 +299,7 @@ const PlatformBillingProfileSchema = z.object({
   city: z.string().trim().max(100).optional(),
   county: z.string().trim().max(100).optional(),
   country: z.string().trim().max(80).default("Romania"),
+  postalCode: z.string().trim().max(20).optional(),
   iban: z.string().trim().max(60).optional(),
   bank: z.string().trim().max(100).optional(),
   email: z.string().trim().email().optional().or(z.literal("")),
@@ -357,6 +358,26 @@ function billingEfacturaContext(config: { id: string; efacturaEnvironment?: stri
     efacturaCertFilename: config.billingEfacturaCertFilename || null,
     efacturaCertPasswordEnc: config.billingEfacturaCertPasswordEnc || null,
   }
+}
+
+function validateControlInvoiceEfacturaData(issuer: Record<string, unknown>, invoice: Record<string, unknown>) {
+  const fields: Array<[unknown, string]> = [
+    [issuer.name, "Completează denumirea firmei emitente."],
+    [issuer.cui, "Completează CUI-ul firmei emitente."],
+    [issuer.address, "Completează adresa firmei emitente."],
+    [issuer.city, "Completează localitatea firmei emitente."],
+    [issuer.county, "Completează județul firmei emitente."],
+    [issuer.country, "Completează țara firmei emitente."],
+    [issuer.postalCode, "Completează codul poștal al firmei emitente."],
+    [invoice.customerName, "Completează denumirea beneficiarului."],
+    [invoice.customerCif, "Completează CUI-ul beneficiarului."],
+    [invoice.customerAddress, "Completează adresa beneficiarului."],
+    [invoice.customerCity, "Completează localitatea beneficiarului."],
+    [invoice.customerCounty, "Completează județul beneficiarului."],
+    [invoice.customerCountry, "Completează țara beneficiarului."],
+    [invoice.customerPostalCode, "Completează codul poștal al beneficiarului."],
+  ]
+  return fields.filter(([value]) => !String(value || "").trim()).map(([, message]) => message)
 }
 
 function getTenantCompanies(tenant: { companies?: CompanyLike[] | null }) {
@@ -2785,7 +2806,7 @@ async function getControlInvoiceEfacturaData(invoiceId: string) {
   if (amount <= 0) throw new Error("Factura trebuie să aibă o sumă mai mare decât zero înainte de transmiterea la ANAF.")
   const efInvoice = {
     docNo: invoice.number, docDate: invoice.issueDate, dueDate: invoice.dueDate, currency: invoice.currency,
-    customerName: customer?.name || invoice.tenant.name, customerCif: customer?.cui || "", customerRegNo: customer?.regNo || "", customerAddress: customer?.address || "", customerCity: customer?.city || "", customerCounty: customer?.county || "", customerCountry: customer?.country || "RO", isEfacturaRequired: true, invoiceTypeCode: "380", totalNetFc: amount, totalVatFc: 0, totalGrossFc: amount, totalSgrFc: 0,
+    customerName: customer?.name || invoice.tenant.name, customerCif: customer?.cui || "", customerRegNo: customer?.regNo || "", customerAddress: customer?.address || "", customerCity: customer?.city || "", customerCounty: customer?.county || "", customerCountry: customer?.country || "RO", customerPostalCode: customer?.postalCode || "", isEfacturaRequired: true, invoiceTypeCode: "380", totalNetFc: amount, totalVatFc: 0, totalGrossFc: amount, totalSgrFc: 0,
     items: [{ productName: `${product} - ${cycle}`, productCode: invoice.subscription.product, qty: 1, unitPriceFc: amount, vatRateValue: 0, lineNetFc: amount, lineVatFc: 0, lineGrossFc: amount, uomCode: "C62" }],
   }
   return { config, invoice, issuer, efInvoice, context: billingEfacturaContext(config, issuer) }
@@ -2795,9 +2816,11 @@ router.post("/api/v1/admin/invoices/:invoiceId/efactura/prepare", requireAuth, r
   try {
     const { invoice, issuer, efInvoice } = await getControlInvoiceEfacturaData(req.params.invoiceId)
     const validation = validateInvoiceForEFactura(efInvoice, issuer)
-    if (!validation.ok) {
-      await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "NOT_READY", efacturaErrorText: validation.errors.map((item) => item.message).join(" ") } })
-      return res.status(400).json({ ok: false, error: validation.errors.map((item) => item.message).join(" "), validation })
+    const controlErrors = validateControlInvoiceEfacturaData(issuer, efInvoice)
+    const errors = [...validation.errors.map((item) => item.message), ...controlErrors]
+    if (errors.length) {
+      await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "NOT_READY", efacturaErrorText: errors.join(" ") } })
+      return res.status(400).json({ ok: false, error: errors.join(" "), validation: { ...validation, controlErrors } })
     }
     const xml = generateInvoiceEFacturaXml(efInvoice, issuer)
     const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "PREPARED", efacturaXmlText: xml, efacturaPreparedAt: new Date(), efacturaErrorText: validation.warnings.map((item) => item.message).join(" ") || null } })

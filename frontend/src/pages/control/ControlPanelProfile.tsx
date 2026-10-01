@@ -2,10 +2,10 @@ import { useEffect, useState } from "react"
 import { Building2, KeyRound, Save, ShieldCheck } from "lucide-react"
 import { api } from "../../lib/api"
 
-type Profile = Record<"name" | "cui" | "regNo" | "address" | "city" | "county" | "country" | "iban" | "bank" | "email" | "phone" | "invoiceSeries", string>
+type Profile = Record<"name" | "cui" | "regNo" | "address" | "city" | "county" | "country" | "postalCode" | "iban" | "bank" | "email" | "phone" | "invoiceSeries", string>
 type Efactura = { hasToken: boolean; lastError?: string | null }
-const empty: Profile = { name: "", cui: "", regNo: "", address: "", city: "", county: "", country: "Romania", iban: "", bank: "", email: "", phone: "", invoiceSeries: "GUF" }
-const fields: Array<[keyof Profile, string]> = [["name", "Denumire firmă *"], ["cui", "CUI *"], ["regNo", "Reg. Com."], ["address", "Adresă sediu"], ["city", "Localitate"], ["county", "Județ"], ["country", "Țară"], ["email", "Email"], ["phone", "Telefon"], ["bank", "Bancă"], ["iban", "IBAN"], ["invoiceSeries", "Serie facturi"]]
+const empty: Profile = { name: "", cui: "", regNo: "", address: "", city: "", county: "", country: "Romania", postalCode: "", iban: "", bank: "", email: "", phone: "", invoiceSeries: "GUF" }
+const fields: Array<[keyof Profile, string]> = [["name", "Denumire firmă *"], ["cui", "CUI *"], ["regNo", "Reg. Com."], ["address", "Adresă sediu *"], ["city", "Localitate *"], ["county", "Județ *"], ["country", "Țară *"], ["postalCode", "Cod poștal *"], ["email", "Email"], ["phone", "Telefon"], ["bank", "Bancă"], ["iban", "IBAN"], ["invoiceSeries", "Serie facturi"]]
 
 export default function ControlPanelProfile() {
   const [form, setForm] = useState<Profile>(empty), [ef, setEf] = useState<Efactura | null>(null), [message, setMessage] = useState(""), [error, setError] = useState("")
