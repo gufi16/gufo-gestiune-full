@@ -510,7 +510,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
           ) : null}
         </div>
 
-        <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
+        <div className="hidden h-16 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
             <div className="erp-workspace-title shrink-0 border-r border-white/10 pr-5">
               <div className="text-2xl font-bold tracking-[-0.03em] text-[#17213a]">{currentWorkspaceTitle}</div>

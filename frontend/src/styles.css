@@ -373,6 +373,12 @@ table td {
   }
 }
 
+@media (min-width: 1280px) and (min-height: 860px) {
+  .erp-dashboard {
+    grid-template-rows: 104px 348px 312px;
+  }
+}
+
 /* Dashboard desktop follows the fixed backoffice grid: a single information
    hierarchy with five metrics, the operational chart, and three data panels. */
 @media (min-width: 1280px) {

@@ -972,7 +972,8 @@ export default function Dashboard() {
             </div>
           }
         >
-          <div className="dashboard-activity divide-y divide-slate-100">
+          <div className="flex h-full min-h-0 flex-col">
+          <div className="dashboard-activity min-h-0 divide-y divide-slate-100">
             {dashboardLoading ? (
               <div className="text-sm text-slate-500">Se incarca activitatea recenta...</div>
             ) : recentActivity.length === 0 ? (
@@ -998,6 +999,8 @@ export default function Dashboard() {
               })
             )}
           </div>
+          <button type="button" onClick={() => navigate("/documente")} className="mt-auto self-end pt-2 text-xs font-semibold text-[#2563eb] hover:underline">Vezi toată activitatea →</button>
+          </div>
         </SectionCard>
       </div>
 
@@ -1006,7 +1009,8 @@ export default function Dashboard() {
           title="Stoc critic automat"
           action={<span className="rounded-full bg-[#fff1d6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#c66e00]">{criticalStockCount} produse</span>}
         >
-          <div className="dashboard-stock-table h-full overflow-hidden">
+          <div className="flex h-full min-h-0 flex-col">
+          <div className="dashboard-stock-table min-h-0 flex-1 overflow-hidden">
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto] gap-2 border-b border-slate-200 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400"><span>Produs</span><span>Locație</span><span>Diferență</span></div>
             {dashboardLoading || criticalLoading ? (
               <div className="text-sm text-slate-500">Se incarca produsele cu stoc mic...</div>
@@ -1041,6 +1045,8 @@ export default function Dashboard() {
                 </div>
               ))
             )}
+          </div>
+          <button type="button" onClick={() => navigate("/gestiune/stoc")} className="mt-auto self-end pt-2 text-xs font-semibold text-[#2563eb] hover:underline">Vezi toate produsele →</button>
           </div>
         </SectionCard>
       </div>
