@@ -237,33 +237,33 @@ function SalesChart({
   }))
 
   return (
-    <div className="rounded-2xl border border-[#d7cbb9] bg-[linear-gradient(135deg,#fffdf9_0%,#f4ecdf_100%)] p-3 shadow-[0_12px_28px_rgba(71,56,38,0.08)]">
-      <div className="mb-3 grid gap-2 xl:grid-cols-[1.35fr_1fr]">
-        <div className="bg-[#334238] px-4 py-3 text-white">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d6e1cf]">
-            <span className="flex h-7 w-7 items-center justify-center bg-[#c97a43] text-white"><BarChart3 size={15} /></span>
+    <div className="dashboard-sales-panel flex h-full min-h-0 flex-col border border-[#d8e0e7] bg-white p-3 shadow-sm">
+      <div className="mb-3 grid shrink-0 gap-2 xl:grid-cols-[1.35fr_1fr]">
+        <div className="px-3 py-1 text-[#17324D]">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+            <span className="flex h-8 w-8 items-center justify-center bg-[#f39c12] text-white"><BarChart3 size={16} /></span>
             Vânzări pe interval
           </div>
-          <div className="mt-3 text-3xl font-bold tracking-tight">{formatRon(total)}</div>
-          <div className="mt-1 text-xs text-[#d6e1cf]">Totalul real al perioadei selectate</div>
+          <div className="mt-2 text-[27px] font-bold tracking-tight text-slate-950">{formatRon(total)}</div>
+          <div className="mt-0.5 text-xs text-slate-500">Totalul real al perioadei selectate</div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Bonuri</div>
-            <div className="mt-0.5 text-sm font-bold text-[#334036]">{receipts}</div>
+          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Bonuri</div>
+            <div className="mt-0.5 text-sm font-bold text-slate-900">{receipts}</div>
           </div>
-          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Medie / zi</div>
-            <div className="mt-0.5 text-sm font-bold text-[#334036]">{formatRon(average)}</div>
+          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Medie / zi</div>
+            <div className="mt-0.5 text-sm font-bold text-slate-900">{formatRon(average)}</div>
           </div>
-          <div className="border border-[#e5dccd] bg-[#fffaf1] px-3 py-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a765b]">Cash / Card</div>
-            <div className="mt-0.5 text-xs font-bold text-[#334036]">{formatRon(cash)} / {formatRon(card)}</div>
+          <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Cash / Card</div>
+            <div className="mt-0.5 text-xs font-bold text-slate-900">{formatRon(cash)} / {formatRon(card)}</div>
           </div>
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-lg border border-[#e5dccd] bg-[#fffdf9] px-3 py-3">
+      <div className="relative min-h-0 flex-1 overflow-hidden border border-[#e6ebef] bg-white px-3 py-3">
         {!hasData && !loading ? (
           <div className="border border-dashed border-[#d8cbb9] bg-[#f8f3ea] px-4 py-4 text-center text-sm text-slate-500">
             Nu exista vanzari pentru intervalul selectat.
@@ -272,13 +272,13 @@ function SalesChart({
 
         {hasData ? (
           <>
-            <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-[#6d765f]">
-              <div className="flex items-center gap-3"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 bg-[#425346]" />Vânzări zilnice</span><span className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3 bg-[#c97a43]" />Medie zilnică</span></div>
-              {hovered ? <span>{hovered.label}: <strong className="text-[#334036]">{formatRon(hovered.value)}</strong></span> : null}
+            <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-500">
+              <div className="flex items-center gap-3"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-700" />Vânzări zilnice</span><span className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3 bg-[#f39c12]" />Medie zilnică</span></div>
+              {hovered ? <span>{hovered.label}: <strong className="text-slate-800">{formatRon(hovered.value)}</strong></span> : null}
             </div>
 
-            <div className="rounded-lg border border-[#e5dccd] bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e7_100%)] px-3 py-2.5">
-              <div className="h-[156px]">
+            <div className="h-[calc(100%-1.7rem)] border-t border-dashed border-slate-200 px-3 pt-2">
+              <div className="h-full min-h-[155px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
@@ -291,27 +291,27 @@ function SalesChart({
                   >
                     <defs>
                       <linearGradient id="dashboard-sales-area" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6f9270" stopOpacity={0.42} />
-                        <stop offset="55%" stopColor="#91b58c" stopOpacity={0.15} />
-                        <stop offset="100%" stopColor="#91b58c" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor="#20a486" stopOpacity={0.34} />
+                        <stop offset="55%" stopColor="#20a486" stopOpacity={0.11} />
+                        <stop offset="100%" stopColor="#20a486" stopOpacity={0.01} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#dfd5c6" strokeDasharray="3 5" />
+                    <CartesianGrid vertical={false} stroke="#dce5ea" strokeDasharray="3 5" />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#7e765f", fontSize: 11, fontWeight: 600 }}
+                      tick={{ fill: "#728092", fontSize: 11, fontWeight: 600 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       width={62}
-                      tick={{ fill: "#9b907e", fontSize: 10 }}
+                      tick={{ fill: "#8794a3", fontSize: 10 }}
                       tickFormatter={(value) => `${Math.round(Number(value || 0))}`}
                     />
                     <Tooltip
-                      cursor={{ stroke: "#c97a43", strokeWidth: 1.5, strokeDasharray: "3 5" }}
+                      cursor={{ stroke: "#f39c12", strokeWidth: 1.5, strokeDasharray: "3 5" }}
                       content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null
                         const value = Number(payload[0]?.value || 0)
@@ -326,18 +326,18 @@ function SalesChart({
                     <Area
                       type="monotone"
                       dataKey="amount"
-                      stroke="#425346"
+                      stroke="#08765e"
                       strokeWidth={3}
                       fill="url(#dashboard-sales-area)"
                       dot={{ r: 0 }}
                       activeDot={{
                         r: 6,
                         fill: "#ffffff",
-                        stroke: "#425346",
+                        stroke: "#08765e",
                         strokeWidth: 3,
                       }}
                     />
-                    <Area type="monotone" dataKey="average" stroke="#c97a43" strokeWidth={1.5} strokeDasharray="5 5" fill="transparent" dot={false} activeDot={false} />
+                    <Area type="monotone" dataKey="average" stroke="#f39c12" strokeWidth={1.5} strokeDasharray="5 5" fill="transparent" dot={false} activeDot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -370,28 +370,24 @@ function MetricCard({
   icon: any
 }) {
   return (
-    <div className="rounded-2xl border border-[#DCE6EF] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-3 shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300">
-      <div className="flex items-start justify-between gap-3">
+    <div className="dashboard-metric border border-[#dce5ea] bg-white p-3 shadow-sm transition hover:border-slate-300">
+      <div className="flex items-start gap-3">
+        <span
+          className={[
+            "flex h-11 w-11 shrink-0 items-center justify-center",
+            tone === "blue" && "bg-[#fff0dd] text-[#e67e22]",
+            tone === "slate" && "bg-[#eaf1fb] text-[#17324D]",
+            tone === "amber" && "bg-[#fff0cf] text-[#f39c12]",
+            tone === "blue-soft" && "bg-[#d9f3f7] text-[#14758d]",
+            tone === "emerald" && "bg-[#16b889] text-white",
+          ].filter(Boolean).join(" ")}
+        ><Icon size={21} /></span>
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</div>
           <div className="mt-1 break-words text-xl font-semibold tracking-tight text-slate-950">{value}</div>
           <div className="mt-0.5 text-xs text-slate-500">{hint}</div>
         </div>
 
-        <span
-          className={[
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-            tone === "blue" && "bg-[#17324D] text-white",
-            tone === "slate" && "bg-[#17324D] text-white",
-            tone === "amber" && "bg-[#F39C12] text-white",
-            tone === "blue-soft" && "bg-slate-100 text-slate-700",
-            tone === "emerald" && "bg-emerald-500 text-white",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <Icon size={17} />
-        </span>
       </div>
     </div>
   )
@@ -409,7 +405,7 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-[#DCE6EF] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FBFD_100%)] p-3.5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
+    <div className="flex h-full min-h-0 flex-col border border-[#dce5ea] bg-white p-3.5 shadow-sm">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-[15px] font-semibold tracking-[0.01em] text-slate-950">{title}</div>
@@ -417,7 +413,7 @@ function SectionCard({
         </div>
         {action}
       </div>
-      {children}
+      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
     </div>
   )
 }
@@ -962,7 +958,7 @@ export default function Dashboard() {
             </div>
           }
         >
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+          <div className="divide-y divide-slate-100">
             {dashboardLoading ? (
               <div className="text-sm text-slate-500">Se incarca activitatea recenta...</div>
             ) : recentActivity.length === 0 ? (
@@ -970,16 +966,18 @@ export default function Dashboard() {
                 Nu exista inca activitate recenta pentru locatia selectata.
               </div>
             ) : (
-              recentActivity.map((item, index) => {
+              recentActivity.slice(0, 5).map((item, index) => {
                 const Icon = ACTIVITY_ICON_MAP[item.type] || FileText
                 return (
-                  <div key={`${item.type}-${item.at}-${index}`} className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-slate-900 shadow-sm">
+                  <div key={`${item.type}-${item.at}-${index}`} className="flex items-center gap-3 py-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-700">
                       <Icon size={18} />
                     </div>
-                    <div className="text-sm font-semibold text-slate-900">{item.title}</div>
-                    <div className="mt-2 text-sm text-slate-500">{item.meta}</div>
-                    <div className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#B66A00]">{formatRelativeTime(item.at)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-900">{item.title}</div>
+                      <div className="mt-0.5 truncate text-xs text-slate-500">{item.meta}</div>
+                    </div>
+                    <div className="shrink-0 text-xs font-medium text-slate-400">{formatRelativeTime(item.at)}</div>
                   </div>
                 )
               })
@@ -992,20 +990,20 @@ export default function Dashboard() {
         <SectionCard
           title="Stoc critic automat"
         >
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+          <div className="divide-y divide-slate-100">
             {dashboardLoading || criticalLoading ? (
               <div className="text-sm text-slate-500">Se incarca produsele cu stoc mic...</div>
             ) : lowStock.length > 0 ? (
-              lowStock.map((item, index) => (
+              lowStock.slice(0, 8).map((item, index) => (
                 <div
                   key={`${item.product}-${item.location}-${index}`}
-                  className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 py-1.5"
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-slate-800">{item.product}</div>
                     <div className="text-xs text-slate-500">{item.location}</div>
                   </div>
-                  <div className="ml-3 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                  <div className="ml-3 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600">
                     {formatQtyRo(item.qty || 0)}
                   </div>
                 </div>
@@ -1015,16 +1013,16 @@ export default function Dashboard() {
                 Nu exista suficiente date pentru alerta de stoc critic.
               </div>
             ) : (
-              criticalStock.map((product, index) => (
+              criticalStock.slice(0, 8).map((product, index) => (
                 <div
                   key={`${product.productId || product.id || index}`}
-                  className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 py-1.5"
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-slate-800">{product.name || "Produs fara nume"}</div>
                     <div className="text-xs text-slate-500">{product.sku || "fara SKU"}</div>
                   </div>
-                  <div className="ml-3 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                  <div className="ml-3 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600">
                     {formatQtyRo(activeLocationId ? product.qty : product.totalQty || 0)} {product.uom || ""}
                   </div>
                 </div>

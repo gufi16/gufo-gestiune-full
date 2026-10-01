@@ -186,37 +186,38 @@ table td {
 
 /* Header controls belong to the header, not to a second white application. */
 .erp-topbar {
-  background: var(--erp-ink-soft) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  background: #ffffff !important;
+  border-color: #dce5ea !important;
+  color: #17213a !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
 }
 
 .erp-topbar :is(input, select) {
   min-height: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid #dfe6ec !important;
   border-radius: 3px !important;
-  background: #27282f !important;
-  color: #f4f7f9 !important;
+  background: #f7f9fb !important;
+  color: #17213a !important;
   box-shadow: none !important;
 }
 
 .erp-topbar :is(input, select):focus {
-  border-color: #f39c12 !important;
-  outline: 2px solid rgba(243, 156, 18, 0.18) !important;
+  border-color: #17324d !important;
+  outline: 2px solid rgba(23, 50, 77, 0.12) !important;
 }
 
 .erp-topbar [class*="bg-white"],
 .erp-topbar [class*="bg-[#EEF4FB]"] {
-  background-color: #27282f !important;
+  background-color: #ffffff !important;
 }
 
 .erp-topbar [class*="text-[#17324D]"] {
-  color: #f5f8fa !important;
+  color: #17324d !important;
 }
 
 .erp-topbar [class*="border-slate-200"],
 .erp-topbar [class*="border-slate-100"] {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: #dfe6ec !important;
 }
 
 .erp-topbar [class*="rounded-"] {
@@ -227,7 +228,7 @@ table td {
 .erp-topbar .erp-date-range {
   gap: 0.45rem;
   border: 0 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-right: 1px solid #e2e8ee !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -245,7 +246,7 @@ table td {
 .erp-topbar .erp-context-field > div:last-child > div,
 .erp-topbar .erp-date-range > div > div {
   margin-bottom: 0.18rem !important;
-  color: #9ca9b5 !important;
+  color: #778596 !important;
   font-size: 0.59rem !important;
   letter-spacing: 0.1em !important;
 }
@@ -275,30 +276,30 @@ table td {
 .erp-topbar .erp-date-range button,
 .erp-topbar .erp-topbar-action,
 .erp-topbar .erp-logout {
-  border-color: rgba(255, 255, 255, 0.14) !important;
+  border-color: #dfe6ec !important;
   background: transparent !important;
-  color: #d8e1e8 !important;
+  color: #17324d !important;
   box-shadow: none !important;
 }
 
 .erp-topbar .erp-date-range button:hover,
 .erp-topbar .erp-topbar-action:hover,
 .erp-topbar .erp-logout:hover {
-  border-color: rgba(243, 156, 18, 0.7) !important;
-  background: rgba(243, 156, 18, 0.1) !important;
-  color: #f5b94f !important;
+  border-color: #f39c12 !important;
+  background: #fff8ed !important;
+  color: #c66e00 !important;
 }
 
 .erp-topbar .erp-user-context {
   border: 0 !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-left: 1px solid #e2e8ee !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
 .erp-topbar .erp-user-context [class*="text-[#17324D]"] {
-  color: #f4f7f9 !important;
+  color: #17324d !important;
 }
 
 .erp-sidebar [class*="rounded-"] {
