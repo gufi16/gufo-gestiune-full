@@ -246,10 +246,10 @@ function SalesChart({
         <div className="px-3 py-1 text-[#17324D]">
           <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
             <span className="flex h-8 w-8 items-center justify-center bg-[#f39c12] text-white"><BarChart3 size={16} /></span>
-            Vânzări pe interval
+            Evoluția vânzărilor
           </div>
           <div className="mt-2 text-[27px] font-bold tracking-tight text-slate-950">{formatRon(total)}</div>
-          <div className="mt-0.5 text-xs text-slate-500">Totalul real al perioadei selectate</div>
+          <div className="mt-0.5 text-xs text-slate-500">Total real pentru perioada selectată</div>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="border border-[#edf0f3] bg-[#fafbfc] px-3 py-2">

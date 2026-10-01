@@ -510,10 +510,11 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
           ) : null}
         </div>
 
-        <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
+        <div className="erp-topbar-desktop hidden h-[72px] items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
             <div className="erp-workspace-title shrink-0 border-r border-white/10 pr-5">
               <div className="text-2xl font-bold tracking-[-0.03em] text-[#17213a]">{currentWorkspaceTitle}</div>
+              {isDashboard ? <div className="erp-workspace-subtitle">Imagine de ansamblu a performanței operaționale</div> : null}
             </div>
             {companyChoices.length ? (
               <div className="erp-context-field erp-company-context flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, PackageSearch, Plus, Receipt } from "lucide-react"
+import { ArrowLeftRight, ChevronRight, PackageSearch, Plus, Receipt } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 const actions = [
@@ -37,11 +37,11 @@ export default function QuickActions({ onOpenReceipts, compact = false }: { onOp
   const navigate = useNavigate()
 
   return (
-    <div className={`flex min-h-0 flex-col border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-900/[0.03] ${compact ? "h-full" : "md:p-3.5"}`}>
+    <div className={`dashboard-quick-actions-panel flex min-h-0 flex-col border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.03] ${compact ? "h-full" : "md:p-3.5"}`}>
       <div className={`${compact ? "mb-2" : "mb-3"} flex items-center justify-between gap-3`}>
         <div>
-          <div className="text-base font-semibold tracking-[-0.01em] text-[#17324D]">Actiuni rapide</div>
-          <div className="mt-0.5 text-xs text-slate-500">Acces direct.</div>
+          <div className="text-base font-semibold tracking-[-0.01em] text-[#17324D]">Acțiuni rapide</div>
+          <div className="mt-0.5 text-xs text-slate-500">Instrumentele cele mai folosite.</div>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ export default function QuickActions({ onOpenReceipts, compact = false }: { onOp
               }
               if (action.path) navigate(action.path)
             }}
-            className={`group border border-slate-200 bg-white text-left shadow-sm shadow-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 ${compact ? "p-2" : "p-3"}`}
+            className={`dashboard-quick-action group border border-slate-200 bg-white text-left shadow-sm shadow-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 ${compact ? "p-3" : "p-3"}`}
           >
             <div className="flex items-start justify-between gap-2">
               <span
@@ -75,9 +75,7 @@ export default function QuickActions({ onOpenReceipts, compact = false }: { onOp
                 <Icon size={17} />
               </span>
 
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                rapid
-              </span>
+              <ChevronRight size={17} className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-700" />
             </div>
 
             <div className={compact ? "mt-2" : "mt-3"}>
