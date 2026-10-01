@@ -138,8 +138,8 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; 
           "group relative flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-200",
           nested ? "rounded-lg" : "rounded-xl",
           isActive
-            ? "bg-[#EEF4FB] font-semibold text-[#17324D]"
-            : "font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            ? "bg-[#526252] font-semibold text-white shadow-sm"
+            : "font-medium text-[#d8dfd3] hover:bg-white/10 hover:text-white"
         )
       }
     >
@@ -148,7 +148,7 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; 
           <span
             className={clsx(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
-              isActive ? "bg-white text-[#17324D]" : "bg-slate-100 text-slate-500 group-hover:bg-white"
+              isActive ? "bg-[#f1b978] text-[#29342d]" : "bg-white/10 text-[#c8d3c2] group-hover:bg-white/15"
             )}
           >
             <Icon size={16} />
@@ -160,11 +160,11 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; 
             size={14}
             className={clsx(
               "transition-all duration-200",
-              isActive ? "translate-x-0 text-[#17324D]/70" : "translate-x-1 opacity-0 text-slate-400 group-hover:translate-x-0 group-hover:opacity-100"
+              isActive ? "translate-x-0 text-[#f1b978]" : "translate-x-1 opacity-0 text-[#aebba8] group-hover:translate-x-0 group-hover:opacity-100"
             )}
           />
 
-          {isActive ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#17324D]" /> : null}
+          {isActive ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#f1b978]" /> : null}
         </>
       )}
     </NavLink>
@@ -215,14 +215,14 @@ function SidebarAccordion({
         className={clsx(
           "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
           hasActiveChild
-            ? "bg-[#EEF4FB] font-semibold text-[#17324D]"
-            : "font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            ? "bg-[#526252] font-semibold text-white shadow-sm"
+            : "font-medium text-[#d8dfd3] hover:bg-white/10 hover:text-white"
         )}
       >
         <span
           className={clsx(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
-            hasActiveChild ? "bg-white text-[#17324D]" : "bg-slate-100 text-slate-500 group-hover:bg-white"
+            hasActiveChild ? "bg-[#f1b978] text-[#29342d]" : "bg-white/10 text-[#c8d3c2] group-hover:bg-white/15"
           )}
         >
           <Icon size={16} />
@@ -233,13 +233,13 @@ function SidebarAccordion({
         <span
           className={clsx(
             "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
-            hasActiveChild ? "bg-white text-[#17324D]/75" : "text-slate-400"
+            hasActiveChild ? "bg-white/15 text-[#f1b978]" : "text-[#aebba8]"
           )}
         >
-          {flyout ? <ChevronRight size={15} className={clsx(isOpen ? "text-[#17324D]" : "")} /> : isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          {flyout ? <ChevronRight size={15} className={clsx(isOpen ? "text-[#f1b978]" : "")} /> : isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
         </span>
 
-        {hasActiveChild ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#17324D]" /> : null}
+        {hasActiveChild ? <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#f1b978]" /> : null}
       </button>
 
       {flyout ? (
@@ -252,7 +252,7 @@ function SidebarAccordion({
           )}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-3">
+            <div className="ml-4 mt-1 space-y-1 border-l border-white/10 pl-3">
               {items.map((item) => (
                 <SidebarLink key={`${title}-${item.label}`} item={item} nested onNavigate={onNavigate} />
               ))}
@@ -290,16 +290,16 @@ function SidebarContent({
   )
 
   return (
-    <div className={clsx("relative flex h-full w-full bg-white", mobile ? "overflow-hidden" : "overflow-visible")}>
-      <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200/80 bg-white">
-        <div className="border-b border-slate-200/80 px-5 pb-5 pt-5">
+    <div className={clsx("relative flex h-full w-full bg-[#29342d]", mobile ? "overflow-hidden" : "overflow-visible")}>
+      <div className="flex h-full w-64 shrink-0 flex-col border-r border-black/20 bg-[#29342d]">
+        <div className="border-b border-white/10 px-5 pb-5 pt-5">
           {mobile ? (
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Meniu ERP</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b8c6b3]">Meniu ERP</div>
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#d8dfd3]"
                 aria-label="Inchide meniul"
               >
                 <ChevronLeft size={18} />
@@ -313,7 +313,8 @@ function SidebarContent({
               alt="Gufo"
               className={clsx("object-contain", mobile ? "h-10 w-10" : "h-11 w-11")}
             />
-            <div className="mt-2 text-sm font-semibold tracking-[0.01em] text-[#17324D]">Gufo Backoffice</div>
+            <div className="mt-2 text-sm font-semibold tracking-[0.01em] text-white">Gufo ERP</div>
+            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#b8c6b3]">Spațiu operațional</div>
           </div>
         </div>
 
@@ -322,7 +323,7 @@ function SidebarContent({
             {visibleSections.map((section) =>
               section.collapsible && section.icon ? (
                 <div key={section.title}>
-                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9dad97]">
                     {section.title}
                   </div>
                   <SidebarAccordion
@@ -345,7 +346,7 @@ function SidebarContent({
                 </div>
               ) : (
                 <div key={section.title}>
-                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9dad97]">
                     {section.title}
                   </div>
                   {section.items.map((item) => (
@@ -361,10 +362,10 @@ function SidebarContent({
           </div>
         </div>
 
-        <div className="border-t border-slate-200/80 px-5 py-3">
-          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <div className="border-t border-white/10 px-5 py-3">
+          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aebba8]">
             <div>Versiunea: {APP_VERSION}</div>
-            <div className="text-emerald-700">Activ</div>
+            <div className="text-[#a8d8ad]">Activ</div>
           </div>
         </div>
       </div>
@@ -374,10 +375,10 @@ function SidebarContent({
           className="absolute left-[calc(100%+12px)] z-50 hidden w-[292px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_52px_rgba(15,35,55,0.18)] xl:flex xl:max-h-[calc(100vh-32px)] xl:flex-col"
           style={{ top: flyoutTop }}
         >
-          <div className="flex items-start justify-between border-b border-slate-100 bg-[#F8FAFC] px-4 py-3">
+          <div className="flex items-start justify-between border-b border-[#e6ddcf] bg-[#f7f1e7] px-4 py-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Submeniu</div>
-              <div className="mt-1 text-base font-semibold text-[#17324D]">{activeDesktopSection}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8a765b]">Submeniu</div>
+              <div className="mt-1 text-base font-semibold text-[#334036]">{activeDesktopSection}</div>
             </div>
             <button
               type="button"
@@ -436,7 +437,7 @@ export default function Sidebar({
 
       <aside className="hidden xl:block xl:w-64 xl:shrink-0">
         <div
-          className="fixed left-0 top-0 z-40 hidden h-screen w-64 overflow-visible border-r border-slate-200/80 bg-white/95 backdrop-blur xl:flex"
+          className="fixed left-0 top-0 z-40 hidden h-screen w-64 overflow-visible border-r border-black/20 bg-[#29342d] shadow-[12px_0_34px_rgba(41,52,45,0.14)] xl:flex"
         >
           <SidebarContent
             visibleSections={visibleSections}
@@ -452,7 +453,7 @@ export default function Sidebar({
 
       <div
         className={clsx(
-          "fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-[300px] border-r border-slate-200 bg-white shadow-2xl transition-transform duration-200 xl:hidden",
+          "fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-[300px] border-r border-black/20 bg-[#29342d] shadow-2xl transition-transform duration-200 xl:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

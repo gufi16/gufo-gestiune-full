@@ -384,20 +384,20 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(247,250,252,0.92)_100%)] backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-[#263228] bg-[linear-gradient(135deg,#334238_0%,#2a352d_100%)] text-white shadow-[0_6px_20px_rgba(41,52,45,0.16)] backdrop-blur">
       <div className="px-3 py-2.5 md:px-3.5 md:py-2 xl:px-3.5">
         <div className="flex items-center gap-2.5 md:hidden">
           <button
             type="button"
             onClick={onOpenMenu}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-[#17324D] xl:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/15 bg-white/10 text-white xl:hidden"
           >
             <Menu size={18} />
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-[#17324D]">{userLabel}</div>
-            <div className="truncate text-[11px] text-slate-500">{companyLabel}</div>
+            <div className="truncate text-sm font-semibold text-white">{userLabel}</div>
+            <div className="truncate text-[11px] text-[#c8d3c2]">{companyLabel}</div>
           </div>
 
           <button

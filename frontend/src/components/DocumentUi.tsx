@@ -12,10 +12,10 @@ export function DocumentSection({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-sm shadow-slate-900/[0.03] md:px-4">
+    <section className="rounded-2xl border border-[#e6ddcf] bg-[#fffdf9] px-3.5 py-3 shadow-[0_10px_28px_rgba(71,56,38,0.05)] md:px-4">
       <div className="mb-2.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[#17324D]">{title}</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[#334036]">{title}</h2>
           {description ? <p className="mt-0.5 text-[13px] leading-5 text-slate-500">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
@@ -110,13 +110,13 @@ export function DocumentPageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-[linear-gradient(180deg,#FFFFFF_0%,#F9FBFD_100%)] px-3.5 py-3 shadow-sm shadow-slate-900/[0.03] md:px-4 md:py-3.5">
+    <div className="rounded-2xl border border-[#e5dccd] bg-[radial-gradient(circle_at_top_right,rgba(203,137,83,0.14),transparent_30%),linear-gradient(135deg,#fffdf8_0%,#f7f1e7_100%)] px-3.5 py-3 shadow-[0_12px_30px_rgba(71,56,38,0.07)] md:px-4 md:py-3.5">
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 shadow-sm shadow-slate-900/[0.02]">
+          <div className="inline-flex rounded-full border border-[#e4d7c4] bg-[#fffaf1] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#745b3e] shadow-sm shadow-slate-900/[0.02]">
             {badge}
           </div>
-          <h1 className="mt-1.5 text-[23px] font-semibold tracking-[-0.02em] text-[#17324D]">{title}</h1>
+          <h1 className="mt-1.5 text-[23px] font-semibold tracking-[-0.02em] text-[#334036]">{title}</h1>
           {subtitle ? <p className="mt-1 max-w-4xl text-[13px] leading-5 text-slate-500">{subtitle}</p> : null}
         </div>
 
