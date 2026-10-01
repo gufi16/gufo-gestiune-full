@@ -2,25 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Places renders its suggestion menu outside the app root. Keep it above maps and dialogs. */
+/* Google Places is rendered outside the application root. */
 .pac-container {
   z-index: 2147483647 !important;
 }
 
 :root {
   color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   font-size: 14px;
-  --erp-forest: #2e6174;
-  --erp-forest-deep: #29323c;
-  --erp-cream: #f4f6f8;
-  --erp-paper: #ffffff;
-  --erp-line: #dce3e8;
-  --erp-clay: #dc9a3d;
-  --erp-sage: #a7c7c1;
+  --erp-ink: #1f2933;
+  --erp-ink-soft: #2b3844;
+  --erp-canvas: #f3f5f7;
+  --erp-surface: #ffffff;
+  --erp-muted: #667687;
+  --erp-line: #d8e0e7;
+  --erp-line-strong: #c5d0da;
+  --erp-primary: #176b87;
+  --erp-primary-dark: #125269;
+  --erp-teal: #16876f;
+  --erp-warning: #b7791f;
+  --erp-danger: #b83d4b;
 }
 
 body {
-  @apply bg-[#f4f6f8] text-neutral-900 leading-snug;
+  @apply bg-[#f3f5f7] text-slate-800 antialiased;
+  line-height: 1.42;
 }
 
 #root {
@@ -31,22 +38,11 @@ button,
 input,
 select,
 textarea {
-  @apply leading-snug;
+  font: inherit;
 }
 
-input,
-select,
-textarea {
-  @apply border-slate-300;
-}
-
-input,
-select {
-  min-height: 2.25rem;
-}
-
-textarea {
-  min-height: 2.5rem;
+button {
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 table th,
@@ -55,211 +51,197 @@ table td {
 }
 
 .card {
-  @apply rounded-xl bg-white shadow-sm border border-[#dce3e8];
+  @apply border border-[#d8e0e7] bg-white shadow-none;
+  border-radius: 4px;
+}
+
+/* Shared ERP workspace: intentionally calm, dense and desktop-first. */
+.erp-workspace {
+  background: var(--erp-canvas);
+  color: #273442;
 }
 
 .erp-workspace main {
-  background:
-    radial-gradient(circle at 90% -10%, rgba(101, 175, 168, 0.13), transparent 28rem),
-    radial-gradient(circle at 24% 0%, rgba(220, 154, 61, 0.1), transparent 24rem),
-    #f4f6f8;
+  background: var(--erp-canvas);
 }
 
-.erp-workspace input:not([type="checkbox"]):not([type="radio"]),
-.erp-workspace select,
-.erp-workspace textarea {
-  border-color: #d8e1e7;
-  background-color: #ffffff;
+.erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 2.25rem;
+  border: 1px solid var(--erp-line-strong) !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+  color: #243342 !important;
+  box-shadow: none !important;
+  font-size: 0.84rem;
 }
 
-.erp-workspace input:not([type="checkbox"]):not([type="radio"]):focus,
-.erp-workspace select:focus,
-.erp-workspace textarea:focus {
-  border-color: #43849a;
-  box-shadow: 0 0 0 3px rgba(67, 132, 154, 0.13);
+.erp-workspace main textarea {
+  min-height: 4.8rem;
 }
 
-/* Normalize legacy blue utility colors while older screens are progressively rebuilt. */
-.erp-workspace [class*="bg-[#17324D]"] {
-  background-color: var(--erp-forest) !important;
-}
-
-.erp-workspace [class*="text-[#17324D]"] {
-  color: var(--erp-forest) !important;
-}
-
-.erp-workspace [class*="bg-[#EEF4FB]"],
-.erp-workspace [class*="bg-[#EAF3FF]"] {
-  background-color: #e8f2f3 !important;
-}
-
-.erp-workspace [class*="border-slate-200"],
-.erp-workspace [class*="border-[#DCE6EF]"],
-.erp-workspace [class*="border-[#D9E4EE]"] {
-  border-color: var(--erp-line) !important;
-}
-
-.erp-workspace [class~="bg-white"] {
-  background-color: var(--erp-paper);
-}
-
-/* Dense desktop ERP: all operational controls use one compact geometry. */
-.erp-workspace main :is(input, select, textarea) {
-  min-height: 2rem;
-  border-radius: 0.4rem !important;
-  font-size: 0.8125rem;
+.erp-workspace main :is(input, select, textarea):focus {
+  border-color: var(--erp-primary) !important;
+  outline: 2px solid rgba(23, 107, 135, 0.14) !important;
+  outline-offset: 0;
 }
 
 .erp-workspace main button:not([class*="rounded-full"]) {
-  border-radius: 0.4rem !important;
+  border-radius: 3px !important;
 }
 
-.erp-workspace main [class~="rounded-2xl"] {
-  border-radius: 0.65rem !important;
+/* Remove the old mobile-app rounding from every ERP page, dialog and panel. */
+.erp-workspace main [class*="rounded-"] {
+  border-radius: 4px !important;
 }
 
-.erp-workspace main [class~="rounded-xl"] {
-  border-radius: 0.5rem !important;
+.erp-workspace main [class*="rounded-full"] {
+  border-radius: 999px !important;
 }
 
-.erp-workspace main [class*="rounded-[28px]"],
-.erp-workspace main [class*="rounded-[24px]"] {
-  border-radius: 0.7rem !important;
+.erp-workspace main :is([class~="rounded-2xl"], [class~="rounded-xl"], [class~="rounded-lg"]) {
+  border-radius: 4px !important;
 }
 
-.erp-workspace main [class*="rounded-[20px]"],
-.erp-workspace main [class*="rounded-[16px]"] {
-  border-radius: 0.55rem !important;
+.erp-workspace main [class*="border-slate-200"],
+.erp-workspace main [class*="border-slate-100"],
+.erp-workspace main [class*="border-[#dce3e8]"] {
+  border-color: var(--erp-line) !important;
 }
 
-.erp-topbar [class*="rounded-[12px]"],
-.erp-topbar [class*="rounded-[14px]"],
-.erp-topbar [class*="rounded-[16px]"] {
-  border-radius: 0.45rem !important;
+.erp-workspace main [class*="shadow-"] {
+  box-shadow: 0 1px 2px rgba(31, 41, 51, 0.06) !important;
 }
 
-.erp-topbar [class*="border-slate-200"] {
-  border-color: #d8e1e7 !important;
+.erp-workspace main [class*="bg-[linear-gradient"],
+.erp-workspace main [class*="bg-[radial-gradient"] {
+  background-image: none !important;
+  background-color: #fff !important;
 }
 
-.erp-topbar [class*="bg-[#EEF4FB]"] {
-  background-color: #e8f2f3 !important;
-  color: #2e6174 !important;
+.erp-workspace main [class*="bg-[#EEF4FB]"],
+.erp-workspace main [class*="bg-blue-50"] {
+  background-color: #edf5f7 !important;
+}
+
+.erp-workspace main [class*="text-[#17324D]"] {
+  color: var(--erp-primary-dark) !important;
+}
+
+/* Dense, legible data grids instead of card-like tables. */
+.erp-workspace main table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.erp-workspace main thead tr {
+  background: #eef2f5;
+}
+
+.erp-workspace main th {
+  color: #526273;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.erp-workspace main tbody tr:nth-child(even) {
+  background: #fbfcfd;
+}
+
+.erp-workspace main tbody tr:hover {
+  background: #f2f8fa;
+}
+
+.erp-workspace main td,
+.erp-workspace main th {
+  border-color: var(--erp-line) !important;
+}
+
+/* Legacy color utility normalization inside the ERP only. */
+.erp-workspace [class*="bg-[#17324D]"] {
+  background-color: var(--erp-primary-dark) !important;
+}
+
+.erp-workspace [class*="bg-[#29342d]"],
+.erp-workspace [class*="bg-[#354238]"],
+.erp-workspace [class*="bg-[#334238]"] {
+  background-color: var(--erp-ink) !important;
+}
+
+.erp-workspace [class*="bg-[#425346]"] {
+  background-color: var(--erp-ink-soft) !important;
+}
+
+.erp-workspace [class*="text-[#f1b978]"] {
+  color: #f4bd60 !important;
+}
+
+.erp-workspace [class*="border-[#526252]"] {
+  border-color: #415160 !important;
+}
+
+/* Header controls belong to the header, not to a second white application. */
+.erp-topbar {
+  background: var(--erp-ink) !important;
+  border-color: #344352 !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 .erp-topbar :is(input, select) {
-  min-height: 1.8rem;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  border-radius: 0.35rem !important;
-  background-color: rgba(16, 29, 37, 0.24) !important;
-  color: #ffffff !important;
-  color-scheme: dark;
-}
-
-.erp-topbar [class~="bg-white"],
-.erp-topbar [class*="bg-[linear-gradient"] {
-  background-color: rgba(255, 255, 255, 0.06) !important;
-  background-image: none !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
+  min-height: 2rem;
+  border: 1px solid #526373 !important;
+  border-radius: 3px !important;
+  background: #2b3844 !important;
+  color: #f4f7f9 !important;
   box-shadow: none !important;
 }
 
-.erp-topbar [class*="text-[#6C7A89]"],
-.erp-topbar [class*="text-slate-500"] {
-  color: #b9cad0 !important;
+.erp-topbar :is(input, select):focus {
+  border-color: #77b6c9 !important;
+  outline: 2px solid rgba(119, 182, 201, 0.22) !important;
+}
+
+.erp-topbar [class*="bg-white"],
+.erp-topbar [class*="bg-[#EEF4FB]"] {
+  background-color: #2b3844 !important;
 }
 
 .erp-topbar [class*="text-[#17324D]"] {
-  color: #ffffff !important;
+  color: #f5f8fa !important;
 }
 
-.erp-topbar :is(select, input) option {
-  color: #1f2c34;
-  background: #ffffff;
+.erp-topbar [class*="border-slate-200"],
+.erp-topbar [class*="border-slate-100"] {
+  border-color: #526373 !important;
 }
 
-.erp-dashboard [class*="bg-[linear-gradient"] {
-  background-image: linear-gradient(135deg, #ffffff 0%, #f1f6f7 100%) !important;
+.erp-topbar [class*="rounded-"] {
+  border-radius: 3px !important;
 }
 
-.erp-dashboard [class*="shadow-[0_18px"],
-.erp-dashboard [class*="shadow-[0_20px"] {
-  box-shadow: 0 8px 18px rgba(71, 56, 38, 0.06) !important;
+.erp-sidebar [class*="rounded-"] {
+  border-radius: 3px !important;
 }
 
-/* Coherent SaaS palette for components that still have legacy hard-coded values. */
-.erp-workspace [class*="bg-[#29342d]"] { background-color: #29323c !important; }
-.erp-workspace [class*="bg-[#354238]"],
-.erp-workspace [class*="bg-[#334238]"] { background-color: #344852 !important; }
-.erp-workspace [class*="bg-[#425346]"] { background-color: #2e6174 !important; }
-.erp-workspace [class*="text-[#334036]"] { color: #294b5a !important; }
-.erp-workspace [class*="bg-[#e2eadc]"] { background-color: #e8f2f3 !important; }
-.erp-workspace [class*="bg-[#c97a43]"] { background-color: #dc9a3d !important; }
-.erp-workspace [class*="border-[#e5dccd]"],
-.erp-workspace [class*="border-[#d7cbb9]"] { border-color: #dce3e8 !important; }
-.erp-workspace [class*="bg-[#fffaf1]"],
-.erp-workspace [class*="bg-[#f8f3ea]"] { background-color: #f7fafb !important; }
+.erp-sidebar [class*="bg-[#526252]"] {
+  background-color: #344352 !important;
+}
+
+.erp-sidebar [class*="bg-[#f1b978]"] {
+  background-color: #35b39a !important;
+}
 
 @media (min-width: 1024px) {
-  .erp-workspace main section {
-    border-radius: 0.65rem;
+  .erp-desktop-dense {
+    min-height: calc(100vh - 4rem);
+    padding: 1.15rem 1.25rem 1.5rem !important;
   }
 
-  .erp-workspace main :is(input, select) {
-    height: 2rem;
-  }
-
-  .erp-workspace main textarea {
-    min-height: 4.5rem;
-  }
-
-  .erp-dashboard [class*="min-h-["] {
-    min-height: 0 !important;
-  }
-}
-
-/* Desktop ERP workspace: dense operational screens. Mobile layouts keep their own touch-first spacing. */
-@media (min-width: 1024px) {
-  .erp-desktop-dense .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.875rem;
-  }
-
-  .erp-desktop-dense .space-y-5 > :not([hidden]) ~ :not([hidden]),
-  .erp-desktop-dense .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.75rem;
-  }
-
-  .erp-desktop-dense .gap-5 {
-    gap: 0.875rem;
-  }
-
-  .erp-desktop-dense .gap-4 {
-    gap: 0.75rem;
-  }
-
-  .erp-desktop-dense .p-6 {
-    padding: 1rem;
-  }
-
-  .erp-desktop-dense .p-5 {
-    padding: 0.875rem;
-  }
-
-  .erp-desktop-dense .p-4 {
-    padding: 0.75rem;
-  }
-
-  .erp-desktop-dense .rounded-\[28px\],
-  .erp-desktop-dense .rounded-\[24px\] {
-    border-radius: 1.125rem;
-  }
-
-  .erp-desktop-dense .overflow-x-auto {
-    max-height: calc(100vh - 20rem);
-    overflow-y: auto;
-  }
-
-  .erp-desktop-dense .fixed .overflow-x-auto {
-    max-height: none;
+  .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select) {
+    min-height: 2.1rem;
   }
 }

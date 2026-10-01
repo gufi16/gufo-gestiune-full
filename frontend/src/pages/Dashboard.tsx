@@ -850,48 +850,22 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="hidden overflow-hidden rounded-2xl border border-[#DCE6EF] bg-[radial-gradient(circle_at_top_right,rgba(71,194,177,0.10),transparent_28%),linear-gradient(180deg,#FFFFFF_0%,#F4F8FB_100%)] p-3.5 shadow-[0_18px_38px_rgba(15,23,42,0.08)] xl:block">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div className="hidden border border-[#d8e0e7] bg-white px-4 py-3 shadow-sm xl:block">
+        <div className="flex items-center justify-between gap-6">
           <div className="min-w-0">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
-              <Activity size={13} className="text-emerald-600" />
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#176b87]">
+              <Activity size={14} />
               Dashboard operational
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 shadow-sm">
-                <Clock3 size={14} />
-                {rangeLabel}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 shadow-sm">
-                <Boxes size={14} />
-                {scopeLabel}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 shadow-sm">
-                <CreditCard size={14} />
-                {terminalLabel}
-              </span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1.5"><Clock3 size={13} />{rangeLabel}</span>
+              <span className="inline-flex items-center gap-1.5"><Boxes size={13} />{scopeLabel}</span>
+              <span className="inline-flex items-center gap-1.5"><CreditCard size={13} />{terminalLabel}</span>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:w-[560px]">
-            <div className="rounded-xl border border-white/70 bg-white/88 px-2.5 py-2 shadow-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Live</div>
-              <div className="mt-1 text-sm font-semibold text-emerald-700">{lastUpdatedLabel}</div>
-            </div>
-            <div className="rounded-xl border border-white/70 bg-white/88 px-2.5 py-2 shadow-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Cash</div>
-              <div className="mt-1 text-sm font-semibold text-slate-950">{formatRon(cashTotal)}</div>
-            </div>
-            <div className="rounded-xl border border-white/70 bg-white/88 px-2.5 py-2 shadow-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Card</div>
-              <div className="mt-1 text-sm font-semibold text-slate-950">{formatRon(cardTotal)}</div>
-            </div>
-            <div className="rounded-xl border border-white/70 bg-white/88 px-2.5 py-2 shadow-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Versiune</div>
-              <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                {appVersion}
-              </div>
-            </div>
+          <div className="shrink-0 border-l border-[#d8e0e7] pl-5 text-right">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400">Actualizat</div>
+            <div className="mt-0.5 text-sm font-semibold text-[#16876f]">{lastUpdatedLabel}</div>
           </div>
         </div>
       </div>

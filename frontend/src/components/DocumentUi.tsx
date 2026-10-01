@@ -110,13 +110,13 @@ export function DocumentPageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-[#dce3e8] bg-[radial-gradient(circle_at_top_right,rgba(89,163,176,0.13),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f1f6f7_100%)] px-3.5 py-3 shadow-[0_12px_30px_rgba(37,58,70,0.07)] md:px-4 md:py-3.5">
+    <div className="rounded border border-[#d8e0e7] bg-white px-4 py-3 shadow-sm md:px-5 md:py-3.5">
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="inline-flex rounded-full border border-[#d7e4e7] bg-[#f2f8f8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#3d6875] shadow-sm shadow-slate-900/[0.02]">
             {badge}
           </div>
-          <h1 className="mt-1.5 text-[23px] font-semibold tracking-[-0.02em] text-[#294b5a]">{title}</h1>
+          <h1 className="mt-1.5 text-[22px] font-semibold tracking-[-0.015em] text-[#243342]">{title}</h1>
           {subtitle ? <p className="mt-1 max-w-4xl text-[13px] leading-5 text-slate-500">{subtitle}</p> : null}
         </div>
 

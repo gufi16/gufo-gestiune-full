@@ -1162,7 +1162,9 @@ export default function GufoAiWidget() {
                 pointerEvents: "auto",
               }}
             >
-              <GufoAiAvatar size={46} thinking={loading} mode={loading ? "thinking" : open ? "active" : "idle"} className="shrink-0" />
+              <span className="flex h-10 w-10 items-center justify-center border border-[#526373] bg-[#2b3844] text-[11px] font-bold tracking-[0.08em] text-[#b9e2e8] shadow-sm">
+                AI
+              </span>
             </button>
           </div>
         </>
