@@ -178,7 +178,7 @@ router.get("/api/v1/dashboard", requireAuth, async (req: AuthedRequest, res: Res
           )
         GROUP BY p.name
         ORDER BY qty DESC
-        LIMIT 5
+        LIMIT 100
       `),
       prisma.stockBalance.findMany({
         where: {

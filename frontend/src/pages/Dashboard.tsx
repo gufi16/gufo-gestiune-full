@@ -438,6 +438,7 @@ export default function Dashboard() {
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState("")
   const [receiptsOpen, setReceiptsOpen] = useState(false)
+  const [topProductsOpen, setTopProductsOpen] = useState(false)
 
   const [salesTotal, setSalesTotal] = useState(0)
   const [receiptsCount, setReceiptsCount] = useState(0)
@@ -628,7 +629,7 @@ export default function Dashboard() {
   const paymentTotal = cashTotal + cardTotal
   const cashShare = paymentTotal > 0 ? (cashTotal / paymentTotal) * 100 : 0
   const cardShare = paymentTotal > 0 ? (cardTotal / paymentTotal) * 100 : 0
-  const totalTopProfit = topProducts.reduce((acc, item) => acc + item.profit, 0)
+  const totalTopProfit = topProducts.slice(0, 5).reduce((acc, item) => acc + item.profit, 0)
   const lastUpdatedLabel = updatedAt ? formatRelativeTime(updatedAt) : "nesincronizat"
   const rangeLabel = formatRangeLabel(dateFrom, dateTo)
   const scopeLabel = activeLocationId ? "Locatie selectata" : "Toate locatiile"
@@ -904,14 +905,44 @@ export default function Dashboard() {
         </div>
       ) : null}
 
+      {topProductsOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[82vh] w-full max-w-4xl flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <div className="text-lg font-bold text-slate-900">Top produse vândute</div>
+                <div className="mt-1 text-sm text-slate-500">Produse reale din intervalul selectat.</div>
+              </div>
+              <button type="button" onClick={() => setTopProductsOpen(false)} className="border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Închide</button>
+            </div>
+            <div className="min-h-0 overflow-auto p-5">
+              <table className="w-full text-left text-sm">
+                <thead><tr><th className="px-3 py-2">#</th><th className="px-3 py-2">Produs</th><th className="px-3 py-2 text-right">Cantitate</th><th className="px-3 py-2 text-right">Profit</th></tr></thead>
+                <tbody>
+                  {topProducts.map((item, index) => (
+                    <tr key={`all-${item.name}-${index}`}>
+                      <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                      <td className="px-3 py-2 font-semibold text-slate-800">{item.name}</td>
+                      <td className="px-3 py-2 text-right font-medium text-slate-700">{formatQtyRo(item.qty || 0)}</td>
+                      <td className={"px-3 py-2 text-right font-semibold " + (item.profit > 0 ? "text-emerald-700" : "text-rose-700")}>{formatRon(item.profit)}</td>
+                    </tr>
+                  ))}
+                  {!topProducts.length ? <tr><td colSpan={4} className="px-3 py-8 text-center text-slate-500">Nu există produse vândute în intervalul selectat.</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="dashboard-secondary hidden gap-3 xl:grid xl:grid-cols-3">
       <div className="contents">
         <SectionCard
           title="Top produse"
           action={
-            <div className="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#B66A00]">
-              top 5
-            </div>
+            <button type="button" onClick={() => setTopProductsOpen(true)} className="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#B66A00] hover:bg-[#ffe5b6]">
+              Vezi toate
+            </button>
           }
         >
           <div className="space-y-2.5">
@@ -922,7 +953,7 @@ export default function Dashboard() {
                 Nu exista produse vandute in intervalul selectat.
               </div>
             ) : (
-              topProducts.map((item, index) => (
+              topProducts.slice(0, 4).map((item, index) => (
                 <div
                   key={`${item.name}-${index}`}
                   className={[
