@@ -78,6 +78,10 @@ type CreateClientPayload = {
   cui?: string
   regNo?: string
   address?: string
+  city?: string
+  county?: string
+  country?: string
+  postalCode?: string
   email?: string
   phone?: string
   contactName?: string
@@ -286,6 +290,7 @@ export default function ControlPanelClients() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [cuiLookupBusy, setCuiLookupBusy] = useState(false)
   const [ownerEmail, setOwnerEmail] = useState("")
   const [createdCredentials, setCreatedCredentials] = useState<{ clientName: string; email: string; password: string; portalUrl?: string | null } | null>(null)
   const [form, setForm] = useState<CreateClientPayload>({
@@ -294,6 +299,10 @@ export default function ControlPanelClients() {
     cui: "",
     regNo: "",
     address: "",
+    city: "",
+    county: "",
+    country: "RO",
+    postalCode: "",
     email: "",
     phone: "",
     contactName: "",
@@ -413,6 +422,10 @@ export default function ControlPanelClients() {
         cui: "",
         regNo: "",
         address: "",
+        city: "",
+        county: "",
+        country: "RO",
+        postalCode: "",
         email: "",
         phone: "",
         contactName: "",
@@ -429,6 +442,19 @@ export default function ControlPanelClients() {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function lookupClientCui() {
+    if (!form.cui?.trim()) return setFormError("Introdu mai intai CUI-ul.")
+    try {
+      setCuiLookupBusy(true)
+      setFormError(null)
+      const data = await api<any>(`/api/v1/company/cui-lookup?cui=${encodeURIComponent(form.cui)}`)
+      if (!data?.company) throw new Error(data?.error || "Nu am gasit firma dupa CUI.")
+      const company = data.company
+      setForm((previous) => ({ ...previous, companyName: company.name || previous.companyName, cui: company.cui || previous.cui, regNo: company.regNo || previous.regNo, address: company.address || previous.address, city: company.city || previous.city, county: company.county || previous.county, country: company.country || previous.country, postalCode: company.postalCode || previous.postalCode }))
+      setMessage("Datele firmei au fost preluate dupa CUI.")
+    } catch (err: any) { setFormError(err?.message || "Nu am putut prelua firma dupa CUI.") } finally { setCuiLookupBusy(false) }
   }
 
   function handleAddCompany(clientId: string) {
@@ -685,13 +711,16 @@ export default function ControlPanelClients() {
                   ].map(([field, label, placeholder]) => (
                     <label key={field} className="block">
                       <div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
-                      <input
-                        type={field === "password" ? "password" : "text"}
-                        value={(form as any)[field] || ""}
-                        onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={placeholder}
-                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]"
-                      />
+                      <div className={field === "cui" ? "flex" : ""}>
+                        <input
+                          type={field === "password" ? "password" : "text"}
+                          value={(form as any)[field] || ""}
+                          onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                          placeholder={placeholder}
+                          className={`h-11 min-w-0 ${field === "cui" ? "flex-1 rounded-l-2xl" : "w-full rounded-2xl"} border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]`}
+                        />
+                        {field === "cui" ? <button type="button" onClick={() => void lookupClientCui()} disabled={cuiLookupBusy} className="border border-l-0 border-slate-200 bg-slate-100 px-3 text-xs font-bold text-[#17324D] disabled:opacity-50">{cuiLookupBusy ? "Caut..." : "Preia"}</button> : null}
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -704,6 +733,9 @@ export default function ControlPanelClients() {
                     className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]"
                   />
                 </label>
+                <div className="mt-3 grid gap-3 md:grid-cols-4">
+                  {([['city', 'Localitate'], ['county', 'Județ'], ['country', 'Țară'], ['postalCode', 'Cod poștal']] as Array<[keyof CreateClientPayload, string]>).map(([field, label]) => <label key={field} className="block"><div className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div><input value={String(form[field] || "")} onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))} className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" /></label>)}
+                </div>
               </section>
 
               <section className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
