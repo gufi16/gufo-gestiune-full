@@ -1021,6 +1021,18 @@ table td {
 }
 
 @media (min-width: 1280px) {
+  .erp-topbar--dashboard .erp-workspace-title {
+    display: none !important;
+  }
+
+  .erp-topbar--dashboard .erp-company-context {
+    margin-left: 0 !important;
+  }
+
+  .erp-topbar--dashboard .erp-topbar-desktop > div:first-child {
+    gap: 0.65rem !important;
+  }
+
   .erp-dashboard .dashboard-sales-panel {
     display: flex !important;
     padding: 1.15rem 1.3rem !important;
