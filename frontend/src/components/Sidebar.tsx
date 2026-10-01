@@ -165,13 +165,10 @@ function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () 
 function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[]; mobile?: boolean; onCloseMobile?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-[#292a31] text-slate-100">
-      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-        <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-9 w-9 object-contain" />
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
-          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace operațional</div>
-        </div>
-        {mobile ? <button type="button" onClick={onCloseMobile} className="inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
+      <div className="relative flex flex-col items-center border-b border-white/10 px-5 py-4 text-center">
+        <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-11 w-11 object-contain" />
+        <div className="mt-2 text-sm font-bold tracking-[0.08em] text-white">GUFO BACKOFFICE</div>
+        {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">

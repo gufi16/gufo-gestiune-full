@@ -185,7 +185,7 @@ router.get("/api/v1/dashboard", requireAuth, async (req: AuthedRequest, res: Res
           tenantId,
           companyId,
           ...buildLocationWhere(locationId),
-          qty: { lte: 5 },
+          qty: { lte: 0 },
         },
         include: {
           product: true,

@@ -529,7 +529,7 @@ export default function Dashboard() {
       const items = Array.isArray(data.items) ? data.items : []
 
       const sorted = [...items]
-        .filter((item) => Number(selectedLocationId ? item.qty : item.totalQty || 0) >= 0)
+        .filter((item) => Number(selectedLocationId ? item.qty : item.totalQty || 0) <= 0)
         .sort((a, b) => Number(selectedLocationId ? a.qty : a.totalQty || 0) - Number(selectedLocationId ? b.qty : b.totalQty || 0))
         .slice(0, 6)
 

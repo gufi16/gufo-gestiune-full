@@ -513,8 +513,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
         <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
             <div className="erp-workspace-title hidden shrink-0 border-r border-white/10 pr-5 2xl:block">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Gufo ERP</div>
-              <div className="mt-0.5 text-sm font-semibold text-white">{currentWorkspaceTitle}</div>
+              <div className="text-sm font-semibold text-[#17324D]">{currentWorkspaceTitle}</div>
             </div>
             {companyChoices.length > 1 ? (
               <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
