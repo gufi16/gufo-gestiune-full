@@ -64,37 +64,55 @@ export function drawReferenceInvoicePdf(doc: PDFKit.PDFDocument, input: {
     ].filter(Boolean) as Array<{ value: string; bold: boolean }>
     let y = margin + 3
     entries.forEach((entry) => {
-      doc.font(entry.bold ? fonts.bold : fonts.regular).fontSize(entry.bold ? 10 : 8.8).fillColor(dark).text(entry.value, x, y, { width: leftW - 4, align })
-      y += entry.bold ? 12 : lineHeight
+      const size = entry.bold ? 10 : 8.8
+      doc.font(entry.bold ? fonts.bold : fonts.regular).fontSize(size).fillColor(dark)
+      const height = doc.heightOfString(entry.value, { width: leftW - 4, align })
+      doc.text(entry.value, x, y, { width: leftW - 4, align })
+      y += Math.max(entry.bold ? 12 : lineHeight, height + 2)
     })
     return y
   }
 
-  drawParty("Furnizor:", input.supplier, margin, "left")
-  drawParty("Cumparator:", input.customer, rightX + 4, "left")
+  const supplierEnd = drawParty("Furnizor:", input.supplier, margin, "left")
+  const customerEnd = drawParty("Cumparator:", input.customer, rightX + 4, "left")
   doc.font(fonts.bold).fontSize(28).fillColor(dark).text("FACTURA", centerX, margin + 16, { width: centerW, align: "center" })
-  doc.font(fonts.regular).fontSize(10.5).text(`Seria: ${pdfText(input.number)} din ${new Date(input.issueDate).toLocaleDateString("ro-RO")}`, centerX, margin + 54, { width: centerW, align: "center" })
-  doc.font(fonts.regular).fontSize(10.5).text(`Termen de plata: ${input.dueDate ? new Date(input.dueDate).toLocaleDateString("ro-RO") : "-"}`, centerX, margin + 72, { width: centerW, align: "center" })
-  doc.font(fonts.regular).fontSize(10.5).text(`Cota de TVA: ${pdfFmt(input.vatRate || 0, 0)}%`, centerX, 140, { width: centerW, align: "center" })
+  const seriesText = `Seria: ${pdfText(input.number)} din ${new Date(input.issueDate).toLocaleDateString("ro-RO")}`
+  const dueText = `Termen de plata: ${input.dueDate ? new Date(input.dueDate).toLocaleDateString("ro-RO") : "-"}`
+  const headerTextY = margin + 54
+  doc.font(fonts.regular).fontSize(10.5)
+  const seriesHeight = doc.heightOfString(seriesText, { width: centerW, align: "center" })
+  doc.text(seriesText, centerX, headerTextY, { width: centerW, align: "center" })
+  const dueY = headerTextY + seriesHeight + 3
+  const dueHeight = doc.heightOfString(dueText, { width: centerW, align: "center" })
+  doc.text(dueText, centerX, dueY, { width: centerW, align: "center" })
+  const vatY = Math.max(140, dueY + dueHeight + 5)
+  doc.text(`Cota de TVA: ${pdfFmt(input.vatRate || 0, 0)}%`, centerX, vatY, { width: centerW, align: "center" })
 
-  let y = 167
+  let y = Math.max(167, supplierEnd + 10, customerEnd + 10, vatY + lineHeight + 10)
   const cols = [238, 59, 60, 59, 60, 59]
   const headers = ["Produs", "Cantitate", "Pret unitar", "Discount", `Valoare ${input.currency}, fara TVA`, "Valoare TVA"]
+  const cellTextHeight = (value: string, colWidth: number, bold = false, size = 8.5, align: "left" | "center" | "right" = "left") => {
+    doc.font(bold ? fonts.bold : fonts.regular).fontSize(size)
+    return doc.heightOfString(value, { width: colWidth - 8, align })
+  }
   const drawCell = (x: number, top: number, colWidth: number, height: number, value: string, align: "left" | "center" | "right", bold = false, size = 8.5) => {
     doc.lineWidth(0.55).strokeColor(line).rect(x, top, colWidth, height).stroke()
-    doc.font(bold ? fonts.bold : fonts.regular).fontSize(size).fillColor(dark).text(value, x + 4, top + 7, { width: colWidth - 8, align })
+    const textHeight = cellTextHeight(value, colWidth, bold, size, align)
+    const textY = top + Math.max(4, (height - textHeight) / 2)
+    doc.font(bold ? fonts.bold : fonts.regular).fontSize(size).fillColor(dark).text(value, x + 4, textY, { width: colWidth - 8, align })
   }
+  const headerHeight = Math.max(32, ...headers.map((header, index) => cellTextHeight(header, cols[index], true, 8.5, index === 0 ? "left" : "center") + 10))
   let x = margin
-  headers.forEach((header, index) => { drawCell(x, y, cols[index], 32, header, index === 0 ? "left" : "center", true, 8.5); x += cols[index] })
-  y += 32
+  headers.forEach((header, index) => { drawCell(x, y, cols[index], headerHeight, header, index === 0 ? "left" : "center", true, 8.5); x += cols[index] })
+  y += headerHeight
   input.lines.forEach((item) => {
     const itemName = pdfText(item.name)
-    const rowHeight = Math.max(20, doc.heightOfString(itemName, { width: cols[0] - 8 }) + 8)
+    const values = [itemName, pdfFmt(item.qty, 0), pdfFmt(item.unitPrice), pdfNum(item.discount) > 0 ? pdfFmt(item.discount) : "-", pdfFmt(item.net), pdfFmt(item.vat)]
+    const rowHeight = Math.max(20, ...values.map((value, index) => cellTextHeight(value, cols[index], index === 0, 8.5, index === 0 ? "left" : "right") + 10))
     if (y + rowHeight + 160 > doc.page.height - margin) {
       doc.addPage({ size: "A4", margin })
       y = margin
     }
-    const values = [itemName, pdfFmt(item.qty, 0), pdfFmt(item.unitPrice), pdfNum(item.discount) > 0 ? pdfFmt(item.discount) : "-", pdfFmt(item.net), pdfFmt(item.vat)]
     x = margin
     values.forEach((value, index) => { drawCell(x, y, cols[index], rowHeight, value, index === 0 ? "left" : "right", index === 0, 8.5); x += cols[index] })
     y += rowHeight
