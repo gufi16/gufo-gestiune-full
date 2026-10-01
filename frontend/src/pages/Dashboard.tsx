@@ -232,7 +232,7 @@ function SalesChart({
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number>(data.length ? data.length - 1 : 0)
   const hovered = data[Math.min(hoveredIndex, Math.max(data.length - 1, 0))]
-  const hasData = data.some((item) => item.value > 0)
+  const hasData = data.length > 0
   const chartData = data.map((item) => ({
     ...item,
     amount: Number(item.value || 0),
@@ -267,12 +267,6 @@ function SalesChart({
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden border border-[#e6ebef] bg-white px-3 py-3">
-        {!hasData && !loading ? (
-          <div className="border border-dashed border-[#d8cbb9] bg-[#f8f3ea] px-4 py-4 text-center text-sm text-slate-500">
-            Nu exista vanzari pentru intervalul selectat.
-          </div>
-        ) : null}
-
         {hasData ? (
           <>
             <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-500">

@@ -334,6 +334,10 @@ table td {
 
 /* Desktop dashboard is an operational canvas, not a scrolling landing page. */
 @media (min-width: 1280px) and (min-height: 760px) {
+  .erp-dashboard-shell .erp-dashboard {
+    height: 100%;
+  }
+
   .erp-dashboard {
     display: grid;
     height: calc(100vh - 5.1rem);
