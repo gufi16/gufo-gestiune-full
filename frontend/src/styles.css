@@ -11,22 +11,22 @@
   color-scheme: light;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   font-size: 14px;
-  --erp-ink: #1f2933;
-  --erp-ink-soft: #2b3844;
-  --erp-canvas: #f3f5f7;
+  --erp-ink: #292a31;
+  --erp-ink-soft: #34353d;
+  --erp-canvas: #f1f2f5;
   --erp-surface: #ffffff;
   --erp-muted: #667687;
   --erp-line: #d8e0e7;
   --erp-line-strong: #c5d0da;
-  --erp-primary: #176b87;
-  --erp-primary-dark: #125269;
+  --erp-primary: #f39c12;
+  --erp-primary-dark: #17324d;
   --erp-teal: #16876f;
   --erp-warning: #b7791f;
   --erp-danger: #b83d4b;
 }
 
 body {
-  @apply bg-[#f3f5f7] text-slate-800 antialiased;
+  @apply bg-[#f1f2f5] text-slate-800 antialiased;
   line-height: 1.42;
 }
 
@@ -186,28 +186,28 @@ table td {
 
 /* Header controls belong to the header, not to a second white application. */
 .erp-topbar {
-  background: var(--erp-ink) !important;
-  border-color: #344352 !important;
+  background: var(--erp-ink-soft) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 .erp-topbar :is(input, select) {
   min-height: 2rem;
-  border: 1px solid #526373 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 3px !important;
-  background: #2b3844 !important;
+  background: #27282f !important;
   color: #f4f7f9 !important;
   box-shadow: none !important;
 }
 
 .erp-topbar :is(input, select):focus {
-  border-color: #77b6c9 !important;
-  outline: 2px solid rgba(119, 182, 201, 0.22) !important;
+  border-color: #f39c12 !important;
+  outline: 2px solid rgba(243, 156, 18, 0.18) !important;
 }
 
 .erp-topbar [class*="bg-white"],
 .erp-topbar [class*="bg-[#EEF4FB]"] {
-  background-color: #2b3844 !important;
+  background-color: #27282f !important;
 }
 
 .erp-topbar [class*="text-[#17324D]"] {
@@ -216,7 +216,7 @@ table td {
 
 .erp-topbar [class*="border-slate-200"],
 .erp-topbar [class*="border-slate-100"] {
-  border-color: #526373 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 .erp-topbar [class*="rounded-"] {
@@ -228,11 +228,11 @@ table td {
 }
 
 .erp-sidebar [class*="bg-[#526252]"] {
-  background-color: #344352 !important;
+  background-color: #3b3d47 !important;
 }
 
 .erp-sidebar [class*="bg-[#f1b978]"] {
-  background-color: #35b39a !important;
+  background-color: #f39c12 !important;
 }
 
 @media (min-width: 1024px) {

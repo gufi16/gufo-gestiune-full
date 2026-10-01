@@ -60,23 +60,8 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const dashboardDateFrom = searchParams.get("dateFrom") || defaultDateFrom
   const dashboardDateTo = searchParams.get("dateTo") || defaultDateTo
 
-  const notifications = [
-    {
-      id: "release",
-      title: "Actualizare ERP",
-      description: "Sunt disponibile modificari noi in platforma.",
-    },
-    {
-      id: "sync",
-      title: "Sincronizare finalizata",
-      description: "Datele au fost actualizate.",
-    },
-    {
-      id: "support",
-      title: "Notificare",
-      description: "Verifica ultimele alerte disponibile.",
-    },
-  ]
+  // Notifications remain empty until they are backed by a real server-side feed.
+  const notifications: Array<{ id: string; title: string; description: string }> = []
 
   const userInitials = useMemo(() => {
     const source = (userLabel || "U").trim()
@@ -384,8 +369,8 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   }
 
   return (
-    <header className="erp-topbar sticky top-0 z-30 border-b border-[#24323c] bg-[linear-gradient(135deg,#344852_0%,#29323c_100%)] text-white shadow-[0_6px_20px_rgba(32,48,58,0.18)] backdrop-blur">
-      <div className="px-3 py-2.5 md:px-3.5 md:py-2 xl:px-3.5">
+    <header className="erp-topbar sticky top-0 z-30 border-b border-black/20 bg-[#34353d] text-white shadow-sm">
+      <div className="px-3 md:px-5 xl:px-6">
         <div className="flex items-center gap-2.5 md:hidden">
           <button
             type="button"
@@ -512,7 +497,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
           ) : null}
         </div>
 
-        <div className="mt-2 hidden items-center justify-between gap-2 xl:flex">
+        <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
             {companyChoices.length > 1 ? (
               <div className="flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
@@ -657,9 +642,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
                 className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-[#6C7A89] shadow-sm transition hover:border-slate-300 hover:text-[#17324D]"
               >
                 <Bell size={18} />
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white">
-                  {notifications.length}
-                </span>
+                {notifications.length ? <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f39c12] px-1 text-[10px] font-bold text-[#292a31]">{notifications.length}</span> : null}
               </button>
 
               {notificationsOpen ? (
@@ -672,6 +655,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
                         <div className="mt-1 text-xs leading-5 text-slate-500">{item.description}</div>
                       </div>
                     ))}
+                    {!notifications.length ? <div className="px-1 py-5 text-center text-xs text-slate-500">Nu exista notificari noi.</div> : null}
                   </div>
                 </div>
               ) : null}

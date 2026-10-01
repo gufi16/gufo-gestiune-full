@@ -24,7 +24,6 @@ import {
   Truck,
   UtensilsCrossed,
   Warehouse,
-  X,
 } from "lucide-react"
 import { hasModule } from "../lib/modules"
 
@@ -258,32 +257,16 @@ function SidebarAccordion({
 
 function SidebarContent({
   visibleSections,
-  activeDesktopSection,
-  activeDesktopTop,
-  onActiveDesktopSectionChange,
   mobile = false,
   onCloseMobile,
 }: {
   visibleSections: SidebarSection[]
-  activeDesktopSection?: string | null
-  activeDesktopTop?: number
-  onActiveDesktopSectionChange?: (section: string | null, anchorTop?: number) => void
   mobile?: boolean
   onCloseMobile?: () => void
 }) {
-  const activeDesktopItems =
-    !mobile && activeDesktopSection
-      ? visibleSections.find((section) => section.title === activeDesktopSection)?.items || []
-      : []
-  const estimatedFlyoutHeight = 88 + activeDesktopItems.length * 52
-  const flyoutTop = Math.max(
-    16,
-    Math.min(activeDesktopTop || 96, Math.max(16, window.innerHeight - estimatedFlyoutHeight - 16))
-  )
-
   return (
-    <div className={clsx("relative flex h-full w-full bg-[#29342d]", mobile ? "overflow-hidden" : "overflow-visible")}>
-      <div className="flex h-full w-64 shrink-0 flex-col border-r border-black/20 bg-[#29342d]">
+    <div className={clsx("relative flex h-full w-full bg-[#292a31]", mobile ? "overflow-hidden" : "overflow-visible")}>
+      <div className="flex h-full w-64 shrink-0 flex-col border-r border-black/30 bg-[#292a31]">
         <div className="border-b border-white/10 px-5 pb-5 pt-5">
           {mobile ? (
             <div className="mb-2 flex items-center justify-between">
@@ -319,17 +302,7 @@ function SidebarContent({
                     title={section.title}
                     icon={section.icon}
                     items={section.items}
-                    flyout={!mobile}
-                    forceOpen={!mobile && activeDesktopSection === section.title}
-                    onToggle={
-                      mobile
-                        ? undefined
-                        : (anchorTop) =>
-                            onActiveDesktopSectionChange?.(
-                              activeDesktopSection === section.title ? null : section.title,
-                              anchorTop
-                            )
-                    }
+                    flyout={false}
                     onNavigate={mobile ? onCloseMobile : undefined}
                   />
                 </div>
@@ -356,40 +329,6 @@ function SidebarContent({
         </div>
       </div>
 
-      {!mobile && activeDesktopSection ? (
-        <div
-          className="absolute left-[calc(100%+12px)] z-50 hidden w-[292px] overflow-hidden rounded-2xl border border-black/20 bg-[#354238] shadow-[0_20px_52px_rgba(30,40,33,0.28)] xl:flex xl:max-h-[calc(100vh-32px)] xl:flex-col"
-          style={{ top: flyoutTop }}
-        >
-          <div className="flex items-start justify-between border-b border-white/10 bg-[#354238] px-4 py-3">
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b8c6b3]">Submeniu</div>
-              <div className="mt-1 text-base font-semibold text-white">{activeDesktopSection}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onActiveDesktopSectionChange?.(null)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#b8c6b3] transition hover:bg-white/10 hover:text-white"
-              aria-label={`Inchide submeniul ${activeDesktopSection}`}
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="min-h-0 overflow-y-auto p-2">
-            <div className="space-y-1">
-              {activeDesktopItems.map((item) => (
-                <SidebarLink
-                  key={`${activeDesktopSection}-${item.label}`}
-                  item={item}
-                  nested
-                  onNavigate={() => onActiveDesktopSectionChange?.(null)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -408,13 +347,6 @@ export default function Sidebar({
       items: section.items.filter((item) => !item.module || hasModule(item.module)),
     }))
     .filter((section) => section.items.length > 0)
-  const [activeDesktopSection, setActiveDesktopSection] = useState<string | null>(null)
-  const [activeDesktopTop, setActiveDesktopTop] = useState(96)
-
-  useEffect(() => {
-    setActiveDesktopSection(null)
-  }, [location.pathname])
-
   return (
     <>
       {mobileOpen ? (
@@ -423,23 +355,17 @@ export default function Sidebar({
 
       <aside className="hidden xl:block xl:w-64 xl:shrink-0">
         <div
-          className="fixed left-0 top-0 z-40 hidden h-screen w-64 overflow-visible border-r border-black/20 bg-[#29342d] shadow-[12px_0_34px_rgba(41,52,45,0.14)] xl:flex"
+          className="fixed left-0 top-0 z-40 hidden h-screen w-64 overflow-hidden border-r border-black/30 bg-[#292a31] shadow-[8px_0_18px_rgba(15,23,42,0.12)] xl:flex"
         >
           <SidebarContent
             visibleSections={visibleSections}
-            activeDesktopSection={activeDesktopSection}
-            activeDesktopTop={activeDesktopTop}
-            onActiveDesktopSectionChange={(section, anchorTop) => {
-              if (section && typeof anchorTop === "number") setActiveDesktopTop(anchorTop)
-              setActiveDesktopSection(section)
-            }}
           />
         </div>
       </aside>
 
       <div
         className={clsx(
-          "fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-[300px] border-r border-black/20 bg-[#29342d] shadow-2xl transition-transform duration-200 xl:hidden",
+          "fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-[300px] border-r border-black/30 bg-[#292a31] shadow-2xl transition-transform duration-200 xl:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
