@@ -8,6 +8,10 @@ export type CompanyLike = {
   cui?: string | null
   regNo?: string | null
   address?: string | null
+  city?: string | null
+  county?: string | null
+  country?: string | null
+  postalCode?: string | null
   email?: string | null
   phone?: string | null
   isDefault?: boolean | null
@@ -143,6 +147,10 @@ export function serializeCompanySummary(company?: CompanyLike | null) {
     cui: company.cui,
     regNo: company.regNo,
     address: company.address,
+    city: company.city,
+    county: company.county,
+    country: company.country,
+    postalCode: company.postalCode,
     email: company.email,
     phone: company.phone,
     isDefault: company.isDefault,
@@ -171,6 +179,10 @@ export function serializePrimaryCompanyDetails(company?: CompanyLike | null) {
     phone: company.phone,
     regNo: company.regNo,
     address: company.address,
+    city: company.city,
+    county: company.county,
+    country: company.country,
+    postalCode: company.postalCode,
   }
 }
 

@@ -316,8 +316,25 @@ const AddTenantCompanySchema = z.object({
   cui: z.string().optional(),
   regNo: z.string().optional(),
   address: z.string().optional(),
+  city: z.string().optional(),
+  county: z.string().optional(),
+  country: z.string().optional(),
+  postalCode: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
+})
+
+const UpdateTenantCompanySchema = z.object({
+  name: z.string().trim().min(2),
+  cui: z.string().trim().optional(),
+  regNo: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  county: z.string().trim().optional(),
+  country: z.string().trim().optional(),
+  postalCode: z.string().trim().optional(),
+  email: z.string().trim().email().optional().or(z.literal("")),
+  phone: z.string().trim().optional(),
 })
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -1831,9 +1848,12 @@ router.post("/api/v1/admin/clients/:id/companies", requireAuth, requireOwner, as
       cui: parsed.data.cui?.trim() || null,
       regNo: parsed.data.regNo?.trim() || null,
       address: parsed.data.address?.trim() || null,
+      city: parsed.data.city?.trim() || null,
+      county: parsed.data.county?.trim() || null,
+      country: parsed.data.country?.trim() || "RO",
+      postalCode: parsed.data.postalCode?.trim() || null,
       email: parsed.data.email?.trim() || null,
       phone: parsed.data.phone?.trim() || null,
-      country: "RO",
     },
   })
 
@@ -1959,6 +1979,47 @@ router.post("/api/v1/admin/clients/:id/users", requireAuth, requireOwner, async 
       error: getErrorMessage(error, "Nu am putut crea utilizatorul"),
     })
   }
+})
+
+router.patch("/api/v1/admin/clients/:id/companies/:companyId", requireAuth, requireOwner, async (req: AuthedRequest, res) => {
+  const parsed = UpdateTenantCompanySchema.safeParse(req.body || {})
+  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() })
+
+  const company = await prisma.company.findFirst({
+    where: { id: req.params.companyId, tenantId: req.params.id },
+  })
+  if (!company) return res.status(404).json({ ok: false, error: "Firma nu aparține acestui client." })
+
+  const data = parsed.data
+  const updated = await prisma.company.update({
+    where: { id: company.id },
+    data: {
+      name: data.name,
+      cui: data.cui || null,
+      regNo: data.regNo || null,
+      address: data.address || null,
+      city: data.city || null,
+      county: data.county || null,
+      country: data.country || "RO",
+      postalCode: data.postalCode || null,
+      email: data.email || null,
+      phone: data.phone || null,
+    },
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      tenantId: req.params.id,
+      actorType: "OWNER",
+      actorId: req.auth?.userId,
+      action: "TENANT_COMPANY_UPDATED",
+      entityType: "Company",
+      entityId: updated.id,
+      payload: { companyName: updated.name, companyCode: updated.code },
+    },
+  })
+
+  return res.json({ ok: true, item: serializePrimaryCompanyDetails(updated) })
 })
 
 router.patch("/api/v1/admin/users/:userId", requireAuth, requireOwner, async (req: AuthedRequest, res) => {

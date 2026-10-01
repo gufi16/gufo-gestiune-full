@@ -538,6 +538,8 @@ export default function ControlPanelClientDetails() {
   const [userError, setUserError] = useState<string | null>(null)
   const [companyError, setCompanyError] = useState<string | null>(null)
   const [creatingCompany, setCreatingCompany] = useState(false)
+  const [companyLookupBusy, setCompanyLookupBusy] = useState(false)
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null)
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [licenseModalOpen, setLicenseModalOpen] = useState(false)
@@ -567,6 +569,10 @@ export default function ControlPanelClientDetails() {
     cui: "",
     regNo: "",
     address: "",
+    city: "",
+    county: "",
+    country: "RO",
+    postalCode: "",
     email: "",
     phone: "",
   })
@@ -886,25 +892,37 @@ export default function ControlPanelClientDetails() {
       setCreatingCompany(true)
       setCompanyError(null)
       setError(null)
-      await api<CreateCompanyResponse>(`/api/v1/admin/clients/${id}/companies`, {
-        method: "POST",
-        body: JSON.stringify(companyForm),
-      })
+      if (editingCompanyId) {
+        await api(`/api/v1/admin/clients/${id}/companies/${editingCompanyId}`, {
+          method: "PATCH",
+          body: JSON.stringify(companyForm),
+        })
+      } else {
+        await api<CreateCompanyResponse>(`/api/v1/admin/clients/${id}/companies`, {
+          method: "POST",
+          body: JSON.stringify(companyForm),
+        })
+      }
       setCompanyForm({
         name: "",
         cui: "",
         regNo: "",
         address: "",
+        city: "",
+        county: "",
+        country: "RO",
+        postalCode: "",
         email: "",
         phone: "",
       })
+      setEditingCompanyId(null)
       setShowCompanyForm(false)
       if (searchParams.get("adaugaFirma") === "1") {
         const nextParams = new URLSearchParams(searchParams)
         nextParams.delete("adaugaFirma")
         setSearchParams(nextParams, { replace: true })
       }
-      setMessage("Firma suplimentara a fost adaugata.")
+      setMessage(editingCompanyId ? "Datele firmei au fost actualizate." : "Firma suplimentara a fost adaugata.")
       await load()
     } catch (err: any) {
       setCompanyError(err?.message || "Nu am putut adauga firma.")
@@ -1303,6 +1321,8 @@ export default function ControlPanelClientDetails() {
   ]
 
   function openCompanyForm() {
+    setEditingCompanyId(null)
+    setCompanyForm({ name: "", cui: "", regNo: "", address: "", city: "", county: "", country: "RO", postalCode: "", email: "", phone: "" })
     setShowCompanyForm(true)
     window.setTimeout(() => {
       companySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -1371,6 +1391,43 @@ export default function ControlPanelClientDetails() {
     setEditingLocationId(null)
     setLocationError(null)
     setLocationForm(emptyLocationForm())
+  }
+
+  function openCompanyEditor(company: any) {
+    setEditingCompanyId(company.id)
+    setCompanyForm({
+      name: company.name || "",
+      cui: company.cui || "",
+      regNo: company.regNo || "",
+      address: company.address || "",
+      city: company.city || "",
+      county: company.county || "",
+      country: company.country || "RO",
+      postalCode: company.postalCode || "",
+      email: company.email || "",
+      phone: company.phone || "",
+    })
+    setCompanyError(null)
+    setShowCompanyForm(true)
+  }
+
+  async function lookupCompanyCui() {
+    if (!companyForm.cui.trim()) {
+      setCompanyError("Introdu mai întâi CUI-ul.")
+      return
+    }
+    try {
+      setCompanyLookupBusy(true)
+      setCompanyError(null)
+      const data = await api<any>(`/api/v1/company/cui-lookup?cui=${encodeURIComponent(companyForm.cui)}`)
+      if (!data?.company) throw new Error(data?.error || "Nu am găsit firma după CUI.")
+      const company = data.company
+      setCompanyForm((previous) => ({ ...previous, name: company.name || previous.name, cui: company.cui || previous.cui, regNo: company.regNo || previous.regNo, address: company.address || previous.address, city: company.city || previous.city, county: company.county || previous.county, country: company.country || previous.country, postalCode: company.postalCode || previous.postalCode }))
+    } catch (err: any) {
+      setCompanyError(err?.message || "Nu am putut prelua firma după CUI.")
+    } finally {
+      setCompanyLookupBusy(false)
+    }
   }
 
   const isOverview = activeTab === "overview"
@@ -2393,6 +2450,12 @@ export default function ControlPanelClientDetails() {
               ))}
             </div>
 
+            <div className="mt-4 flex justify-end">
+              <button type="button" onClick={() => setOverviewPanelOpen("companies")} className="inline-flex items-center gap-2 rounded-2xl bg-[#17324D] px-4 py-2.5 text-sm font-semibold text-white">
+                <Pencil size={15} /> Editeaza datele firmei
+              </button>
+            </div>
+
             <div className="mt-5 grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -2485,6 +2548,10 @@ export default function ControlPanelClientDetails() {
 
             {showCompanyForm ? (
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-[#17324D]">{editingCompanyId ? "Editeaza firma" : "Adauga firma"}</div>
+                  {editingCompanyId ? <div className="text-xs text-slate-500">Actualizezi datele existente ale firmei.</div> : null}
+                </div>
                 <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                   <input
                     value={companyForm.name}
@@ -2492,12 +2559,10 @@ export default function ControlPanelClientDetails() {
                     placeholder="Nume firma"
                     className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]"
                   />
-                  <input
-                    value={companyForm.cui}
-                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, cui: e.target.value }))}
-                    placeholder="CUI"
-                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]"
-                  />
+                  <div className="flex">
+                    <input value={companyForm.cui} onChange={(e) => setCompanyForm((prev) => ({ ...prev, cui: e.target.value }))} placeholder="CUI" className="h-10 min-w-0 flex-1 rounded-l-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" />
+                    <button type="button" onClick={() => void lookupCompanyCui()} disabled={companyLookupBusy} className="rounded-r-2xl border border-l-0 border-slate-200 bg-white px-3 text-xs font-bold text-[#17324D] disabled:opacity-50">{companyLookupBusy ? "Caut..." : "Preia"}</button>
+                  </div>
                   <input
                     value={companyForm.regNo}
                     onChange={(e) => setCompanyForm((prev) => ({ ...prev, regNo: e.target.value }))}
@@ -2522,12 +2587,16 @@ export default function ControlPanelClientDetails() {
                     placeholder="Adresa"
                     className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]"
                   />
+                  <input value={companyForm.city} onChange={(e) => setCompanyForm((prev) => ({ ...prev, city: e.target.value }))} placeholder="Localitate" className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" />
+                  <input value={companyForm.county} onChange={(e) => setCompanyForm((prev) => ({ ...prev, county: e.target.value }))} placeholder="Județ" className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" />
+                  <input value={companyForm.country} onChange={(e) => setCompanyForm((prev) => ({ ...prev, country: e.target.value }))} placeholder="Țară" className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" />
+                  <input value={companyForm.postalCode} onChange={(e) => setCompanyForm((prev) => ({ ...prev, postalCode: e.target.value }))} placeholder="Cod poștal" className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#17324D]" />
                 </div>
 
                 <div className="mt-2 flex flex-wrap justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowCompanyForm(false)}
+                    onClick={() => { setShowCompanyForm(false); setEditingCompanyId(null); setCompanyError(null) }}
                     className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700"
                   >
                     Inchide
@@ -2539,24 +2608,25 @@ export default function ControlPanelClientDetails() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-[#17324D] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Save size={15} />
-                    {creatingCompany ? "Se salveaza..." : "Salveaza firma"}
+                    {creatingCompany ? "Se salveaza..." : editingCompanyId ? "Salveaza modificarile" : "Salveaza firma"}
                   </button>
                 </div>
               </div>
             ) : null}
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-              <div className="grid grid-cols-[minmax(0,1.5fr)_120px_180px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <div className="grid grid-cols-[minmax(0,1.5fr)_120px_180px_110px_90px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                 <div>Firma</div>
                 <div>CUI</div>
                 <div>Email</div>
                 <div>Status</div>
+                <div className="text-right">Actiune</div>
               </div>
               {companies.length ? (
                 companies.map((company: any) => (
                   <div
                     key={company.id}
-                    className="grid grid-cols-[minmax(0,1.5fr)_120px_180px_110px] gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-b-0"
+                    className="grid grid-cols-[minmax(0,1.5fr)_120px_180px_110px_90px] gap-3 border-b border-slate-100 px-4 py-2.5 text-sm last:border-b-0"
                   >
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-[#17324D]">{company.name}</div>
@@ -2571,6 +2641,7 @@ export default function ControlPanelClientDetails() {
                         {company.isDefault ? "Implicita" : "Activa"}
                       </span>
                     </div>
+                    <div className="text-right"><button type="button" onClick={() => openCompanyEditor(company)} className="inline-flex rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#17324D] hover:border-[#17324D]">Editeaza</button></div>
                   </div>
                 ))
               ) : (
