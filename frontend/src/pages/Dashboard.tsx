@@ -596,7 +596,7 @@ export default function Dashboard() {
       )
       setLowStock(Array.isArray(data.lowStock) ? data.lowStock : [])
       setRecentActivity(Array.isArray(data.recentActivity) ? data.recentActivity : [])
-      setUpdatedAt(String(data.updatedAt || new Date().toISOString()))
+      setUpdatedAt(typeof data.updatedAt === "string" ? data.updatedAt : "")
     } catch (error) {
       console.error("Dashboard load failed", error)
       setDashboardError("Nu am putut incarca dashboardul din backend.")
@@ -629,7 +629,7 @@ export default function Dashboard() {
   const cashShare = paymentTotal > 0 ? (cashTotal / paymentTotal) * 100 : 0
   const cardShare = paymentTotal > 0 ? (cardTotal / paymentTotal) * 100 : 0
   const totalTopProfit = topProducts.reduce((acc, item) => acc + item.profit, 0)
-  const lastUpdatedLabel = updatedAt ? formatRelativeTime(updatedAt) : "acum"
+  const lastUpdatedLabel = updatedAt ? formatRelativeTime(updatedAt) : "nesincronizat"
   const rangeLabel = formatRangeLabel(dateFrom, dateTo)
   const scopeLabel = activeLocationId ? "Locatie selectata" : "Toate locatiile"
   const terminalLabel = activeTerminalId ? "Terminal selectat" : "Toate terminalele"
