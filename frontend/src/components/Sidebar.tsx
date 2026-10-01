@@ -9,7 +9,6 @@ import {
   CalendarCheck,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
   FilePlus2,
   FileSpreadsheet,
   FileText,
@@ -29,348 +28,175 @@ import { hasModule } from "../lib/modules"
 
 const APP_VERSION = "V1.1"
 
-type SidebarItem = {
-  to?: string
+type NavItem = {
+  to: string
   label: string
   icon: any
   module?: string
 }
 
-type SidebarSection = {
-  title: string
-  icon?: any
-  collapsible?: boolean
-  items: SidebarItem[]
+type NavGroup = {
+  label: string
+  icon?: NavItem["icon"]
+  module?: string
+  items: NavItem[]
 }
 
-const sections: SidebarSection[] = [
+const navigation: NavGroup[] = [
+  { label: "PANOU", items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" }] },
   {
-    title: "Dashboard",
-    items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" }],
-  },
-  {
-    title: "Operatiuni",
+    label: "OPERARE",
     icon: FilePlus2,
-    collapsible: true,
     items: [
-      { to: "/inregistrare-document", label: "Inregistrare documente", icon: FilePlus2, module: "documents" },
+      { to: "/inregistrare-document", label: "Înregistrare documente", icon: FilePlus2, module: "documents" },
       { to: "/documente", label: "Documente", icon: FileText, module: "documents" },
     ],
   },
   {
-    title: "Stoc si productie",
+    label: "STOC ȘI PRODUCȚIE",
     icon: Warehouse,
-    collapsible: true,
     items: [
       { to: "/gestiune/stoc", label: "Stoc", icon: Warehouse, module: "inventory" },
       { to: "/gestiune/gestiuni", label: "Gestiuni", icon: Building2, module: "inventory" },
-      { to: "/gestiune/productie", label: "Productie", icon: Receipt, module: "inventory" },
+      { to: "/gestiune/productie", label: "Producție", icon: Receipt, module: "inventory" },
     ],
   },
   {
-    title: "ANAF si SPV",
+    label: "ANAF ȘI SPV",
     icon: Truck,
-    collapsible: true,
     items: [
       { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "documents" },
       { to: "/e-transport", label: "Registru e-Transport", icon: Truck, module: "documents" },
     ],
   },
   {
-    title: "Rapoarte",
+    label: "RAPOARTE",
     icon: BarChart3,
-    collapsible: true,
     items: [
       { to: "/rapoarte", label: "Rapoarte", icon: BarChart3, module: "reports" },
       { to: "/rapoarte/export-contabilitate", label: "Export contabilitate", icon: FileSpreadsheet, module: "reports" },
     ],
   },
   {
-    title: "Financiar",
+    label: "FINANCIAR",
     icon: CalendarCheck,
-    collapsible: true,
     items: [
-      { to: "/financiar/vanzari-bon", label: "Vanzari / Bon", icon: Receipt },
-      { to: "/financiar/inchideri-zilnice", label: "Inchideri zilnice", icon: CalendarCheck },
+      { to: "/financiar/vanzari-bon", label: "Vânzări / Bon", icon: Receipt },
+      { to: "/financiar/inchideri-zilnice", label: "Închideri zilnice", icon: CalendarCheck },
     ],
   },
   {
-    title: "Nomenclator",
+    label: "NOMENCLATOR",
     icon: BookOpen,
-    collapsible: true,
     items: [
       { to: "/nomenclator/produse", label: "Produse", icon: Package2, module: "nomenclature" },
       { to: "/nomenclator/categorii", label: "Categorii", icon: FolderTree, module: "nomenclature" },
       { to: "/nomenclator/subcategorii", label: "Subcategorii", icon: FolderTree, module: "nomenclature" },
       { to: "/nomenclator/departamente", label: "Departamente", icon: BookOpen, module: "nomenclature" },
-      { to: "/nomenclator/uom", label: "Unitati masura", icon: Ruler, module: "nomenclature" },
+      { to: "/nomenclator/uom", label: "Unități de măsură", icon: Ruler, module: "nomenclature" },
       { to: "/nomenclator/materii-prime", label: "Materii prime", icon: Boxes, module: "nomenclature" },
       { to: "/nomenclator/semifabricate", label: "Semifabricate", icon: Boxes, module: "nomenclature" },
       { to: "/nomenclator/meniuri", label: "Meniuri", icon: UtensilsCrossed, module: "nomenclature" },
       { to: "/nomenclator/furnizori", label: "Furnizori", icon: Building2, module: "nomenclature" },
-      { to: "/nomenclator/clienti", label: "Clienti", icon: Building2, module: "nomenclature" },
+      { to: "/nomenclator/clienti", label: "Clienți", icon: Building2, module: "nomenclature" },
     ],
   },
   {
-    title: "Setari",
+    label: "SETĂRI",
     icon: Settings,
-    collapsible: true,
     items: [
-      { to: "/setari", label: "Setari", icon: Settings, module: "settings" },
+      { to: "/setari", label: "Setări", icon: Settings, module: "settings" },
       { to: "/setari/gufo-ai", label: "Gufo AI", icon: Store, module: "settings" },
       { to: "/setari/marketplace", label: "Marketplace", icon: Store, module: "settings" },
     ],
   },
 ]
 
-function SidebarLink({ item, nested = false, onNavigate }: { item: SidebarItem; nested?: boolean; onNavigate?: () => void }) {
+function SidebarLink({ item, nested = false, onNavigate }: { item: NavItem; nested?: boolean; onNavigate?: () => void }) {
   const Icon = item.icon
-
-  if (!item.to) return null
-
   return (
     <NavLink
       to={item.to}
       onClick={onNavigate}
-      className={({ isActive }) =>
-        clsx(
-          "group relative flex items-center px-3 py-2 text-sm transition-all duration-200",
-          nested ? "rounded-lg" : "rounded-xl",
-          isActive
-            ? "bg-[#526252] font-semibold text-white shadow-sm"
-            : "font-medium text-[#d8dfd3] hover:bg-white/10 hover:text-white"
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {!nested ? <span className={clsx("mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-all duration-200", isActive ? "bg-white/15 text-[#a7c7c1]" : "text-[#aebdc3] group-hover:text-white")}><Icon size={16} /></span> : null}
-          <span className="flex-1 truncate">{item.label}</span>
-
-          <ChevronRight
-            size={14}
-            className={clsx(
-              "transition-all duration-200",
-              isActive ? "translate-x-0 text-[#a7c7c1]" : "translate-x-1 opacity-0 text-[#aebdc3] group-hover:translate-x-0 group-hover:opacity-100"
-            )}
-          />
-
-          {isActive ? <span className="absolute inset-y-2 left-0 w-0.5 bg-[#a7c7c1]" /> : null}
-        </>
+      className={({ isActive }) => clsx(
+        "group flex items-center gap-3 border-l-2 px-3 py-2 text-[13px] transition",
+        nested ? "ml-3" : "",
+        isActive
+          ? "border-[#f39c12] bg-[#3b3d47] font-semibold text-white"
+          : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white",
       )}
+    >
+      {({ isActive }) => <><Icon size={nested ? 15 : 17} className={isActive ? "text-[#f39c12]" : "text-slate-500 group-hover:text-slate-300"} /><span className="min-w-0 flex-1 truncate">{item.label}</span></>}
     </NavLink>
   )
 }
 
-function SidebarAccordion({
-  title,
-  icon: Icon,
-  items,
-  flyout = false,
-  forceOpen,
-  onToggle,
-  onNavigate,
-}: {
-  title: string
-  icon: any
-  items: SidebarItem[]
-  flyout?: boolean
-  forceOpen?: boolean
-  onToggle?: (anchorTop: number) => void
-  onNavigate?: () => void
-}) {
+function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () => void }) {
   const location = useLocation()
-  const hasActiveChild = useMemo(
-    () => items.some((item) => item.to && location.pathname.startsWith(item.to)),
-    [items, location.pathname]
-  )
-  const [open, setOpen] = useState(hasActiveChild)
+  const active = useMemo(() => group.items.some((item) => location.pathname.startsWith(item.to)), [group.items, location.pathname])
+  const [open, setOpen] = useState(active)
 
   useEffect(() => {
-    if (hasActiveChild) setOpen(true)
-  }, [hasActiveChild])
+    if (active) setOpen(true)
+  }, [active])
 
-  const isOpen = flyout ? !!forceOpen : open
+  if (!group.icon) return <SidebarLink item={group.items[0]} onNavigate={onNavigate} />
+  const Icon = group.icon
 
   return (
-    <div className="relative">
+    <div>
       <button
         type="button"
-        onClick={(event) => {
-          if (flyout) {
-            onToggle?.(event.currentTarget.getBoundingClientRect().top)
-            return
-          }
-          setOpen((value) => !value)
-        }}
+        onClick={() => setOpen((value) => !value)}
         className={clsx(
-          "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
-          hasActiveChild
-            ? "bg-[#526252] font-semibold text-white shadow-sm"
-            : "font-medium text-[#d8dfd3] hover:bg-white/10 hover:text-white"
+          "flex w-full items-center gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-bold tracking-[0.12em] transition",
+          active ? "border-[#f39c12] bg-[#3b3d47] text-white" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200",
         )}
       >
-        <span
-          className={clsx(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
-            hasActiveChild ? "bg-[#f1b978] text-[#29342d]" : "bg-white/10 text-[#c8d3c2] group-hover:bg-white/15"
-          )}
-        >
-          <Icon size={16} />
-        </span>
-
-        <span className="flex-1 truncate">{title}</span>
-
-        <span
-          className={clsx(
-            "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
-            hasActiveChild ? "bg-white/15 text-[#f1b978]" : "text-[#aebba8]"
-          )}
-        >
-          {flyout ? <ChevronRight size={15} className={clsx(isOpen ? "text-[#f1b978]" : "")} /> : isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-        </span>
-
-        {hasActiveChild ? <span className="absolute inset-y-2 left-0 w-0.5 bg-[#a7c7c1]" /> : null}
+        <Icon size={16} className={active ? "text-[#f39c12]" : "text-slate-500"} />
+        <span className="min-w-0 flex-1 truncate">{group.label}</span>
+        <ChevronDown size={15} className={clsx("transition-transform", open ? "rotate-180" : "")} />
       </button>
-
-      {flyout ? (
-        null
-      ) : (
-        <div
-          className={clsx(
-            "grid overflow-hidden transition-all duration-300",
-            isOpen ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-80"
-          )}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="ml-4 mt-1 space-y-1 border-l border-white/10 pl-3">
-              {items.map((item) => (
-                <SidebarLink key={`${title}-${item.label}`} item={item} nested onNavigate={onNavigate} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {open ? <div className="border-l border-white/10 py-1">{group.items.map((item) => <SidebarLink key={item.to} item={item} nested onNavigate={onNavigate} />)}</div> : null}
     </div>
   )
 }
 
-function SidebarContent({
-  visibleSections,
-  mobile = false,
-  onCloseMobile,
-}: {
-  visibleSections: SidebarSection[]
-  mobile?: boolean
-  onCloseMobile?: () => void
-}) {
+function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[]; mobile?: boolean; onCloseMobile?: () => void }) {
   return (
-    <div className={clsx("relative flex h-full w-full bg-[#292a31]", mobile ? "overflow-hidden" : "overflow-visible")}>
-      <div className="flex h-full w-64 shrink-0 flex-col border-r border-black/30 bg-[#292a31]">
-        <div className="border-b border-white/10 px-5 pb-5 pt-5">
-          {mobile ? (
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b8c6b3]">Meniu ERP</div>
-              <button
-                type="button"
-                onClick={onCloseMobile}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#d8dfd3]"
-                aria-label="Inchide meniul"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            </div>
-          ) : null}
-
-          <div className="flex flex-col items-center text-center">
-            <img
-              src="/gufo-logo.png?v=20260417-6"
-              alt="Gufo"
-              className={clsx("object-contain", mobile ? "h-10 w-10" : "h-11 w-11")}
-            />
-            <div className="mt-2 text-sm font-semibold tracking-[0.01em] text-white">Gufo ERP</div>
-            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#b8c6b3]">Spațiu operațional</div>
-          </div>
+    <div className="flex h-full flex-col bg-[#292a31] text-slate-100">
+      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+        <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-9 w-9 object-contain" />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold tracking-[0.08em] text-white">GUFO ERP</div>
+          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace operațional</div>
         </div>
-
-        <div className={clsx("min-h-0 flex-1 px-3 py-4", mobile ? "overflow-y-auto" : "overflow-y-auto")}>
-          <div className="space-y-4">
-            {visibleSections.map((section) =>
-              section.collapsible && section.icon ? (
-                <div key={section.title}>
-                  <SidebarAccordion
-                    title={section.title}
-                    icon={section.icon}
-                    items={section.items}
-                    flyout={false}
-                    onNavigate={mobile ? onCloseMobile : undefined}
-                  />
-                </div>
-              ) : (
-                <div key={section.title}>
-                  {section.items.map((item) => (
-                    <SidebarLink
-                      key={`${section.title}-${item.label}`}
-                      item={item}
-                      onNavigate={mobile ? onCloseMobile : undefined}
-                    />
-                  ))}
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="border-t border-white/10 px-5 py-3">
-          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aebba8]">
-            <div>Versiunea: {APP_VERSION}</div>
-            <div className="text-[#a8d8ad]">Activ</div>
-          </div>
-        </div>
+        {mobile ? <button type="button" onClick={onCloseMobile} className="inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        <div className="space-y-1">{groups.map((group) => <SidebarGroup key={group.label} group={group} onNavigate={onCloseMobile} />)}</div>
+      </nav>
+
+      <div className="border-t border-white/10 px-5 py-4 text-[11px] text-slate-500">
+        <div className="font-semibold text-slate-300">GUFO Ecosystem</div>
+        <div className="mt-1">ERP · POS · KDS · Delivery · Kiosk</div>
+        <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Versiunea {APP_VERSION}</div>
+      </div>
     </div>
   )
 }
 
-export default function Sidebar({
-  mobileOpen = false,
-  onCloseMobile,
-}: {
-  mobileOpen?: boolean
-  onCloseMobile?: () => void
-}) {
-  const location = useLocation()
-  const visibleSections = sections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => !item.module || hasModule(item.module)),
-    }))
-    .filter((section) => section.items.length > 0)
+export default function Sidebar({ mobileOpen = false, onCloseMobile }: { mobileOpen?: boolean; onCloseMobile?: () => void }) {
+  const groups = navigation
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.module || hasModule(item.module)) }))
+    .filter((group) => group.items.length)
+
   return (
     <>
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-[1px] xl:hidden" onClick={onCloseMobile} />
-      ) : null}
-
-      <aside className="hidden xl:block xl:w-64 xl:shrink-0">
-        <div
-          className="fixed left-0 top-0 z-40 hidden h-screen w-64 overflow-hidden border-r border-black/30 bg-[#292a31] shadow-[8px_0_18px_rgba(15,23,42,0.12)] xl:flex"
-        >
-          <SidebarContent
-            visibleSections={visibleSections}
-          />
-        </div>
-      </aside>
-
-      <div
-        className={clsx(
-          "fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-[300px] border-r border-black/30 bg-[#292a31] shadow-2xl transition-transform duration-200 xl:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <SidebarContent visibleSections={visibleSections} mobile onCloseMobile={onCloseMobile} />
-      </div>
+      {mobileOpen ? <div className="fixed inset-0 z-50 bg-slate-950/60 xl:hidden" onClick={onCloseMobile} /> : null}
+      <aside className="hidden xl:block xl:w-64 xl:shrink-0"><div className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-black/30 xl:block"><SidebarContent groups={groups} /></div></aside>
+      <div className={clsx("fixed inset-y-0 left-0 z-[60] w-[86vw] max-w-64 border-r border-black/30 shadow-2xl transition-transform xl:hidden", mobileOpen ? "translate-x-0" : "-translate-x-full")}><SidebarContent groups={groups} mobile onCloseMobile={onCloseMobile} /></div>
     </>
   )
 }
