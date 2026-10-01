@@ -67,6 +67,11 @@ const CONTROL_EFACTURA_OAUTH_COOKIE = "gufo_control_anaf_oauth"
 const ANAF_AUTH_URL = "https://logincert.anaf.ro/anaf-oauth2/v1/authorize"
 const ANAF_TOKEN_URL = "https://logincert.anaf.ro/anaf-oauth2/v1/token"
 
+function toMoneyNumber(value: unknown) {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : 0
+}
+
 const DeliveryAnnouncementSchema = z.object({
   title: z.string().trim().min(3).max(120),
   body: z.string().trim().min(3).max(1200),
@@ -666,8 +671,11 @@ router.get("/api/v1/admin/platform/billing-efactura/oauth/callback", async (req,
     const payload = await token.json().catch(() => ({}))
     if (!token.ok || !payload?.access_token) throw new Error(String(payload?.error_description || payload?.error || "Nu am putut obtine tokenul ANAF."))
     await prisma.platformConfig.update({ where: { id: config.id }, data: { billingEfacturaAccessToken: String(payload.access_token), billingEfacturaLastError: null } })
-    return res.redirect(`${state.returnTo || "/control-panel/profil"}?efactura=success`)
-  } catch (error) { return res.redirect(`/control-panel/profil?efactura=error&message=${encodeURIComponent(getErrorMessage(error, "Eroare OAuth ANAF."))}`) }
+    return res.type("html").send(`<!doctype html><meta charset="utf-8"><title>Gufo Control</title><script>if(window.opener){window.opener.postMessage({type:"gufo-control-anaf",status:"success"},"*");window.close()}else{window.location.replace(${JSON.stringify(`${state.returnTo || "/control-panel/profil"}?efactura=success`)})}</script><p>Token ANAF conectat. Poți închide această fereastră.</p>`)
+  } catch (error) {
+    const message = getErrorMessage(error, "Eroare OAuth ANAF.")
+    return res.type("html").send(`<!doctype html><meta charset="utf-8"><title>Gufo Control</title><script>if(window.opener){window.opener.postMessage({type:"gufo-control-anaf",status:"error",message:${JSON.stringify(message)}},"*");window.close()}else{window.location.replace(${JSON.stringify(`/control-panel/profil?efactura=error&message=${encodeURIComponent(message)}`)})}</script><p>${message}</p>`)
+  }
 })
 
 router.post("/api/v1/admin/platform/billing-efactura/certificate", requireAuth, requireOwner, controlEfacturaUpload.single("certificate"), async (req: AuthedRequest, res) => {
@@ -2720,7 +2728,7 @@ router.post("/api/v1/admin/subscriptions/:subscriptionId/invoices", requireAuth,
         number,
         issueDate: new Date(),
         dueDate: subscription.nextBillingDate || new Date(),
-        amount: subscription.price,
+        amount: toMoneyNumber(subscription.price),
         currency: subscription.currency,
         status: "ISSUED",
         externalRef: subscription.product,
@@ -2750,7 +2758,7 @@ router.get("/api/v1/admin/invoices", requireAuth, requireOwner, async (_req, res
       number: invoice.number,
       issueDate: invoice.issueDate,
       dueDate: invoice.dueDate,
-      amount: invoice.amount,
+      amount: toMoneyNumber(invoice.amount),
       currency: invoice.currency,
       status: invoice.status,
       efacturaStatus: invoice.efacturaStatus,
@@ -2773,7 +2781,8 @@ async function getControlInvoiceEfacturaData(invoiceId: string) {
   const customer = pickPrimaryCompany(invoice.tenant.companies)
   const product = SUBSCRIPTION_PRODUCT_LABELS[invoice.subscription.product]
   const cycle = invoice.subscription.billingCycle === "MONTHLY" ? "abonament lunar" : "abonament anual"
-  const amount = Number(invoice.amount || 0)
+  const amount = toMoneyNumber(invoice.amount)
+  if (amount <= 0) throw new Error("Factura trebuie să aibă o sumă mai mare decât zero înainte de transmiterea la ANAF.")
   const efInvoice = {
     docNo: invoice.number, docDate: invoice.issueDate, dueDate: invoice.dueDate, currency: invoice.currency,
     customerName: customer?.name || invoice.tenant.name, customerCif: customer?.cui || "", customerRegNo: customer?.regNo || "", customerAddress: customer?.address || "", customerCity: customer?.city || "", customerCounty: customer?.county || "", customerCountry: customer?.country || "RO", isEfacturaRequired: true, invoiceTypeCode: "380", totalNetFc: amount, totalVatFc: 0, totalGrossFc: amount, totalSgrFc: 0,
@@ -2809,7 +2818,11 @@ router.post("/api/v1/admin/invoices/:invoiceId/efactura/send", requireAuth, requ
     }
     const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { efacturaStatus: "SENT", efacturaUploadIndex: result.uploadIndex, efacturaSentAt: new Date(), efacturaLastCheckAt: new Date(), efacturaErrorText: result.summary || null } })
     return res.json({ ok: true, item: updated, message: result.summary || "Factura a fost transmisa la ANAF." })
-  } catch (error) { return res.status(500).json({ ok: false, error: getErrorMessage(error, "Nu am putut trimite factura la ANAF.") }) }
+  } catch (error) {
+    const message = getErrorMessage(error, "Nu am putut trimite factura la ANAF.")
+    await prisma.invoice.update({ where: { id: req.params.invoiceId }, data: { efacturaStatus: "ERROR", efacturaErrorText: message, efacturaLastCheckAt: new Date() } }).catch(() => undefined)
+    return res.status(500).json({ ok: false, error: message })
+  }
 })
 
 router.post("/api/v1/admin/invoices/:invoiceId/efactura/status", requireAuth, requireOwner, async (req, res) => {
@@ -2848,10 +2861,10 @@ router.get("/api/v1/admin/invoices/:invoiceId/pdf", requireAuth, requireOwner, a
     issueDate: invoice.issueDate,
     dueDate: invoice.dueDate,
     currency: invoice.currency,
-    lines: [{ name: `${product} - ${cycle}`, qty: 1, unitPrice: invoice.amount, net: invoice.amount, vat: 0 }],
-    totalNet: invoice.amount,
+    lines: [{ name: `${product} - ${cycle}`, qty: 1, unitPrice: toMoneyNumber(invoice.amount), net: toMoneyNumber(invoice.amount), vat: 0 }],
+    totalNet: toMoneyNumber(invoice.amount),
     totalVat: 0,
-    totalGross: invoice.amount,
+    totalGross: toMoneyNumber(invoice.amount),
     spvDownloadId: invoice.efacturaDownloadId,
   })
   doc.end()
