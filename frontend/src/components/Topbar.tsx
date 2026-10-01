@@ -1,4 +1,4 @@
-import { Bell, Building2, LogOut, MapPin, Menu, Warehouse } from "lucide-react"
+import { Bell, Building2, CreditCard, LogOut, MapPin, Menu, Warehouse } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { API_BASE as API, authHeaders, resolvePublicAssetUrl } from "../lib/api"
@@ -510,7 +510,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
           ) : null}
         </div>
 
-        <div className="hidden h-16 items-center justify-between gap-2 xl:flex">
+        <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
             <div className="erp-workspace-title shrink-0 border-r border-white/10 pr-5">
               <div className="text-2xl font-bold tracking-[-0.03em] text-[#17213a]">{currentWorkspaceTitle}</div>
@@ -594,6 +594,9 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
 
             {showSalesFilters ? (
               <div className="erp-context-field erp-context-field--device flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+                <div className="erp-device-icon flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
+                  <CreditCard size={15} />
+                </div>
                 <div className="w-[146px]">
                   <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6C7A89]">
                     Device

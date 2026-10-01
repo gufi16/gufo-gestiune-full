@@ -411,32 +411,59 @@ table td {
     display: none !important;
   }
 
+  .erp-topbar--dashboard {
+    min-height: 56px;
+  }
+
+  .erp-topbar--dashboard .erp-context-field,
+  .erp-topbar--dashboard .erp-date-range {
+    height: 34px;
+    gap: 0.38rem !important;
+    border: 1px solid #edf0f4 !important;
+    border-radius: 6px !important;
+    background: #f6f8fb !important;
+    padding: 0 0.6rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-context-field select,
+  .erp-topbar--dashboard .erp-date-range input {
+    height: 32px !important;
+    background: transparent !important;
+    font-size: 0.72rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-company-context > :first-child {
+    display: none !important;
+  }
+
+  .erp-topbar--dashboard .erp-context-field--device > :first-child {
+    display: flex !important;
+  }
+
   .erp-topbar--dashboard .erp-workspace-title {
     border-right: 0 !important;
     padding-right: 1.1rem !important;
   }
 
   .erp-topbar--dashboard .erp-workspace-title > div {
-    font-size: 1.55rem !important;
+    font-size: 1.2rem !important;
     font-weight: 700 !important;
-    letter-spacing: -0.035em !important;
+    letter-spacing: -0.025em !important;
   }
 
   .erp-topbar--dashboard .erp-company-context {
-    min-width: 12.8rem;
-    padding-right: 0.9rem !important;
+    min-width: 9.6rem;
   }
 
   .erp-topbar--dashboard .erp-company-context > div:last-child,
   .erp-topbar--dashboard .erp-company-context select {
-    width: 11.25rem !important;
-    min-width: 11.25rem !important;
+    width: 8.75rem !important;
+    min-width: 8.75rem !important;
   }
 
   .erp-topbar--dashboard .erp-date-range {
     order: 2;
-    gap: 0.55rem !important;
-    padding-right: 0.9rem !important;
+    gap: 0.2rem !important;
   }
 
   .erp-topbar--dashboard .erp-date-range > div > div {
@@ -453,20 +480,27 @@ table td {
   }
 
   .erp-topbar--dashboard .erp-date-range input {
-    min-width: 6.8rem !important;
+    min-width: 5.75rem !important;
     font-weight: 600;
   }
 
   .erp-topbar--dashboard .erp-context-field--device {
     order: 4;
-    border-right: 0 !important;
-    padding-right: 0 !important;
   }
 
   .erp-topbar--dashboard .erp-context-field--device > div:last-child,
   .erp-topbar--dashboard .erp-context-field--device select {
-    width: 10.8rem !important;
-    min-width: 10.8rem !important;
+    width: 8.9rem !important;
+    min-width: 8.9rem !important;
+  }
+
+  .erp-topbar--dashboard .erp-date-range button {
+    height: 28px !important;
+    border: 1px solid #e8edf3 !important;
+    border-radius: 5px !important;
+    background: #fff !important;
+    padding: 0 0.7rem !important;
+    font-size: 0.68rem !important;
   }
 
   .erp-dashboard .dashboard-metric {
