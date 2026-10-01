@@ -223,6 +223,84 @@ table td {
   border-radius: 3px !important;
 }
 
+.erp-topbar .erp-context-field,
+.erp-topbar .erp-date-range {
+  gap: 0.45rem;
+  border: 0 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 0.75rem 0 0 !important;
+}
+
+.erp-topbar .erp-context-field > :first-child {
+  display: none;
+}
+
+.erp-topbar .erp-context-field > div:last-child {
+  width: auto !important;
+}
+
+.erp-topbar .erp-context-field > div:last-child > div,
+.erp-topbar .erp-date-range > div > div {
+  margin-bottom: 0.18rem !important;
+  color: #9ca9b5 !important;
+  font-size: 0.59rem !important;
+  letter-spacing: 0.1em !important;
+}
+
+.erp-topbar .erp-context-field select,
+.erp-topbar .erp-date-range input {
+  width: auto !important;
+  min-width: 8.25rem;
+  border: 0 !important;
+  background: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0.25rem !important;
+}
+
+.erp-topbar .erp-context-field--device select {
+  min-width: 7.5rem;
+}
+
+.erp-topbar .erp-date-range {
+  align-items: center !important;
+}
+
+.erp-topbar .erp-date-range input {
+  min-width: 6.7rem;
+}
+
+.erp-topbar .erp-date-range button,
+.erp-topbar .erp-topbar-action,
+.erp-topbar .erp-logout {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: transparent !important;
+  color: #d8e1e8 !important;
+  box-shadow: none !important;
+}
+
+.erp-topbar .erp-date-range button:hover,
+.erp-topbar .erp-topbar-action:hover,
+.erp-topbar .erp-logout:hover {
+  border-color: rgba(243, 156, 18, 0.7) !important;
+  background: rgba(243, 156, 18, 0.1) !important;
+  color: #f5b94f !important;
+}
+
+.erp-topbar .erp-user-context {
+  border: 0 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.erp-topbar .erp-user-context [class*="text-[#17324D]"] {
+  color: #f4f7f9 !important;
+}
+
 .erp-sidebar [class*="rounded-"] {
   border-radius: 3px !important;
 }

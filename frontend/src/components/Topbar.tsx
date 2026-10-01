@@ -28,6 +28,18 @@ function isKdsTerminalLike(item: { deviceType?: string; label?: string; deviceId
   return label.includes("KDS") || deviceId.startsWith("KDS-")
 }
 
+function workspaceTitle(pathname: string) {
+  if (pathname.startsWith("/inregistrare-document")) return "Înregistrare documente"
+  if (pathname.startsWith("/documente")) return "Documente"
+  if (pathname.startsWith("/gestiune")) return "Stoc și producție"
+  if (pathname.startsWith("/nomenclator")) return "Nomenclator"
+  if (pathname.startsWith("/financiar")) return "Financiar"
+  if (pathname.startsWith("/rapoarte")) return "Rapoarte"
+  if (pathname.startsWith("/setari")) return "Setări"
+  if (pathname.startsWith("/e-transport")) return "ANAF și SPV"
+  return "Dashboard"
+}
+
 export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -50,6 +62,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const [warehouseConfig, setWarehouseConfig] = useState(getDefaultWarehouseConfig())
 
   const isDashboard = location.pathname === "/dashboard"
+  const currentWorkspaceTitle = useMemo(() => workspaceTitle(location.pathname), [location.pathname])
   const isReports = location.pathname === "/rapoarte"
   const isFinanceReceipts = location.pathname === "/financiar/vanzari-bon"
   const isFinanceClosures = location.pathname === "/financiar/inchideri-zilnice"
@@ -499,8 +512,12 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
 
         <div className="hidden h-14 items-center justify-between gap-2 xl:flex">
           <div className="flex min-w-0 items-center gap-2">
+            <div className="erp-workspace-title hidden shrink-0 border-r border-white/10 pr-5 2xl:block">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Gufo ERP</div>
+              <div className="mt-0.5 text-sm font-semibold text-white">{currentWorkspaceTitle}</div>
+            </div>
             {companyChoices.length > 1 ? (
-              <div className="flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                   <Building2 size={16} />
                 </div>
@@ -525,7 +542,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               </div>
             ) : null}
 
-            <div className="flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+            <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
               <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                 <MapPin size={16} />
               </div>
@@ -550,7 +567,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
             </div>
 
             {warehouseConfig.multiWarehouseEnabled && warehouseConfig.warehouseFilterEnabled ? (
-              <div className="flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-context-field flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#EEF4FB] text-[#244A7C]">
                   <Warehouse size={16} />
                 </div>
@@ -577,7 +594,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
             ) : null}
 
             {showSalesFilters ? (
-              <div className="flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-context-field erp-context-field--device flex shrink-0 items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div className="w-[146px]">
                   <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6C7A89]">
                     Device
@@ -600,7 +617,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
             ) : null}
 
             {isDashboard ? (
-              <div className="flex shrink-0 items-end gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
+              <div className="erp-date-range flex shrink-0 items-end gap-2 rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 shadow-sm shadow-slate-900/[0.03]">
                 <div>
                   <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6C7A89]">
                     De la
@@ -639,7 +656,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               <button
                 type="button"
                 onClick={() => setNotificationsOpen((prev) => !prev)}
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-[#6C7A89] shadow-sm transition hover:border-slate-300 hover:text-[#17324D]"
+                className="erp-topbar-action relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-[#6C7A89] shadow-sm transition hover:border-slate-300 hover:text-[#17324D]"
               >
                 <Bell size={18} />
                 {notifications.length ? <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f39c12] px-1 text-[10px] font-bold text-[#292a31]">{notifications.length}</span> : null}
@@ -661,7 +678,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               ) : null}
             </div>
 
-            <div className="flex min-w-0 max-w-[240px] items-center gap-2 rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] px-2.5 py-1.5 shadow-sm shadow-slate-900/[0.04]">
+            <div className="erp-user-context flex min-w-0 max-w-[240px] items-center gap-2 rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] px-2.5 py-1.5 shadow-sm shadow-slate-900/[0.04]">
               {userAvatarUrl ? (
                 <img
                   src={userAvatarUrl}
@@ -682,7 +699,7 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
             <button
               type="button"
               onClick={handleIesire}
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-[12px] border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+              className="erp-logout inline-flex h-9 shrink-0 items-center justify-center rounded-[12px] border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
             >
               <LogOut size={16} className="mr-2" />
               Iesire
