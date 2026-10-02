@@ -96,7 +96,7 @@ function NumberingTable({
   onChange: <K extends keyof FormState>(key: K, value: FormState[K]) => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#E8E3DA]">
+    <div className="workspace-numbering-table overflow-hidden rounded-md border border-[#E8E3DA]">
       <table className="w-full text-[12px] md:text-[13px]">
         <thead className="bg-[#F8F5EF] text-slate-500">
           <tr>
@@ -133,7 +133,7 @@ function NumberingTable({
                 />
               </td>
               <td className="px-2.5 py-2 align-middle">
-                <div className="rounded-[12px] border border-[#E8E3DA] bg-[#FCFBF8] px-2.5 py-2 text-[13px] font-semibold text-[#17324D]">
+                <div className="rounded-md border border-[#E8E3DA] bg-[#FCFBF8] px-2.5 py-2 text-[13px] font-semibold text-[#17324D]">
                   {row.preview}
                 </div>
               </td>
@@ -272,7 +272,7 @@ export default function SetariNumerotare() {
   ]
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-numbering-page space-y-3">
       <PageHeader
         badge="configurare"
         title="Serii si numerotare"

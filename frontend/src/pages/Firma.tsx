@@ -370,7 +370,7 @@ export default function FirmaPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-company-page space-y-3">
       <PageHeader
         badge="configurare"
         title="Firma"
@@ -415,7 +415,7 @@ export default function FirmaPage() {
         }
       >
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
             Se incarca datele firmei...
           </div>
         ) : (
@@ -450,7 +450,7 @@ export default function FirmaPage() {
               </DocumentField>
 
               <DocumentField label="Regim TVA">
-                <label className="flex min-h-10 items-center gap-3 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] text-slate-700">
+                <label className="flex min-h-10 items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 text-[13px] text-slate-700">
                   <input type="checkbox" checked={form.isVatPayer} onChange={(e) => updateField("isVatPayer", e.target.checked)} />
                   <span>Firma este platitoare de TVA</span>
                 </label>

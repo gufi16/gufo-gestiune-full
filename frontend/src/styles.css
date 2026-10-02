@@ -1478,6 +1478,34 @@ table td {
   padding-bottom: 0.75rem;
 }
 
+.workspace-numbering-table {
+  border-color: var(--workspace-line) !important;
+}
+
+.workspace-numbering-table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-numbering-table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-numbering-table tbody tr {
+  border-color: #e7edf3 !important;
+}
+
+.workspace-numbering-table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
+.workspace-numbering-table td > div:last-child {
+  border-color: #dfe7ef !important;
+  background: #f8fafc !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;
