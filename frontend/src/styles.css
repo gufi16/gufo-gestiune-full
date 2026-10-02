@@ -1457,6 +1457,27 @@ table td {
   background: #f2f9f9;
 }
 
+.workspace-partner-row {
+  border-color: #dfe7ef !important;
+  box-shadow: inset 3px 0 0 transparent;
+}
+
+.workspace-partner-row:hover {
+  border-color: #a9ced0 !important;
+  box-shadow: inset 3px 0 0 var(--workspace-teal);
+}
+
+.workspace-partner-modal {
+  border-color: #dce5ee !important;
+  border-top: 3px solid var(--workspace-teal) !important;
+  box-shadow: 0 20px 56px rgba(23, 44, 69, 0.22) !important;
+}
+
+.workspace-partner-modal > div:first-child {
+  border-bottom: 1px solid #edf1f5;
+  padding-bottom: 0.75rem;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

@@ -287,7 +287,7 @@ export default function ClientiPage() {
   )
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-partners-page space-y-3">
       <PageHeader
         badge="nomenclator"
         title="Clienti"
@@ -329,11 +329,11 @@ export default function ClientiPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-2">
           {loading ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-7 text-center text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-7 text-center text-sm text-slate-500">
               Se incarca clientii...
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-7 text-center text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-7 text-center text-sm text-slate-500">
               Nu exista clienti salvati.
             </div>
           ) : (
@@ -343,7 +343,7 @@ export default function ClientiPage() {
                   key={item.id}
                   type="button"
                   onClick={() => openEditModal(item)}
-                  className="grid w-full grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white md:grid-cols-[minmax(220px,1.4fr)_140px_180px_180px]"
+                  className="workspace-partner-row grid w-full grid-cols-1 gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white md:grid-cols-[minmax(220px,1.4fr)_140px_180px_180px]"
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-[#17324D]">{item.name}</div>
@@ -372,7 +372,7 @@ export default function ClientiPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+          <div className="workspace-partner-modal w-full max-w-3xl rounded-md border border-slate-200 bg-white p-3 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[18px] font-semibold text-[#17324D]">{form.id ? "Editeaza client" : "Adauga client"}</div>
@@ -429,7 +429,7 @@ export default function ClientiPage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-[#17324D]">Regim TVA</label>
-                <label className="flex min-h-10 items-center gap-3 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] text-slate-700">
+                <label className="flex min-h-10 items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 text-[13px] text-slate-700">
                   <input type="checkbox" checked={form.vatPayer} onChange={(e) => setForm((prev) => ({ ...prev, vatPayer: e.target.checked }))} />
                   <span>Client platitor de TVA</span>
                 </label>
