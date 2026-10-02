@@ -131,14 +131,9 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: NavItem; nest
   )
 }
 
-function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () => void }) {
+function SidebarGroup({ group, open, onToggle, onNavigate }: { group: NavGroup; open: boolean; onToggle: () => void; onNavigate?: () => void }) {
   const location = useLocation()
   const active = useMemo(() => group.items.some((item) => location.pathname.startsWith(item.to)), [group.items, location.pathname])
-  const [open, setOpen] = useState(active)
-
-  useEffect(() => {
-    if (active) setOpen(true)
-  }, [active])
 
   if (!group.icon) return <SidebarLink item={group.items[0]} onNavigate={onNavigate} />
   const Icon = group.icon
@@ -147,7 +142,7 @@ function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () 
     <div>
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={onToggle}
         className={clsx(
           "flex w-full items-center gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-bold tracking-[0.12em] transition",
           active ? "border-[#f39c12] bg-[#3b3d47] text-white" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200",
@@ -163,6 +158,18 @@ function SidebarGroup({ group, onNavigate }: { group: NavGroup; onNavigate?: () 
 }
 
 function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[]; mobile?: boolean; onCloseMobile?: () => void }) {
+  const location = useLocation()
+  const activeGroupLabel = useMemo(
+    () => groups.find((group) => group.icon && group.items.some((item) => location.pathname.startsWith(item.to)))?.label ?? null,
+    [groups, location.pathname],
+  )
+  const [openGroupLabel, setOpenGroupLabel] = useState<string | null>(activeGroupLabel)
+
+  // Keep the active route visible while preventing several large menu groups from expanding together.
+  useEffect(() => {
+    setOpenGroupLabel(activeGroupLabel)
+  }, [activeGroupLabel])
+
   return (
     <div className="erp-sidebar erp-sidebar--backoffice flex h-full flex-col bg-[#172534] text-slate-100">
       <div className="erp-sidebar-brand relative flex flex-col items-center border-b border-white/10 px-5 py-5 text-center">
@@ -173,7 +180,15 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
       </div>
 
       <nav className="erp-sidebar-nav min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-1">{groups.map((group) => <SidebarGroup key={group.label} group={group} onNavigate={onCloseMobile} />)}</div>
+        <div className="space-y-1">{groups.map((group) => (
+          <SidebarGroup
+            key={group.label}
+            group={group}
+            open={openGroupLabel === group.label}
+            onToggle={() => setOpenGroupLabel((current) => current === group.label ? null : group.label)}
+            onNavigate={onCloseMobile}
+          />
+        ))}</div>
       </nav>
 
       <div className="erp-sidebar-footer border-t border-white/10 px-5 py-4 text-[11px] text-slate-500">
