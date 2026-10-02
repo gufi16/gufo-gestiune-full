@@ -484,7 +484,7 @@ export default function SetariBackupPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="workspace-admin-secondary-page space-y-4">
       <PageHeader badge="backup" title="Backup" subtitle="" />
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

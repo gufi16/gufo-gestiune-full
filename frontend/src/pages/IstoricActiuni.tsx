@@ -98,7 +98,7 @@ export default function IstoricActiuni() {
   )
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-admin-secondary-page space-y-3">
       <PageHeader
         badge="control"
         title="Istoric actiuni ERP"

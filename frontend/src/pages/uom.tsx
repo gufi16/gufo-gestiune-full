@@ -288,7 +288,7 @@ export default function UomPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-taxonomy-page space-y-3">
       <PageHeader
         badge="nomenclator"
         title="Unitati de masura"

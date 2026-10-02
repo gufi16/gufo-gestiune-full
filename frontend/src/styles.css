@@ -1636,6 +1636,28 @@ table td {
   background: #f2f9f9 !important;
 }
 
+.workspace-taxonomy-page :is([class*="rounded-"], .rounded),
+.workspace-admin-secondary-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-taxonomy-page table thead,
+.workspace-admin-secondary-page table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-taxonomy-page table th,
+.workspace-admin-secondary-page table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-taxonomy-page table tbody tr:hover,
+.workspace-admin-secondary-page table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

@@ -457,7 +457,7 @@ export default function SubcategoriiPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="workspace-taxonomy-page space-y-6">
       <PageHeader
         badge="nomenclator"
         title="Subcategorii produse"
