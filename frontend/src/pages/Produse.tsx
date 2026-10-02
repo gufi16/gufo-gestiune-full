@@ -1555,7 +1555,7 @@ function getDefaultVat(list = vatRates) {
   }, [items])
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-catalog-page space-y-3">
       <PageHeader
         badge="nomenclator"
         title={title}
@@ -3448,10 +3448,10 @@ export default function ProdusePage() {
 
 const card: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
+  border: "1px solid #dce5ee",
+  borderRadius: 6,
   padding: 16,
-  boxShadow: "0 1px 2px rgba(15,23,42,0.04)"
+  boxShadow: "0 2px 8px rgba(23,44,69,0.04)"
 }
 
 const kpiGrid: CSSProperties = {
@@ -3462,10 +3462,11 @@ const kpiGrid: CSSProperties = {
 
 const metricCard: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 14,
+  border: "1px solid #dce5ee",
+  borderRadius: 6,
   padding: 14,
-  boxShadow: "0 1px 2px rgba(15,23,42,0.04)"
+  borderLeft: "3px solid #0b888a",
+  boxShadow: "0 2px 8px rgba(23,44,69,0.04)"
 }
 
 const metricTitle: CSSProperties = {
@@ -3490,7 +3491,7 @@ const filterBar: CSSProperties = {
 
 const chip: CSSProperties = {
   padding: "6px 10px",
-  borderRadius: 999,
+  borderRadius: 4,
   border: "1px solid #e2e8f0",
   background: "#fff",
   color: "#334155",
@@ -3501,7 +3502,7 @@ const chip: CSSProperties = {
 
 const chipActive: CSSProperties = {
   padding: "6px 10px",
-  borderRadius: 999,
+  borderRadius: 4,
   border: "1px solid #cbd5e1",
   background: "#f8fafc",
   color: "#0f172a",
@@ -3760,8 +3761,8 @@ const productEditorContent: CSSProperties = {
 }
 
 const sectionCard: CSSProperties = {
-  border: "1px solid #d7e5f4",
-  borderRadius: 10,
+  border: "1px solid #dce5ee",
+  borderRadius: 6,
   padding: 14,
   background: "#fff"
 }
@@ -3781,9 +3782,9 @@ const sectionHeadingMark: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 8,
-  background: "#e8f2ff",
-  color: "#0878ef",
+  borderRadius: 4,
+  background: "#e6f5f3",
+  color: "#0b888a",
   fontSize: 12,
   fontWeight: 900,
 }
@@ -3854,11 +3855,11 @@ const controlDashboard: CSSProperties = {
 }
 
 const controlPanel: CSSProperties = {
-  border: "1px solid #d7e7fb",
-  borderRadius: 14,
+  border: "1px solid #dce5ee",
+  borderRadius: 6,
   padding: 14,
   background: "#ffffff",
-  boxShadow: "0 8px 20px rgba(25, 78, 132, 0.05)",
+  boxShadow: "0 2px 8px rgba(23,44,69,0.04)",
 }
 
 const controlPanelHeading: CSSProperties = {
@@ -3880,9 +3881,9 @@ const settingRow: CSSProperties = {
   gap: 14,
   minHeight: 58,
   padding: "10px 11px",
-  border: "1px solid #e3edf9",
-  borderRadius: 10,
-  background: "#f9fbff",
+  border: "1px solid #e1e8ef",
+  borderRadius: 5,
+  background: "#f8fafc",
 }
 
 const settingRowTitle: CSSProperties = {
@@ -3926,14 +3927,14 @@ const toggleKnob: CSSProperties = {
 
 const posDevicesDetails: CSSProperties = {
   border: "1px solid #d7e7fb",
-  borderRadius: 11,
+  borderRadius: 5,
   background: "#fbfdff",
 }
 
 const compactDisclosure: CSSProperties = {
   gridColumn: "1 / -1",
   border: "1px solid #d7e5f4",
-  borderRadius: 8,
+  borderRadius: 4,
   background: "#fbfdff",
 }
 
@@ -3989,7 +3990,7 @@ const terminalOptionRow: CSSProperties = {
   alignItems: "center",
   gap: 10,
   padding: "9px 10px",
-  borderRadius: 9,
+  borderRadius: 4,
   border: "1px solid #e3edf9",
   background: "#ffffff",
   cursor: "pointer",
@@ -4020,8 +4021,8 @@ const input: CSSProperties = {
   height: 40,
   minHeight: 40,
   padding: "8px 11px",
-  borderRadius: 8,
-  border: "1px solid #c9d9ea",
+  borderRadius: 4,
+  border: "1px solid #cfd9e4",
   background: "#ffffff",
   outline: "none",
   fontSize: 13,
@@ -4031,8 +4032,8 @@ const input: CSSProperties = {
 const textarea: CSSProperties = {
   width: "100%",
   padding: "9px 10px",
-  borderRadius: 8,
-  border: "1px solid #c9d9ea",
+  borderRadius: 4,
+  border: "1px solid #cfd9e4",
   background: "#ffffff",
   outline: "none",
   fontSize: 13,
@@ -4517,9 +4518,9 @@ const modalCard: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   boxSizing: "border-box",
-  background: "#f3f8ff",
-  border: "1px solid rgba(255,255,255,0.72)",
-  borderRadius: 14,
+  background: "#f7fafb",
+  border: "1px solid #dce5ee",
+  borderRadius: 6,
   padding: 14,
   boxShadow: "0 24px 60px rgba(6, 26, 52, 0.28)",
   margin: 0,
@@ -4530,7 +4531,7 @@ const recipeModalCard: CSSProperties = {
   width: "100%",
   maxWidth: 1180,
   background: "#ffffff",
-  borderRadius: 16,
+  borderRadius: 6,
   padding: 16,
   boxShadow: "0 30px 60px rgba(0,0,0,0.18)",
   margin: "8px 0"

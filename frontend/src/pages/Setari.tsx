@@ -200,14 +200,14 @@ export default function Setari() {
           )
         })}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="workspace-settings-sync border border-slate-200 bg-white p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[16px] font-semibold text-slate-900">Sync POS</div>
               <div className="mt-1 text-[13px] leading-5 text-slate-500">Configurezi cat de des sincronizeaza ERP-ul cu Android POS si revii rapid la setarea activa.</div>
             </div>
 
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-900 text-white">
               <Settings2 size={17} />
             </span>
           </div>
