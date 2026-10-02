@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { hasModule } from "../lib/modules"
 
-const APP_VERSION = "V1.2"
+const APP_VERSION = "V1.3"
 
 type NavItem = {
   to: string
@@ -62,7 +62,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "Documente",
+    label: "ANAF și SPV",
     icon: Truck,
     items: [
       { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "documents" },
