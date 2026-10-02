@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import MobileBottomNav from "./MobileBottomNav"
 import Sidebar from "./Sidebar"
@@ -9,6 +9,45 @@ export default function AppShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
   const isDashboard = location.pathname === "/dashboard"
+
+  useEffect(() => {
+    const overlaySelector = ".erp-workspace main .fixed.inset-0, .erp-workspace main [style*='position: fixed']"
+    let frame = 0
+
+    const fitOpenDialogs = () => {
+      document.querySelectorAll<HTMLElement>(overlaySelector).forEach((overlay) => {
+        const dialog = overlay.firstElementChild as HTMLElement | null
+        if (!dialog) return
+
+        // Measure the original content, then reduce only dialogs that cannot fit vertically.
+        dialog.style.removeProperty("--erp-dialog-scale")
+        dialog.classList.remove("erp-modal-fitted")
+        const availableHeight = Math.max(320, window.innerHeight - 32)
+        const naturalHeight = Math.max(dialog.scrollHeight, Math.ceil(dialog.getBoundingClientRect().height))
+
+        if (naturalHeight > availableHeight) {
+          dialog.style.setProperty("--erp-dialog-scale", String(availableHeight / naturalHeight))
+          dialog.classList.add("erp-modal-fitted")
+        }
+      })
+    }
+
+    const scheduleFit = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(fitOpenDialogs)
+    }
+
+    const observer = new MutationObserver(scheduleFit)
+    observer.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener("resize", scheduleFit)
+    scheduleFit()
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener("resize", scheduleFit)
+    }
+  }, [])
 
   return (
     <div className={`erp-workspace min-h-screen overflow-x-hidden bg-[#f1f2f5] text-slate-900${isDashboard ? " xl:h-screen xl:overflow-hidden" : ""}`}>

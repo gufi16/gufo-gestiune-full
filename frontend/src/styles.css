@@ -353,6 +353,17 @@ table td {
   overflow-y: auto;
 }
 
+.erp-workspace main .erp-modal-fitted {
+  max-block-size: none !important;
+  overflow: visible !important;
+  zoom: var(--erp-dialog-scale) !important;
+}
+
+.erp-workspace main .erp-modal-fitted [class*="max-h-"] {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+
 .erp-workspace main :is(.workspace-partner-modal, .workspace-admin-modal, .workspace-spv-modal) {
   max-block-size: calc(100dvh - clamp(1.5rem, 4vh, 4rem)) !important;
   overflow-y: auto;

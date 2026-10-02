@@ -980,7 +980,8 @@ export default function MarketplacePage() {
   const [deliveryPreviewPage, setDeliveryPreviewPage] = useState(0)
   const [deliveryConfigurationOpen, setDeliveryConfigurationOpen] = useState(false)
   const [deliveryConfigurationSection, setDeliveryConfigurationSection] = useState<"restaurant" | "checkout" | "catalog">("restaurant")
-  const [deliveryCheckoutPanel, setDeliveryCheckoutPanel] = useState<"delivery" | "payment" | "account">("delivery")
+  const [deliveryRestaurantPanel, setDeliveryRestaurantPanel] = useState<"routing" | "kiosk" | "profile">("routing")
+  const [deliveryCheckoutPanel, setDeliveryCheckoutPanel] = useState<"fees" | "availability" | "schedule" | "payment" | "account">("fees")
   const [deliveryCatalogPreviewOpen, setDeliveryCatalogPreviewOpen] = useState(false)
   const [promotionDraft, setPromotionDraft] = useState<ProductPromotionDraft | null>(null)
   const [promotionLoading, setPromotionLoading] = useState(false)
@@ -2033,7 +2034,7 @@ export default function MarketplacePage() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Configurare Gufo Delivery</div>
                     <div className="mt-2 text-xl font-semibold tracking-tight text-[#17324D]">Restaurant, rutare comenzi, livrare si plata</div>
                     <p className="mt-2 text-sm leading-6 text-slate-600">Setarile sunt grupate intr-o fereastra landscape, ca sa nu mai ai o pagina lunga cu scroll.</p>
-                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => { setDeliveryConfigurationSection("restaurant"); setDeliveryConfigurationOpen(true) }}>
+                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => { setDeliveryConfigurationSection("restaurant"); setDeliveryRestaurantPanel("routing"); setDeliveryCheckoutPanel("fees"); setDeliveryConfigurationOpen(true) }}>
                       Configureaza Gufo Delivery
                     </button>
                   </div>
@@ -2046,11 +2047,11 @@ export default function MarketplacePage() {
                 </div>
               ) : null}
               <div
-                className={selectedPlatform === "GUFO_DELIVERY" ? (deliveryConfigurationOpen ? "fixed inset-0 z-[90] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden") : ""}
+                className={selectedPlatform === "GUFO_DELIVERY" ? (deliveryConfigurationOpen ? "fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" : "hidden") : ""}
                 onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? () => setDeliveryConfigurationOpen(false) : undefined}
               >
                 <div
-                  className={selectedPlatform === "GUFO_DELIVERY" ? "mx-auto w-full max-w-[1320px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" : ""}
+                  className={selectedPlatform === "GUFO_DELIVERY" ? "delivery-configuration-modal w-full max-w-[1180px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" : ""}
                   onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? (event) => event.stopPropagation() : undefined}
                 >
                   {selectedPlatform === "GUFO_DELIVERY" ? (
@@ -2067,6 +2068,15 @@ export default function MarketplacePage() {
                         ["catalog", "Catalog public"],
                       ] as const).map(([section, label]) => (
                         <button key={section} type="button" onClick={() => setDeliveryConfigurationSection(section)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${deliveryConfigurationSection === section ? "bg-[#17324D] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {selectedPlatform === "GUFO_DELIVERY" && deliveryConfigurationSection === "restaurant" ? (
+                    <div className="mb-4 grid grid-cols-3 gap-2 border-b border-sky-100 pb-4">
+                      {([ ["routing", "Rutare comenzi"], ["kiosk", "Gufo Kiosk"], ["profile", "Profil public"] ] as const).map(([panel, label]) => (
+                        <button key={panel} type="button" onClick={() => setDeliveryRestaurantPanel(panel)} className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${deliveryRestaurantPanel === panel ? "border-[#17324D] bg-[#17324D] text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                           {label}
                         </button>
                       ))}
@@ -2102,7 +2112,7 @@ export default function MarketplacePage() {
                         ) : null}
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${selectedPlatform === "GUFO_DELIVERY" && deliveryRestaurantPanel !== "routing" ? "hidden" : ""}`}>
                         <DocumentField label="Locatie">
                           <select
                             value={currentForm.locationId}
@@ -2176,7 +2186,7 @@ export default function MarketplacePage() {
                         </DocumentField>
                       </div>
 
-                      <div className="mt-3 rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                      <div className={`mt-3 rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 ${selectedPlatform === "GUFO_DELIVERY" && deliveryRestaurantPanel !== "routing" ? "hidden" : ""}`}>
                         {selectedTerminal
                           ? selectedPlatform === "GUFO_DELIVERY"
                             ? currentForm.deliveryOrderDestination === "GO"
@@ -2186,13 +2196,13 @@ export default function MarketplacePage() {
                           : "Alege device-ul/licenta Android POS care trebuie sa primeasca comenzile din platforma."}
                       </div>
                       {!targetTerminals.length && currentForm.locationId ? (
-                        <div className="mt-3 rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                        <div className={`mt-3 rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 ${selectedPlatform === "GUFO_DELIVERY" && deliveryRestaurantPanel !== "routing" ? "hidden" : ""}`}>
                           {currentForm.deliveryOrderDestination === "GO"
                             ? "Pentru locatia selectata nu exista inca un device Gufo Go. Creeaza-l din Control Panel > Locatii > Device, apoi revino aici."
                             : "Pentru locatia selectata nu exista inca niciun POS Android configurat in ERP."}
                         </div>
                       ) : null}
-                      {selectedPlatform === "GUFO_DELIVERY" ? (
+                      {selectedPlatform === "GUFO_DELIVERY" && deliveryRestaurantPanel === "kiosk" ? (
                         <div className="mt-4 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
@@ -2249,7 +2259,7 @@ export default function MarketplacePage() {
                           ) : null}
                         </div>
                       ) : null}
-                      {selectedPlatform === "GUFO_DELIVERY" ? (
+                      {selectedPlatform === "GUFO_DELIVERY" && deliveryRestaurantPanel === "profile" ? (
                         <div className="mt-3">
                           <DocumentField label="Fotografie restaurant in Gufo Delivery">
                             <div className="flex flex-wrap items-center gap-2">
@@ -2293,11 +2303,11 @@ export default function MarketplacePage() {
                 {selectedPlatform === "GUFO_DELIVERY" ? (
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2 rounded-[16px] border border-slate-200 bg-slate-50 p-2">
-                      {([ ["delivery", "Livrare"], ["payment", "Metode plata"], ["account", "Cont online"] ] as const).map(([panel, label]) => (
+                      {([ ["fees", "Tarife"], ["availability", "Disponibilitate"], ["schedule", "Program"], ["payment", "Metode plata"], ["account", "Cont online"] ] as const).map(([panel, label]) => (
                         <button key={panel} type="button" onClick={() => setDeliveryCheckoutPanel(panel)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${deliveryCheckoutPanel === panel ? "bg-[#17324D] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{label}</button>
                       ))}
                     </div>
-                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "fees" ? "hidden" : ""}`}>
                       <div className="mb-3 text-sm font-semibold text-slate-900">Preturi livrare</div>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <DocumentField label="Taxa de livrare sub prag (lei)">
@@ -2312,7 +2322,7 @@ export default function MarketplacePage() {
                       </div>
                       <p className="mt-2 text-xs text-slate-500">Daca percepi o taxa, Gufo creeaza automat serviciul fiscal „Taxa livrare”, il trece separat pe bon si il trimite contabil ca serviciu. Nu apare in catalogul clientului si nu se gestioneaza ca stoc.</p>
                     </div>
-                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "availability" ? "hidden" : ""}`}>
                       <div className="mb-1 text-sm font-semibold text-slate-900">Disponibilitate livrari</div>
                       <p className="mb-3 text-xs text-slate-500">Controleaza numai comenzile cu livrare. Restaurantul poate ramane deschis pentru ridicare sau clienti.</p>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
@@ -2332,7 +2342,7 @@ export default function MarketplacePage() {
                       </div>
                       <p className="mt-2 text-xs font-medium text-[#17324D]">{currentForm.deliveryAvailabilityMode === "PAUSED" ? "Clientul vede: Nu livram momentan." : currentForm.deliveryAvailabilityMode === "OPEN_AT" ? "Clientul vede: Livrarea incepe la ora aleasa." : currentForm.deliveryAvailabilityMode === "FORCE_OPEN" ? "Clientul vede: Livrarea este disponibila acum." : "Clientul vede automat daca livrarea este disponibila, incepe in curand sau nu livreaza astazi."}</p>
                     </div>
-                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "delivery" ? "hidden" : ""}`}>
+                    <div className={`rounded-[16px] border border-slate-200 bg-white p-3 ${deliveryCheckoutPanel !== "schedule" ? "hidden" : ""}`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <div className="text-sm font-semibold text-slate-900">Program livrare</div>
