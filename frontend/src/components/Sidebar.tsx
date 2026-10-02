@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { hasModule } from "../lib/modules"
 
-const APP_VERSION = "V1.1"
+const APP_VERSION = "V1.2"
 
 type NavItem = {
   to: string
@@ -192,9 +192,7 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
       </nav>
 
       <div className="erp-sidebar-footer border-t border-white/10 px-5 py-4 text-[11px] text-slate-500">
-        <div className="font-semibold text-slate-300">GUFO Ecosystem</div>
-        <div className="mt-1">ERP · POS · KDS · Delivery · Kiosk</div>
-        <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Versiunea {APP_VERSION}</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Versiunea {APP_VERSION}</div>
       </div>
     </div>
   )
