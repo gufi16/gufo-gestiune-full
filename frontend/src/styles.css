@@ -340,6 +340,27 @@ table td {
   border-radius: 3px !important;
 }
 
+/* Modal windows must fit the active desktop display, including compact 10-15 inch screens. */
+.erp-workspace main :is([class~="fixed"][class~="inset-0"], [style*="position: fixed"]) {
+  padding: clamp(0.75rem, 2vw, 2rem) !important;
+}
+
+.erp-workspace main :is([class~="fixed"][class~="inset-0"], [style*="position: fixed"]) > div:first-child {
+  max-inline-size: calc(100vw - clamp(1.5rem, 4vw, 4rem)) !important;
+  max-block-size: calc(100dvh - clamp(1.5rem, 4vh, 4rem)) !important;
+}
+
+.erp-workspace main :is(.workspace-partner-modal, .workspace-admin-modal, .workspace-spv-modal) {
+  max-block-size: calc(100dvh - clamp(1.5rem, 4vh, 4rem)) !important;
+  overflow-y: auto;
+}
+
+@media (max-height: 800px) {
+  .erp-workspace main :is([class~="fixed"][class~="inset-0"], [style*="position: fixed"]) > div:first-child {
+    padding: clamp(0.75rem, 1.4vw, 1rem) !important;
+  }
+}
+
 /* Remove the old mobile-app rounding from every ERP page, dialog and panel. */
 .erp-workspace main [class*="rounded-"] {
   border-radius: 4px !important;
