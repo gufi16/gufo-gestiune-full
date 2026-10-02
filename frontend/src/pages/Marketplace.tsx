@@ -2034,7 +2034,7 @@ export default function MarketplacePage() {
                 onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? () => setDeliveryConfigurationOpen(false) : undefined}
               >
                 <div
-                  className={selectedPlatform === "GUFO_DELIVERY" ? "delivery-configuration-modal w-full max-w-[1180px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" : ""}
+                  className={selectedPlatform === "GUFO_DELIVERY" ? "delivery-configuration-modal w-full max-w-[980px] rounded-[24px] border border-[#BFDBFE] bg-[#F8FBFF] p-5 shadow-2xl" : ""}
                   onMouseDown={selectedPlatform === "GUFO_DELIVERY" ? (event) => event.stopPropagation() : undefined}
                 >
                   {selectedPlatform === "GUFO_DELIVERY" ? (
