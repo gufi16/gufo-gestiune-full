@@ -10,7 +10,7 @@ import {
   documentInputClass,
 } from "../components/DocumentUi"
 import { API_BASE as API, getToken } from "../lib/api"
-import { hasModule } from "../lib/modules"
+import { hasAnyModule, hasModule } from "../lib/modules"
 import HubModuleCard from "../components/HubModuleCard"
 
 const items = [
@@ -19,36 +19,42 @@ const items = [
     desc: "Date companie, identificare fiscala si informatii de baza.",
     route: "/setari/firma",
     icon: Building2,
+    module: "company_profile",
   },
   {
     name: "Cote TVA",
     desc: "Gestionare cote TVA si valori utilizate in documente.",
     route: "/setari/tva",
     icon: Percent,
+    module: "tax_rates",
   },
   {
     name: "Serii si numerotare",
     desc: "Setezi seria facturii, numarul de start si codurile automate pentru documente, clienti si furnizori.",
     route: "/setari/numerotare",
     icon: FileDigit,
+    module: "numbering",
   },
   {
     name: "Setari SPV",
     desc: "Configurezi firma, mediul de lucru si tokenul ANAF pentru SPV.",
     route: "/setari/efactura",
     icon: ReceiptText,
+    module: "efactura",
   },
   {
     name: "Configurare gestiune",
     desc: "Setezi regulile de lucru, filtrele si etichetele folosite pentru gestiune in ERP.",
     route: "/setari/gestiune",
     icon: Warehouse,
+    module: "warehouses",
   },
   {
     name: "Marketplace",
     desc: "Conectezi Glovo, Wolt si Bolt Food, mapezi produsele si urmaresti comenzile intrate din platforme.",
     route: "/setari/marketplace",
     icon: Store,
+    anyModules: ["marketplace", "marketplace_glovo", "marketplace_wolt", "marketplace_bolt_food", "marketplace_gufo_delivery"],
   },
   {
     name: "Gufo AI",
@@ -67,18 +73,21 @@ const items = [
     desc: "Administrezi echipa, rolurile si PIN-ul de acces folosit mai departe in POS si KDS.",
     route: "/setari/utilizatori",
     icon: Users,
+    module: "erp_users",
   },
   {
     name: "Backup client",
     desc: "Creezi si descarci snapshot-uri complete pentru clientul curent.",
     route: "/setari/backup",
     icon: Archive,
+    module: "backup_restore",
   },
   {
     name: "Istoric actiuni",
     desc: "Vezi cine a facut modificari in ERP, cand si pe ce entitate.",
     route: "/setari/istoric",
     icon: History,
+    module: "audit_logs",
   },
 ]
 
@@ -87,7 +96,10 @@ const allowedIntervals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30]
 export default function Setari() {
   const nav = useNavigate()
   const token = getToken() || ""
-  const availableItems = items.filter((item) => item.route !== "/setari/efactura" || hasModule("efactura"))
+  const availableItems = items.filter((item) =>
+    (!item.module || hasModule(item.module)) &&
+    (!item.anyModules || hasAnyModule(item.anyModules)),
+  )
 
   const [posSyncInterval, setPosSyncInterval] = useState<number>(5)
   const [loadingConfig, setLoadingConfig] = useState(true)

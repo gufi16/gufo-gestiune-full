@@ -12,6 +12,10 @@ export function hasModule(code: string) {
   return getEnabledModules().includes(code)
 }
 
+export function hasAnyModule(codes: string[]) {
+  return codes.some((code) => hasModule(code))
+}
+
 export function firstAllowedRoute() {
   if (hasModule("dashboard")) return "/dashboard"
   if (hasModule("documents")) return "/inregistrare-document"

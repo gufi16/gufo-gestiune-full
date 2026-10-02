@@ -61,7 +61,7 @@ import ControlPanelDeliveryAnnouncements from "./pages/control/ControlPanelDeliv
 import DeliveryLegalPublic from "./pages/DeliveryLegalPublic"
 import DeliveryOrderLink from "./pages/DeliveryOrderLink"
 import DeliveryLandingPublic from "./pages/DeliveryLandingPublic"
-import { firstAllowedRoute, hasModule } from "./lib/modules"
+import { firstAllowedRoute, hasAnyModule, hasModule } from "./lib/modules"
 
 function RequireModule({
   code,
@@ -71,6 +71,14 @@ function RequireModule({
   children: React.ReactNode
 }) {
   if (!hasModule(code)) {
+    return <Navigate to={firstAllowedRoute()} replace />
+  }
+
+  return <>{children}</>
+}
+
+function RequireAnyModule({ codes, children }: { codes: string[]; children: React.ReactNode }) {
+  if (!hasAnyModule(codes)) {
     return <Navigate to={firstAllowedRoute()} replace />
   }
 
@@ -149,9 +157,9 @@ export default function App() {
         <Route path="/transfer" element={<RequireModule code="documents"><TransferPage /></RequireModule>} />
         <Route path="/transfer/new" element={<RequireModule code="documents"><TransferPage /></RequireModule>} />
         <Route path="/transfer/edit" element={<RequireModule code="documents"><TransferPage /></RequireModule>} />
-        <Route path="/e-transport" element={<RequireModule code="documents"><ETransportPage /></RequireModule>} />
-        <Route path="/e-transport/new" element={<RequireModule code="documents"><ETransportPage /></RequireModule>} />
-        <Route path="/e-transport/edit" element={<RequireModule code="documents"><ETransportPage /></RequireModule>} />
+        <Route path="/e-transport" element={<RequireModule code="etrtransport"><ETransportPage /></RequireModule>} />
+        <Route path="/e-transport/new" element={<RequireModule code="etrtransport"><ETransportPage /></RequireModule>} />
+        <Route path="/e-transport/edit" element={<RequireModule code="etrtransport"><ETransportPage /></RequireModule>} />
 
         <Route path="/gestiune" element={<RequireModule code="inventory"><Navigate to="/gestiune/stoc" replace /></RequireModule>} />
         <Route path="/gestiune/stoc" element={<RequireModule code="inventory"><Stoc /></RequireModule>} />
@@ -162,7 +170,7 @@ export default function App() {
         <Route path="/inregistrare-document/bon-consum/new" element={<RequireModule code="documents"><BonConsumNou /></RequireModule>} />
 
         <Route path="/documente" element={<RequireModule code="documents"><Documente /></RequireModule>} />
-        <Route path="/documente/facturi-primite-spv" element={<RequireModule code="documents"><FacturiPrimiteSPVPage /></RequireModule>} />
+        <Route path="/documente/facturi-primite-spv" element={<RequireModule code="efactura"><FacturiPrimiteSPVPage /></RequireModule>} />
         <Route path="/rapoarte" element={<RequireModule code="reports"><Rapoarte /></RequireModule>} />
         <Route path="/rapoarte/export-contabilitate" element={<RequireModule code="reports"><ExportContabilitatePage /></RequireModule>} />
         <Route path="/financiar/vanzari-bon" element={<FinanceReceipts />} />
@@ -187,7 +195,7 @@ export default function App() {
         <Route path="/setari/tva" element={<RequireModule code="settings"><TvaPage /></RequireModule>} />
         <Route path="/setari/numerotare" element={<RequireModule code="settings"><SetariNumerotarePage /></RequireModule>} />
         <Route path="/setari/efactura" element={<RequireModule code="settings"><SetariEFacturaPage /></RequireModule>} />
-        <Route path="/setari/marketplace" element={<RequireModule code="settings"><MarketplacePage /></RequireModule>} />
+        <Route path="/setari/marketplace" element={<RequireAnyModule codes={["marketplace", "marketplace_glovo", "marketplace_wolt", "marketplace_bolt_food", "marketplace_gufo_delivery"]}><MarketplacePage /></RequireAnyModule>} />
         <Route path="/setari/gufo-ai" element={<RequireModule code="settings"><SetariAiPage /></RequireModule>} />
         <Route path="/setari/utilizatori" element={<RequireModule code="settings"><UtilizatoriPage /></RequireModule>} />
         <Route path="/setari/backup" element={<RequireModule code="settings"><SetariBackupPage /></RequireModule>} />

@@ -24,15 +24,16 @@ import {
   UtensilsCrossed,
   Warehouse,
 } from "lucide-react"
-import { hasModule } from "../lib/modules"
+import { hasAnyModule, hasModule } from "../lib/modules"
 
-const APP_VERSION = "V1.5"
+const APP_VERSION = "V1.6"
 
 type NavItem = {
   to: string
   label: string
   icon: any
   module?: string
+  anyModules?: string[]
 }
 
 type NavGroup = {
@@ -57,16 +58,16 @@ const navigation: NavGroup[] = [
     icon: Warehouse,
     items: [
       { to: "/gestiune/stoc", label: "Stoc", icon: Warehouse, module: "inventory" },
-      { to: "/gestiune/gestiuni", label: "Gestiuni", icon: Building2, module: "inventory" },
-      { to: "/gestiune/productie", label: "Producție", icon: Receipt, module: "inventory" },
+      { to: "/gestiune/gestiuni", label: "Gestiuni", icon: Building2, module: "warehouses" },
+      { to: "/gestiune/productie", label: "Producție", icon: Receipt, module: "production_docs" },
     ],
   },
   {
     label: "Documente",
     icon: Truck,
     items: [
-      { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "documents" },
-      { to: "/e-transport", label: "Registru e-Transport", icon: Truck, module: "documents" },
+      { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "efactura" },
+      { to: "/e-transport", label: "Registru e-Transport", icon: Truck, module: "etrtransport" },
     ],
   },
   {
@@ -74,31 +75,31 @@ const navigation: NavGroup[] = [
     icon: BarChart3,
     items: [
       { to: "/rapoarte", label: "Rapoarte", icon: BarChart3, module: "reports" },
-      { to: "/rapoarte/export-contabilitate", label: "Export contabilitate", icon: FileSpreadsheet, module: "reports" },
+      { to: "/rapoarte/export-contabilitate", label: "Export contabilitate", icon: FileSpreadsheet, module: "accounting_export" },
     ],
   },
   {
     label: "Financiar",
     icon: CalendarCheck,
     items: [
-      { to: "/financiar/vanzari-bon", label: "Vânzări / Bon", icon: Receipt },
-      { to: "/financiar/inchideri-zilnice", label: "Închideri zilnice", icon: CalendarCheck },
+      { to: "/financiar/vanzari-bon", label: "Vânzări / Bon", icon: Receipt, module: "sales_history" },
+      { to: "/financiar/inchideri-zilnice", label: "Închideri zilnice", icon: CalendarCheck, module: "sales_history" },
     ],
   },
   {
     label: "Catalog",
     icon: BookOpen,
     items: [
-      { to: "/nomenclator/produse", label: "Produse", icon: Package2, module: "nomenclature" },
-      { to: "/nomenclator/categorii", label: "Categorii", icon: FolderTree, module: "nomenclature" },
-      { to: "/nomenclator/subcategorii", label: "Subcategorii", icon: FolderTree, module: "nomenclature" },
-      { to: "/nomenclator/departamente", label: "Departamente", icon: BookOpen, module: "nomenclature" },
-      { to: "/nomenclator/uom", label: "Unități de măsură", icon: Ruler, module: "nomenclature" },
-      { to: "/nomenclator/materii-prime", label: "Materii prime", icon: Boxes, module: "nomenclature" },
-      { to: "/nomenclator/semifabricate", label: "Semifabricate", icon: Boxes, module: "nomenclature" },
-      { to: "/nomenclator/meniuri", label: "Meniuri", icon: UtensilsCrossed, module: "nomenclature" },
-      { to: "/nomenclator/furnizori", label: "Furnizori", icon: Building2, module: "nomenclature" },
-      { to: "/nomenclator/clienti", label: "Clienți", icon: Building2, module: "nomenclature" },
+      { to: "/nomenclator/produse", label: "Produse", icon: Package2, module: "products" },
+      { to: "/nomenclator/categorii", label: "Categorii", icon: FolderTree, module: "categories" },
+      { to: "/nomenclator/subcategorii", label: "Subcategorii", icon: FolderTree, module: "categories" },
+      { to: "/nomenclator/departamente", label: "Departamente", icon: BookOpen, module: "departments" },
+      { to: "/nomenclator/uom", label: "Unități de măsură", icon: Ruler, module: "uoms" },
+      { to: "/nomenclator/materii-prime", label: "Materii prime", icon: Boxes, module: "recipes" },
+      { to: "/nomenclator/semifabricate", label: "Semifabricate", icon: Boxes, module: "recipes" },
+      { to: "/nomenclator/meniuri", label: "Meniuri", icon: UtensilsCrossed, module: "recipes" },
+      { to: "/nomenclator/furnizori", label: "Furnizori", icon: Building2, module: "suppliers" },
+      { to: "/nomenclator/clienti", label: "Clienți", icon: Building2, module: "customers" },
     ],
   },
   {
@@ -107,7 +108,7 @@ const navigation: NavGroup[] = [
     items: [
       { to: "/setari", label: "Setări", icon: Settings, module: "settings" },
       { to: "/setari/gufo-ai", label: "Gufo AI", icon: Store, module: "settings" },
-      { to: "/setari/marketplace", label: "Marketplace", icon: Store, module: "settings" },
+      { to: "/setari/marketplace", label: "Marketplace", icon: Store, anyModules: ["marketplace", "marketplace_glovo", "marketplace_wolt", "marketplace_bolt_food", "marketplace_gufo_delivery"] },
     ],
   },
 ]
@@ -200,7 +201,13 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
 
 export default function Sidebar({ mobileOpen = false, onCloseMobile }: { mobileOpen?: boolean; onCloseMobile?: () => void }) {
   const groups = navigation
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.module || hasModule(item.module)) }))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        (!item.module || hasModule(item.module)) &&
+        (!item.anyModules || hasAnyModule(item.anyModules)),
+      ),
+    }))
     .filter((group) => group.items.length)
 
   return (
