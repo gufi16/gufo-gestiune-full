@@ -1579,6 +1579,33 @@ table td {
   background: #f2f9f9 !important;
 }
 
+.workspace-marketplace-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-marketplace-page [class*="bg-[#F8FBFF]"] {
+  border-color: #d8e7e8 !important;
+  background: #f7fbfb !important;
+}
+
+.workspace-marketplace-page [class*="bg-gradient"] {
+  border-left-width: 3px !important;
+  border-left-color: var(--workspace-teal) !important;
+}
+
+.workspace-spv-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-spv-page [class*="bg-slate-50"] {
+  border-color: #dfe7ef !important;
+}
+
+.workspace-spv-modal {
+  border-color: #dce5ee !important;
+  border-top: 3px solid var(--workspace-teal) !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

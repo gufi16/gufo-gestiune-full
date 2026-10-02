@@ -190,7 +190,7 @@ function SettingsModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+      <div className="workspace-spv-modal max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-md border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-[#17324D]">{title}</h2>
@@ -1144,7 +1144,7 @@ export default function SetariEFacturaPage() {
     : "-"
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-spv-page space-y-3">
       <PageHeader
         badge="configurare"
         title="Setari SPV"

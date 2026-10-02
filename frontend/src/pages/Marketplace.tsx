@@ -1877,7 +1877,7 @@ export default function MarketplacePage() {
   }, [platformRecentExternalProducts, productMappingSearch])
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-marketplace-page space-y-3">
       <PageHeader
         badge={selectedPlatform === "GUFO_DELIVERY" ? "gufo delivery" : "marketplace"}
         title={selectedPlatform === "GUFO_DELIVERY" ? "Gufo Delivery" : "Marketplace"}
