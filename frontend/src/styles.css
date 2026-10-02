@@ -1606,6 +1606,36 @@ table td {
   border-top: 3px solid var(--workspace-teal) !important;
 }
 
+.workspace-production-page :is([class*="rounded-"], .rounded),
+.workspace-inventory-page :is([class*="rounded-"], .rounded),
+.workspace-transfer-page :is([class*="rounded-"], .rounded),
+.workspace-etransport-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-production-page table thead,
+.workspace-inventory-page table thead,
+.workspace-transfer-page table thead,
+.workspace-etransport-page table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-production-page table th,
+.workspace-inventory-page table th,
+.workspace-transfer-page table th,
+.workspace-etransport-page table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-production-page table tbody tr:hover,
+.workspace-inventory-page table tbody tr:hover,
+.workspace-transfer-page table tbody tr:hover,
+.workspace-etransport-page table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

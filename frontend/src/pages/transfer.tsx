@@ -1375,7 +1375,7 @@ export default function TransferPage() {
   ] as const
 
   return (
-    <div className="w-full space-y-3">
+    <div className="workspace-transfer-page w-full space-y-3">
       <DocumentPageHeader
         title={!transferId ? "Transfer nou" : isPosted ? "Transfer postat" : "Editare transfer"}
         subtitle="Gestioneaza mutarea stocului intre gestiuni, cu linii clare de transfer, context logistic si validare pentru fluxurile ANAF atunci cand este necesar."

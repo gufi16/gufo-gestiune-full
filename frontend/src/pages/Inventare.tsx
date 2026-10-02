@@ -601,7 +601,7 @@ export default function Inventare() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-inventory-page space-y-3">
       <PageHeader
         badge="gestiune"
         title="Inventare"

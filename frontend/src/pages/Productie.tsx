@@ -311,7 +311,7 @@ export default function ProductiePage() {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="workspace-production-page w-full space-y-4">
       <PageHeader
         badge="document"
         title="Productie"

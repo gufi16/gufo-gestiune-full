@@ -1086,7 +1086,7 @@ export default function ETransportPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-etransport-page space-y-3">
       <DocumentPageHeader
         badge="e-Transport"
         title={noticeId ? "Editare notificare" : "Notificare noua"}
