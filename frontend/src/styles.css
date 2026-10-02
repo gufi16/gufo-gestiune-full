@@ -1381,6 +1381,56 @@ table td {
   color: var(--workspace-ink) !important;
 }
 
+/* Reports share the same operational rhythm as documents and financial registers. */
+.workspace-report-kpi,
+.workspace-report-card,
+.workspace-report-export,
+.workspace-report-tabs {
+  border-color: var(--workspace-line) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(23, 37, 59, 0.045) !important;
+}
+
+.workspace-report-kpi {
+  border-top: 3px solid #d7ecea !important;
+}
+
+.workspace-report-kpi:hover,
+.workspace-report-card:hover {
+  border-color: #c7d9df !important;
+}
+
+.workspace-report-card > div:first-child > div:first-child > div:first-child {
+  color: var(--workspace-ink) !important;
+  font-size: 0.95rem !important;
+  letter-spacing: -0.01em;
+}
+
+.workspace-report-export {
+  border-left: 3px solid var(--workspace-teal) !important;
+}
+
+.workspace-report-export h2 {
+  color: var(--workspace-ink) !important;
+}
+
+.workspace-report-filters label {
+  color: #718198 !important;
+}
+
+.workspace-report-tabs {
+  background: #fbfcfd !important;
+}
+
+.workspace-report-tabs button[class*="bg-slate-900"] {
+  background: #173a4e !important;
+}
+
+.workspace-report-empty,
+.workspace-report-alert {
+  border-radius: 5px !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;
