@@ -1879,37 +1879,28 @@ export default function MarketplacePage() {
 
   return (
     <div className="workspace-marketplace-page space-y-3">
-      <PageHeader
-        badge={selectedPlatform === "GUFO_DELIVERY" ? "gufo delivery" : "marketplace"}
-        title={selectedPlatform === "GUFO_DELIVERY" ? "Gufo Delivery" : "Marketplace"}
-        subtitle={
-          selectedPlatform === "GUFO_DELIVERY"
-            ? "Activezi locatiile Gufo Delivery, alegi daca comenzile ajung in Gufo POS sau Gufo Go si controlezi catalogul publicat in aplicatia noastra."
-            : "Controlezi integrarile, maparile de produse si comenzile care intra din platforme externe, totul din acelasi registru operational."
-        }
-      />
+      {!platformView ? (
+        <PageHeader
+          badge="marketplace"
+          title="Marketplace"
+          subtitle="Controlezi integrarile, maparile de produse si comenzile care intra din platforme externe, totul din acelasi registru operational."
+        />
+      ) : null}
 
-      {selectedPlatform === "GUFO_DELIVERY" ? (
-        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
-          <DocumentMetric title="Locatii active" value={activePlatformIntegrationCount} tone="emerald" />
-          <DocumentMetric title={currentForm.deliveryOrderDestination === "GO" ? "Gufo Go selectat" : "POS selectat"} value={selectedTerminal ? 1 : 0} tone="blue" />
-          <DocumentMetric title="Categorii vizibile" value={visibleCategories.length} tone="amber" />
-          <DocumentMetric title="Produse vizibile" value={visibleProducts.length} tone="slate" />
-        </div>
-      ) : (
+      {!platformView ? (
         <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
           <DocumentMetric title="Integrari active" value={activeIntegrations.length} tone="emerald" />
           <DocumentMetric title="Locatii conectate" value={connectedLocations} tone="blue" />
           <DocumentMetric title="Produse nemapate" value={unmappedCount} tone="amber" />
           <DocumentMetric title="Comenzi in flux" value={orders.filter((item) => item.status !== "FISCALIZED" && item.status !== "DELIVERED").length} tone="slate" />
         </div>
-      )}
+      ) : null}
 
       {error ? <InlineNotice tone="error">{error}</InlineNotice> : null}
       {message ? <InlineNotice tone="success">{message}</InlineNotice> : null}
       {!platformView ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {platforms.map((platform) => {
+          {[...platforms].sort((left, right) => Number(right.code === "GUFO_DELIVERY") - Number(left.code === "GUFO_DELIVERY")).map((platform) => {
             const integrationCount = integrations.filter((item) => item.status === "ACTIVE" && item.platform === platform.code).length
             const orderCount = orders.filter((item) => item.platform === platform.code && item.status !== "FISCALIZED" && item.status !== "DELIVERED").length
             const productCount = recentExternalProducts.filter((item) => item.platform === platform.code).length
@@ -1998,9 +1989,7 @@ export default function MarketplacePage() {
                 </button>
                 <img src={platformLogo(selectedPlatform)} alt={selectedPlatformMeta?.label || selectedPlatform} className="h-14 w-14 rounded-full object-cover shadow-sm ring-2 ring-slate-100" />
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {selectedPlatform === "GUFO_DELIVERY" ? "Aplicatie proprie Gufo" : "Platforma marketplace"}
-                  </div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{selectedPlatform === "GUFO_DELIVERY" ? "Canal propriu" : "Platforma marketplace"}</div>
                   <div className="mt-1 flex items-center gap-2">
                     <h2 className="text-[26px] font-semibold tracking-tight text-[#17324D]">{selectedPlatformMeta?.label || selectedPlatform}</h2>
                     <PlatformBadge platform={selectedPlatform} />
@@ -2009,9 +1998,10 @@ export default function MarketplacePage() {
               </div>
 
               {selectedPlatform === "GUFO_DELIVERY" ? (
-                <div className="flex items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                  <span className={currentForm.deliveryEnabled ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-300"} />
-                  <span className="font-semibold text-slate-800">{currentForm.deliveryEnabled ? "Gufo Delivery activ" : "Gufo Delivery oprit"}</span>
+                <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm">
+                  <div><span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Locatie</span><div className="font-semibold text-slate-800">{selectedLocation?.name || "Nealeasa"}</div></div>
+                  <div><span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Destinatie</span><div className="font-semibold text-slate-800">{selectedTerminal?.label || selectedTerminal?.deviceId || "Neales"}</div></div>
+                  <div className="flex items-center gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2"><span className={currentForm.deliveryEnabled ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-300"} /><span className="font-semibold text-slate-800">{currentForm.deliveryEnabled ? "Activ" : "Oprit"}</span></div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -2029,21 +2019,14 @@ export default function MarketplacePage() {
       {activeTab === "integrari" ? (
             <div className="space-y-3">
               {selectedPlatform === "GUFO_DELIVERY" ? (
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-                  <div className="rounded-[20px] border border-[#BFDBFE] bg-[#F8FBFF] p-5">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0F5EA8]">Configurare Gufo Delivery</div>
-                    <div className="mt-2 text-xl font-semibold tracking-tight text-[#17324D]">Restaurant, rutare comenzi, livrare si plata</div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">Setarile sunt grupate intr-o fereastra landscape, ca sa nu mai ai o pagina lunga cu scroll.</p>
-                    <button type="button" className={`${documentButtonPrimaryClass} mt-4`} onClick={() => { setDeliveryConfigurationSection("restaurant"); setDeliveryRestaurantPanel("routing"); setDeliveryCheckoutPanel("fees"); setDeliveryConfigurationOpen(true) }}>
-                      Configureaza Gufo Delivery
-                    </button>
+                <div className="flex flex-wrap items-center justify-between gap-4 border border-[#BFDBFE] bg-[#F8FBFF] px-5 py-4">
+                  <div>
+                    <div className="text-base font-semibold text-[#17324D]">Configurare operațională</div>
+                    <p className="mt-1 text-sm text-slate-600">Rutare, Kiosk, catalog public, livrare și plată.</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <DocumentMetric title="Locatie" value={selectedLocation?.name || "Nealeasa"} tone="blue" />
-                    <DocumentMetric title={currentForm.deliveryOrderDestination === "GO" ? "Gufo Go" : "POS"} value={selectedTerminal?.label || selectedTerminal?.deviceId || "Neales"} tone="slate" />
-                    <DocumentMetric title="Livrare" value={currentForm.deliveryEnabled ? "Activa" : "Oprita"} tone={currentForm.deliveryEnabled ? "emerald" : "amber"} />
-                    <DocumentMetric title="Plata online" value={currentForm.deliveryVivaConfigured ? "Configurata" : "Neconfigurata"} tone={currentForm.deliveryVivaConfigured ? "emerald" : "amber"} />
-                  </div>
+                  <button type="button" className={documentButtonPrimaryClass} onClick={() => { setDeliveryConfigurationSection("restaurant"); setDeliveryRestaurantPanel("routing"); setDeliveryCheckoutPanel("fees"); setDeliveryConfigurationOpen(true) }}>
+                    Configurează
+                  </button>
                 </div>
               ) : null}
               <div

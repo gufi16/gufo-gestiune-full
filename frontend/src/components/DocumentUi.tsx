@@ -51,16 +51,16 @@ export function DocumentMetric({
   tone?: "slate" | "blue" | "emerald" | "amber"
 }) {
   const toneClasses: Record<string, string> = {
-    slate: "bg-slate-50 text-[#17324D]",
-    blue: "bg-[#EEF4FB] text-[#17324D]",
-    emerald: "bg-[#E5F3E8] text-[#215D2A]",
-    amber: "bg-[#F6F1E7] text-[#7A5A24]",
+    slate: "border-l-slate-400",
+    blue: "border-l-sky-500",
+    emerald: "border-l-emerald-500",
+    amber: "border-l-amber-500",
   }
 
   return (
-    <div className={`workspace-document-metric border border-slate-200 px-3 py-2.5 ${toneClasses[tone] || toneClasses.slate}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75">{title}</div>
-      <div className="mt-0.5 text-base font-semibold text-[#17324D]">{value}</div>
+    <div className={`workspace-document-metric border border-slate-200 border-l-[3px] bg-white px-3 py-2 shadow-sm shadow-slate-900/[0.03] ${toneClasses[tone] || toneClasses.slate}`}>
+      <div className="text-[9px] font-semibold uppercase tracking-[0.13em] text-slate-500">{title}</div>
+      <div className="mt-1 text-sm font-semibold text-[#17324D]">{value}</div>
     </div>
   )
 }
