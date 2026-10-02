@@ -355,9 +355,49 @@ table td {
   overflow-y: auto;
 }
 
+/* Preserve the intent of each dialog size while making it fluid on smaller desktops. */
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-md"] {
+  inline-size: min(92vw, 28rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-xl"] {
+  inline-size: min(92vw, 36rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-2xl"] {
+  inline-size: min(92vw, 42rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-3xl"] {
+  inline-size: min(92vw, 48rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-4xl"] {
+  inline-size: min(94vw, 60rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-5xl"] {
+  inline-size: min(94vw, 68rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-6xl"] {
+  inline-size: min(94vw, 76rem) !important;
+}
+
+.erp-workspace main [class~="fixed"][class~="inset-0"] > [class*="max-w-7xl"] {
+  inline-size: min(94vw, 82rem) !important;
+}
+
 @media (max-height: 800px) {
   .erp-workspace main :is([class~="fixed"][class~="inset-0"], [style*="position: fixed"]) > div:first-child {
     padding: clamp(0.75rem, 1.4vw, 1rem) !important;
+    zoom: 0.9;
+  }
+}
+
+@media (max-height: 700px) {
+  .erp-workspace main :is([class~="fixed"][class~="inset-0"], [style*="position: fixed"]) > div:first-child {
+    zoom: 0.8;
   }
 }
 
