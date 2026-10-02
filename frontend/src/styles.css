@@ -1658,6 +1658,36 @@ table td {
   background: #f2f9f9 !important;
 }
 
+.workspace-nir-page :is([class*="rounded-"], .rounded),
+.workspace-invoice-page :is([class*="rounded-"], .rounded),
+.workspace-nir-list-page :is([class*="rounded-"], .rounded),
+.workspace-received-invoices-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-nir-page table thead,
+.workspace-invoice-page table thead,
+.workspace-nir-list-page table thead,
+.workspace-received-invoices-page table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-nir-page table th,
+.workspace-invoice-page table th,
+.workspace-nir-list-page table th,
+.workspace-received-invoices-page table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-nir-page table tbody tr:hover,
+.workspace-invoice-page table tbody tr:hover,
+.workspace-nir-list-page table tbody tr:hover,
+.workspace-received-invoices-page table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

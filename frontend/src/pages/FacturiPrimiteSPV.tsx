@@ -1199,7 +1199,7 @@ export default function FacturiPrimiteSPVPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-received-invoices-page space-y-3">
       <PageHeader
         badge="documente"
         title="Facturi primite SPV"

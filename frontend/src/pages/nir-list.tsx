@@ -267,7 +267,7 @@ export default function NirListPage() {
   }, [filteredRows])
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-nir-list-page space-y-3">
       <PageHeader
         badge="Operatiuni"
         title="Receptii NIR"

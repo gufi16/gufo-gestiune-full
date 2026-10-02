@@ -732,7 +732,7 @@ export default function FacturaPage() {
   ]
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-invoice-page space-y-3">
       <DocumentPageHeader
         title={invoiceId ? "Editare factura" : "Factura noua"}
         subtitle="Pregatesti factura comerciala completa, cu antet, linii, totaluri si integrarea SPV atunci cand documentul trebuie trimis in fluxul ANAF."

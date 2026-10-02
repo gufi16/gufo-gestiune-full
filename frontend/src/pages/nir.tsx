@@ -1296,7 +1296,7 @@ export default function NirPage() {
   ]
 
   return (
-    <div style={pageWrap}>
+    <div className="workspace-nir-page" style={pageWrap}>
       <div className="no-print">
         <DocumentPageHeader
           title={pageTitle}
