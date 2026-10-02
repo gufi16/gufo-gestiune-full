@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import clsx from "clsx"
 import {
   BarChart3,
@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import { hasModule } from "../lib/modules"
 
-const APP_VERSION = "V1.3"
+const APP_VERSION = "V1.4"
 
 type NavItem = {
   to: string
@@ -38,6 +38,7 @@ type NavItem = {
 type NavGroup = {
   label: string
   icon?: NavItem["icon"]
+  defaultRoute?: string
   module?: string
   items: NavItem[]
 }
@@ -64,6 +65,7 @@ const navigation: NavGroup[] = [
   {
     label: "ANAF și SPV",
     icon: Truck,
+    defaultRoute: "/documente/facturi-primite-spv",
     items: [
       { to: "/documente/facturi-primite-spv", label: "Facturi primite SPV", icon: Inbox, module: "documents" },
       { to: "/e-transport", label: "Registru e-Transport", icon: Truck, module: "documents" },
@@ -133,6 +135,7 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: NavItem; nest
 
 function SidebarGroup({ group, open, onToggle, onNavigate }: { group: NavGroup; open: boolean; onToggle: () => void; onNavigate?: () => void }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const active = useMemo(() => group.items.some((item) => location.pathname.startsWith(item.to)), [group.items, location.pathname])
 
   if (!group.icon) return <SidebarLink item={group.items[0]} onNavigate={onNavigate} />
@@ -140,18 +143,31 @@ function SidebarGroup({ group, open, onToggle, onNavigate }: { group: NavGroup; 
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={onToggle}
+      <div
         className={clsx(
           "flex w-full items-center gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-bold tracking-[0.12em] transition",
           active ? "border-[#f39c12] bg-[#3b3d47] text-white" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200",
         )}
       >
-        <Icon size={16} className={active ? "text-[#f39c12]" : "text-slate-500"} />
-        <span className="min-w-0 flex-1 truncate">{group.label}</span>
-        <ChevronDown size={15} className={clsx("transition-transform", open ? "rotate-180" : "")} />
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (group.defaultRoute) {
+              navigate(group.defaultRoute)
+              onNavigate?.()
+              return
+            }
+            onToggle()
+          }}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <Icon size={16} className={active ? "text-[#f39c12]" : "text-slate-500"} />
+          <span className="min-w-0 flex-1 truncate">{group.label}</span>
+        </button>
+        <button type="button" onClick={onToggle} className="-mr-1 p-1 text-current" aria-label={`Deschide ${group.label}`}>
+          <ChevronDown size={15} className={clsx("transition-transform", open ? "rotate-180" : "")} />
+        </button>
+      </div>
       {open ? <div className="border-l border-white/10 py-1">{group.items.map((item) => <SidebarLink key={item.to} item={item} nested onNavigate={onNavigate} />)}</div> : null}
     </div>
   )
