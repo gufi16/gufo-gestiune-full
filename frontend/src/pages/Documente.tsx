@@ -16,6 +16,7 @@ import {
   Factory,
   ClipboardList,
   FileText,
+  ReceiptText,
   Tags,
   Truck,
   TriangleAlert,
@@ -331,6 +332,29 @@ type SalesInvoiceListItem = {
   efacturaUploadIndex?: string | null
   efacturaDownloadedAt?: string | null
   itemsCount: number
+  cashReceipt?: {
+    id: string
+    receiptNo: string
+    receiptDate: string
+    amount: number
+    currency: string
+  } | null
+}
+
+type CashReceiptListItem = {
+  id: string
+  receiptNo: string
+  receiptDate: string
+  amount: number
+  currency: string
+  payerName: string
+  payerCif?: string | null
+  invoiceDocNo: string
+  invoice: {
+    id: string
+    docNo: string
+    location?: { id: string; name: string } | null
+  }
 }
 
 type ReceiptListItem = {
@@ -409,7 +433,7 @@ type TransferDocListItem = {
   items?: Array<{ id: string }>
 }
 
-type ActiveTab = "consumption" | "production" | "inventory" | "invoice" | "receipt" | "minutes" | "transfer"
+type ActiveTab = "consumption" | "production" | "inventory" | "invoice" | "cash-receipt" | "receipt" | "minutes" | "transfer"
 
 type LocationOption = {
   id: string
@@ -578,6 +602,8 @@ export default function Documente() {
         ? "production"
         : searchParams.get("tab") === "invoice"
           ? "invoice"
+      : searchParams.get("tab") === "cash-receipt"
+            ? "cash-receipt"
       : searchParams.get("tab") === "receipt"
             ? "receipt"
             : searchParams.get("tab") === "minutes"
@@ -628,6 +654,7 @@ export default function Documente() {
     production: 1,
     inventory: 1,
     invoice: 1,
+    "cash-receipt": 1,
     receipt: 1,
     minutes: 1,
     transfer: 1,
@@ -637,6 +664,7 @@ export default function Documente() {
   const [productionDocs, setProductionDocs] = useState<ProductionDocListItem[]>([])
   const [inventoryDocs, setInventoryDocs] = useState<InventoryDocListItem[]>([])
   const [invoiceDocs, setInvoiceDocs] = useState<SalesInvoiceListItem[]>([])
+  const [cashReceiptDocs, setCashReceiptDocs] = useState<CashReceiptListItem[]>([])
   const [receiptDocs, setReceiptDocs] = useState<ReceiptListItem[]>([])
   const [minutesDocs, setMinutesDocs] = useState<MinutesDocListItem[]>([])
   const [transferDocs, setTransferDocs] = useState<TransferDocListItem[]>([])
@@ -654,7 +682,7 @@ export default function Documente() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab === "inventory" || tab === "production" || tab === "consumption" || tab === "invoice" || tab === "receipt" || tab === "minutes" || tab === "transfer") {
+    if (tab === "inventory" || tab === "production" || tab === "consumption" || tab === "invoice" || tab === "cash-receipt" || tab === "receipt" || tab === "minutes" || tab === "transfer") {
       setActiveTab(tab as ActiveTab)
     }
   }, [searchParams])
@@ -821,6 +849,8 @@ export default function Documente() {
       loadProductionDocs()
     } else if (activeTab === "invoice") {
       loadInvoiceDocs()
+    } else if (activeTab === "cash-receipt") {
+      loadCashReceiptDocs()
     } else if (activeTab === "receipt") {
       loadReceiptDocs()
     } else if (activeTab === "minutes") {
@@ -1029,6 +1059,33 @@ export default function Documente() {
       console.error("LOAD SALES INVOICES ERROR", err)
       setInvoiceDocs([])
       setError("Nu am putut incarca facturile.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadCashReceiptDocs() {
+    if (!token) {
+      setLoading(false)
+      setError("Lipseste sesiunea de autentificare.")
+      return
+    }
+    setLoading(true)
+    setError("")
+    try {
+      const params = new URLSearchParams()
+      if (dateFrom) params.set("dateFrom", dateFrom)
+      if (dateTo) params.set("dateTo", dateTo)
+      const res = await fetch(`${API}/api/v1/cash-receipts?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.ok) throw new Error(data?.error || "Nu am putut incarca chitantele.")
+      let items: CashReceiptListItem[] = Array.isArray(data?.receipts) ? data.receipts : []
+      if (selectedLocationId) items = items.filter((item) => item.invoice?.location?.id === selectedLocationId)
+      setCashReceiptDocs(items)
+    } catch (err) {
+      console.error("LOAD CASH RECEIPTS ERROR", err)
+      setCashReceiptDocs([])
+      setError("Nu am putut incarca chitantele.")
     } finally {
       setLoading(false)
     }
@@ -1358,6 +1415,16 @@ export default function Documente() {
       console.error("PDF INVOICE ERROR", err)
       alert("Nu am putut genera PDF-ul facturii.")
     }
+  }
+
+  async function openCashReceiptPdf(id: string) {
+    if (!token) return
+    const res = await fetch(`${API}/api/v1/cash-receipts/${id}/pdf`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) {
+      setError("Nu am putut genera PDF-ul chitantei.")
+      return
+    }
+    await openPdfInNewTab(res)
   }
 
   async function openReceiptPdf(id: string) {
@@ -1825,6 +1892,18 @@ export default function Documente() {
     })
   }, [receiptDocs, search])
 
+  const filteredCashReceiptDocs = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return cashReceiptDocs
+    return cashReceiptDocs.filter((doc) =>
+      [doc.receiptNo, doc.payerName, doc.payerCif, doc.invoiceDocNo, doc.invoice?.location?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    )
+  }, [cashReceiptDocs, search])
+
   useEffect(() => {
     if (searchParams.get("open") !== "1") return
     const needle = search.trim().toLowerCase()
@@ -1930,6 +2009,10 @@ export default function Documente() {
     () => paginateRows(filteredInvoiceDocs, pageByTab.invoice, DOCUMENTS_PAGE_SIZE),
     [filteredInvoiceDocs, pageByTab.invoice]
   )
+  const pagedCashReceipts = useMemo(
+    () => paginateRows(filteredCashReceiptDocs, pageByTab["cash-receipt"], DOCUMENTS_PAGE_SIZE),
+    [filteredCashReceiptDocs, pageByTab]
+  )
   const pagedReceipts = useMemo(
     () => paginateRows(filteredReceiptDocs, pageByTab.receipt, DOCUMENTS_PAGE_SIZE),
     [filteredReceiptDocs, pageByTab.receipt]
@@ -1965,6 +2048,13 @@ export default function Documente() {
               placeholder: "Nr factura, client, CIF, locatie...",
               resultCount: filteredInvoiceDocs.length,
             }
+          : activeTab === "cash-receipt"
+            ? {
+                title: "Istoric chitante cash",
+                subtitle: "Vezi incasarile cash emise din facturi si descarci documentul in format PDF.",
+                placeholder: "Nr chitanta, factura, client, CIF, locatie...",
+                resultCount: filteredCashReceiptDocs.length,
+              }
           : activeTab === "transfer"
             ? {
                 title: "Transferuri intre gestiuni",
@@ -2076,6 +2166,30 @@ export default function Documente() {
                     },
                   ]
                 : []),
+            ]
+        : activeTab === "cash-receipt"
+          ? [
+              {
+                title: "Chitante cash",
+                value: String(filteredCashReceiptDocs.length),
+                hint: "Chitante emise din facturi in intervalul selectat",
+                icon: ReceiptText,
+                tone: "blue",
+              },
+              {
+                title: "Facturi incasate",
+                value: String(new Set(filteredCashReceiptDocs.map((doc) => doc.invoiceDocNo)).size),
+                hint: "Facturi cu incasare cash consemnata",
+                icon: FileText,
+                tone: "slate",
+              },
+              {
+                title: "Total incasat",
+                value: formatRon(filteredCashReceiptDocs.reduce((sum, doc) => sum + Number(doc.amount || 0), 0)),
+                hint: "Valoarea chitanelor din interval",
+                icon: FileCheck2,
+                tone: "emerald",
+              },
             ]
         : activeTab === "receipt"
           ? [
@@ -2200,6 +2314,15 @@ export default function Documente() {
         >
           <FileText size={15} />
           Facturi
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("cash-receipt")}
+          className={documentTypeButtonClass(activeTab === "cash-receipt")}
+        >
+          <ReceiptText size={15} />
+          Chitante
         </button>
 
         <button
@@ -2330,6 +2453,8 @@ export default function Documente() {
                     loadProductionDocs()
                   } else if (activeTab === "invoice") {
                     loadInvoiceDocs()
+                  } else if (activeTab === "cash-receipt") {
+                    loadCashReceiptDocs()
                   } else if (activeTab === "receipt") {
                     loadReceiptDocs()
                   } else if (activeTab === "minutes") {
@@ -2691,6 +2816,7 @@ export default function Documente() {
                         <div className="flex flex-col gap-1">
                           <span>{doc.docNo}</span>
                           {isStornoInvoice ? <span className="w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">STORNO</span> : null}
+                          {doc.cashReceipt ? <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Chitanta {doc.cashReceipt.receiptNo}</span> : null}
                         </div>
                       </td>
                       <td className="px-3 py-2.5 text-slate-600">{formatDate(doc.docDate)}</td>
@@ -2801,6 +2927,45 @@ export default function Documente() {
               totalItems={filteredInvoiceDocs.length}
               onPageChange={(page) => setPageByTab((prev) => ({ ...prev, invoice: page }))}
             />
+          </div>
+        ) : activeTab === "cash-receipt" ? (
+          <div className="overflow-x-auto rounded-[22px] border border-slate-200">
+            <table className="min-w-[1000px] w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-3 py-2.5 text-left font-medium">Numar</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Data</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Factura</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Client</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Locatie</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Valoare cash</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Actiune</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">Se incarca chitantele...</td></tr>
+                ) : filteredCashReceiptDocs.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">Nu exista chitante cash in intervalul selectat.</td></tr>
+                ) : pagedCashReceipts.items.map((doc) => (
+                  <tr key={doc.id} className="border-t border-slate-200">
+                    <td className="px-3 py-2.5 font-semibold text-slate-900">{doc.receiptNo}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{formatDate(doc.receiptDate)}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{doc.invoiceDocNo}</td>
+                    <td className="px-3 py-2.5 text-slate-600"><div>{doc.payerName}</div>{doc.payerCif ? <div className="text-[11px] text-slate-400">CIF {doc.payerCif}</div> : null}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{doc.invoice?.location?.name || "-"}</td>
+                    <td className="px-3 py-2.5 font-semibold text-emerald-700">{formatMoneyRo(doc.amount, doc.currency)}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="flex min-w-max justify-end gap-2">
+                        <a href={`/inregistrare-document/factura/edit?id=${doc.invoice.id}`} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#17324D] transition hover:bg-[#F4F7FB]">Factura <ArrowRight size={16} /></a>
+                        <button type="button" onClick={() => openCashReceiptPdf(doc.id)} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"><Printer size={16} /> PDF</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <PaginationBar page={pagedCashReceipts.page} totalPages={pagedCashReceipts.totalPages} totalItems={filteredCashReceiptDocs.length} onPageChange={(page) => setPageByTab((prev) => ({ ...prev, "cash-receipt": page }))} />
           </div>
         ) : activeTab === "receipt" ? (
           <div className="overflow-x-auto rounded-[22px] border border-slate-200">

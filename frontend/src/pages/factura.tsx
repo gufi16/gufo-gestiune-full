@@ -134,6 +134,7 @@ export default function FacturaPage() {
   const [efacturaUploadIndex, setEfacturaUploadIndex] = useState("")
   const [efacturaSentAt, setEfacturaSentAt] = useState("")
   const [efacturaDownloadedAt, setEfacturaDownloadedAt] = useState("")
+  const [cashReceipt, setCashReceipt] = useState<{ id: string; receiptNo: string; receiptDate: string; amount: number; currency: string } | null>(null)
   const [invoiceTypeCode, setInvoiceTypeCode] = useState("380")
   const [customerSearch, setCustomerSearch] = useState("")
   const [customerChosen, setCustomerChosen] = useState(false)
@@ -244,6 +245,7 @@ export default function FacturaPage() {
       setEfacturaUploadIndex(invoice.efacturaUploadIndex || "")
       setEfacturaSentAt(invoice.efacturaSentAt || "")
       setEfacturaDownloadedAt(invoice.efacturaDownloadedAt || "")
+      setCashReceipt(invoice.cashReceipt || null)
       setHeader({
         locationId: invoice.locationId || "",
         customerId: invoice.customerId || "",
@@ -389,6 +391,42 @@ export default function FacturaPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function issueCashReceipt() {
+    if (!invoiceId || !token) return
+    const confirmed = window.confirm("Emiti chitanta pentru incasarea cash a acestei facturi? Chitanta primeste numar unic si nu poate fi emisa a doua oara pentru aceeasi factura.")
+    if (!confirmed) return
+
+    setSaving(true)
+    setError("")
+    setMessage("")
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/sales-invoices/${invoiceId}/cash-receipts`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.ok || !data?.receipt?.id) throw new Error(data?.error || "Nu am putut emite chitanta.")
+      setCashReceipt(data.receipt)
+      setMessage(`Chitanta ${data.receipt.receiptNo} a fost emisa pentru plata cash.`)
+      const pdf = await fetch(`${API_BASE}/api/v1/cash-receipts/${data.receipt.id}/pdf`, { headers: { Authorization: `Bearer ${token}` } })
+      if (pdf.ok) await downloadPdfFile(pdf, `Chitanta_${data.receipt.receiptNo}.pdf`)
+    } catch (e: any) {
+      setError(e?.message || "Nu am putut emite chitanta.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function downloadCashReceipt() {
+    if (!cashReceipt?.id || !token) return
+    const res = await fetch(`${API_BASE}/api/v1/cash-receipts/${cashReceipt.id}/pdf`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) {
+      setError("Nu am putut descarca chitanta.")
+      return
+    }
+    await downloadPdfFile(res, `Chitanta_${cashReceipt.receiptNo}.pdf`)
   }
 
   async function prepareEfactura() {
@@ -762,6 +800,19 @@ export default function FacturaPage() {
                 Storneaza
               </button>
             ) : null}
+            {invoiceId && status === "ISSUED" && !isStornoInvoice ? (
+              cashReceipt ? (
+                <button type="button" onClick={downloadCashReceipt} className={documentButtonSecondaryClass} disabled={saving || loadingInvoice}>
+                  <ReceiptText size={16} className="mr-2" />
+                  Chitanta {cashReceipt.receiptNo}
+                </button>
+              ) : (
+                <button type="button" onClick={issueCashReceipt} className={documentButtonSecondaryClass} disabled={saving || loadingInvoice}>
+                  <ReceiptText size={16} className="mr-2" />
+                  Emite chitanta cash
+                </button>
+              )
+            ) : null}
             {invoiceId && efacturaEnabled ? (
               <button
                 type="button"
@@ -776,6 +827,12 @@ export default function FacturaPage() {
           </>
         }
       />
+      {cashReceipt ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div><span className="font-semibold">Chitanta cash emisa:</span> nr. {cashReceipt.receiptNo} · {formatMoneyRo(cashReceipt.amount, cashReceipt.currency)}</div>
+          <button type="button" onClick={downloadCashReceipt} className={documentButtonSecondaryClass}>Descarca PDF</button>
+        </div>
+      ) : null}
       {invoiceId && efacturaEnabled ? (
         <div className="rounded-[8px] border border-slate-200 bg-white px-4 py-3 shadow-sm shadow-slate-900/[0.03]">
           <div className="flex flex-wrap items-center gap-2">

@@ -13,6 +13,7 @@ import { readAnafHeader } from "../lib/anafHttp"
 import { resolveTenantCompany } from "../lib/companyResolver"
 import { drawDocumentHero, drawInfoCards, drawSimpleTable, drawSignatureRow, drawTotalsBox, ensurePdfPage, pdfDate, pdfFmt, pdfNum, pdfText, registerPdfFonts } from "../lib/professionalPdf"
 import { drawReferenceInvoicePdf } from "../lib/referenceInvoicePdf"
+import { drawCashReceiptPdf } from "../lib/cashReceiptPdf"
 import { buildCompanyScopedTenantWhere, requireRequestCompanyId, resolveRequestCompany } from "../lib/companyScope"
 import {
   anafCheckUploadStatus,
@@ -117,6 +118,7 @@ type InvoiceLike = {
   totalSgrRon?: unknown
   totalWithSgrRon?: unknown
   items?: InvoiceLineLike[] | unknown
+  cashReceipts?: Array<{ id: string; receiptNo: string; receiptDate: Date; amount: unknown; currency: string }> | unknown
 }
 
 type EfacturaPayloadCompany = {
@@ -418,9 +420,18 @@ async function createStornoInvoice(tenantId: string, companyId: string, sourceIn
 function enrichInvoice(invoice: InvoiceLike | null | undefined) {
   invoice = serializeInvoice(invoice)
   if (!invoice) return invoice
+  const cashReceipt = Array.isArray(invoice.cashReceipts) && invoice.cashReceipts.length > 0
+    ? invoice.cashReceipts[0]
+    : null
   return {
     ...invoice,
     itemsCount: Array.isArray(invoice.items) ? invoice.items.length : 0,
+    cashReceipt: cashReceipt
+      ? {
+          ...cashReceipt,
+          amount: toNumber(cashReceipt.amount),
+        }
+      : null,
   }
 }
 
@@ -482,7 +493,23 @@ function serializeInvoice(invoice: InvoiceLike | null | undefined) {
     totalSgrRon: toNumber(invoice.totalSgrRon),
     totalWithSgrRon: toNumber(invoice.totalWithSgrRon),
     items,
+    cashReceipts: Array.isArray(invoice.cashReceipts)
+      ? invoice.cashReceipts.map((receipt) => ({ ...receipt, amount: toNumber(receipt.amount) }))
+      : invoice.cashReceipts,
   }
+}
+
+function formatCashReceiptNumber(value: number) {
+  return String(Math.max(1, value)).padStart(5, "0")
+}
+
+async function reserveCashReceiptNumber(tx: Prisma.TransactionClient, tenantId: string) {
+  const counter = await tx.skuCounter.upsert({
+    where: { tenantId_key: { tenantId, key: "cashReceipt" } },
+    update: { value: { increment: 1 } },
+    create: { tenantId, key: "cashReceipt", value: 1 },
+  })
+  return formatCashReceiptNumber(counter.value)
 }
 
 function classifyEfacturaStatus(payload: unknown, rawText: string) {
@@ -522,6 +549,7 @@ router.get("/api/v1/sales-invoices", async (req: AuthedRequest, res) => {
     include: {
       location: true,
       customer: true,
+      cashReceipts: { orderBy: { createdAt: "desc" }, take: 1 },
       items: {
         include: {
           product: true,
@@ -551,6 +579,7 @@ router.get("/api/v1/sales-invoices/:id", async (req: AuthedRequest, res) => {
     include: {
       location: true,
       customer: true,
+      cashReceipts: { orderBy: { createdAt: "desc" }, take: 1 },
       items: {
         include: {
           product: {
@@ -858,6 +887,123 @@ router.post("/api/v1/sales-invoices/full", async (req: AuthedRequest, res) => {
       error: getErrorMessage(error, "Nu am putut salva factura."),
     })
   }
+})
+
+router.post("/api/v1/sales-invoices/:id/cash-receipts", async (req: AuthedRequest, res) => {
+  const tenantId = getTenantId(req)
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Tenant invalid." })
+  const companyId = await requireRequestCompanyId(req)
+  const invoiceId = req.params.id
+
+  try {
+    const receipt = await prisma.$transaction(async (tx) => {
+      const invoice = await tx.salesInvoice.findFirst({
+        where: { id: invoiceId, tenantId, companyId },
+        include: { cashReceipts: { take: 1 } },
+      })
+
+      if (!invoice) throw new Error("Factura nu a fost gasita.")
+      if (invoice.status !== "ISSUED") throw new Error("Chitanta poate fi emisa doar pentru o factura finalizata.")
+      if (String(invoice.invoiceTypeCode || "") === "381" || toNumber(invoice.totalWithSgrFc || invoice.totalGrossFc) <= 0) {
+        throw new Error("Nu se poate emite chitanta pentru o factura storno sau cu total zero.")
+      }
+      if (invoice.cashReceipts.length > 0) throw new Error("Factura are deja o chitanta emisa.")
+
+      const receiptNo = await reserveCashReceiptNumber(tx, tenantId)
+      return tx.cashReceipt.create({
+        data: {
+          tenantId,
+          companyId,
+          invoiceId: invoice.id,
+          receiptNo,
+          receiptDate: new Date(),
+          amount: toNumber(invoice.totalWithSgrFc || invoice.totalGrossFc),
+          currency: invoice.currency,
+          paymentType: "CASH",
+          payerName: invoice.customerName || "Client factura",
+          payerCif: invoice.customerCif || null,
+          payerAddress: invoice.customerAddress || null,
+          invoiceDocNo: invoice.docNo,
+        },
+      })
+    })
+
+    return res.status(201).json({ ok: true, receipt: { ...receipt, amount: toNumber(receipt.amount) } })
+  } catch (error: unknown) {
+    return res.status(400).json({ ok: false, error: getErrorMessage(error, "Nu am putut emite chitanta.") })
+  }
+})
+
+router.get("/api/v1/cash-receipts", async (req: AuthedRequest, res) => {
+  const tenantId = getTenantId(req)
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Tenant invalid." })
+  const companyId = await requireRequestCompanyId(req)
+  const dateFrom = String(req.query.dateFrom || "").trim()
+  const dateTo = String(req.query.dateTo || "").trim()
+
+  const receiptDate: Prisma.DateTimeFilter = {}
+  if (dateFrom) receiptDate.gte = new Date(`${dateFrom}T00:00:00.000Z`)
+  if (dateTo) receiptDate.lte = new Date(`${dateTo}T23:59:59.999Z`)
+
+  const receipts = await prisma.cashReceipt.findMany({
+    where: {
+      tenantId,
+      companyId,
+      ...(dateFrom || dateTo ? { receiptDate } : {}),
+    },
+    include: {
+      invoice: {
+        select: {
+          id: true,
+          docNo: true,
+          docDate: true,
+          location: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: [{ receiptDate: "desc" }, { createdAt: "desc" }],
+  })
+
+  return res.json({
+    ok: true,
+    receipts: receipts.map((receipt) => ({ ...receipt, amount: toNumber(receipt.amount) })),
+  })
+})
+
+router.get("/api/v1/cash-receipts/:id/pdf", async (req: AuthedRequest, res) => {
+  const tenantId = getTenantId(req)
+  if (!tenantId) return res.status(401).json({ ok: false, error: "Tenant invalid." })
+  const companyId = await requireRequestCompanyId(req)
+  const receipt = await prisma.cashReceipt.findFirst({
+    where: { id: req.params.id, tenantId, companyId },
+    include: { invoice: true },
+  })
+  if (!receipt) return res.status(404).json({ ok: false, error: "Chitanta nu a fost gasita." })
+
+  const company = await resolveRequestCompany(req)
+  const filename = `Chitanta_${safeFilePart(receipt.receiptNo)}.pdf`
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`)
+  const doc = new PDFDocument({ size: "A4", margin: 34, info: { Title: filename, Author: company?.name || "Gufo ERP", Subject: `Chitanta ${receipt.receiptNo}` } })
+  doc.pipe(res)
+  drawCashReceiptPdf(doc, {
+    supplier: {
+      name: company?.name,
+      cui: company?.cui,
+      regNo: company?.regNo,
+      address: company?.address,
+      county: company?.county,
+      iban: company?.iban,
+      bank: company?.bank,
+    },
+    payer: { name: receipt.payerName, cui: receipt.payerCif, address: receipt.payerAddress },
+    receiptNo: receipt.receiptNo,
+    receiptDate: receipt.receiptDate,
+    amount: receipt.amount,
+    currency: receipt.currency,
+    invoiceDocNo: receipt.invoiceDocNo,
+  })
+  doc.end()
 })
 
 router.get("/api/v1/sales-invoices/:id/pdf", async (req: AuthedRequest, res) => {
