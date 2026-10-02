@@ -327,7 +327,7 @@ export default function Utilizatori() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-users-page space-y-3">
       <PageHeader
         badge="configurare"
         title="Utilizatori ERP"
@@ -422,7 +422,7 @@ export default function Utilizatori() {
                     {item.role === "OWNER" || item.role === "ADMIN" ? (
                       <span className="text-xs font-medium text-slate-500">Toate firmele</span>
                     ) : editingCompaniesFor === item.id ? (
-                      <div className="min-w-[250px] space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="min-w-[250px] space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
                         {availableCompanies.map((company) => (
                           <label key={company.id} className="flex items-start gap-2 text-xs text-slate-700">
                             <input
@@ -519,7 +519,7 @@ export default function Utilizatori() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-          <div className="w-full max-w-2xl rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <div className="workspace-admin-modal w-full max-w-2xl rounded-md border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-[#17324D]">{editingUserId ? "Editeaza utilizator" : "Adauga utilizator"}</h2>
@@ -563,7 +563,7 @@ export default function Utilizatori() {
 
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-slate-700">Poza profil</label>
-                  <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
                     {form.imageUrl ? (
                       <img src={resolvePublicAssetUrl(form.imageUrl)} alt={form.name || "Avatar"} className="h-16 w-16 rounded-full border border-slate-200 object-cover" />
                     ) : (
@@ -659,15 +659,15 @@ export default function Utilizatori() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-700">Acces firme</label>
                 {form.role === "OWNER" || form.role === "ADMIN" ? (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
                     Rolul selectat are acces complet la toate firmele.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
                     {availableCompanies.map((company) => {
                       const checked = form.companyIds.includes(company.id)
                       return (
-                        <label key={company.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                        <label key={company.id} className="flex items-start gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                           <input
                             type="checkbox"
                             className="mt-1 h-4 w-4 rounded border-slate-300 text-[#17324D] focus:ring-[#17324D]"

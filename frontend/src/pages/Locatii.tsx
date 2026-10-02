@@ -239,7 +239,7 @@ export default function LocatiiPage() {
   }, [])
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-locations-page space-y-3">
       <PageHeader
         badge="nomenclator"
         title="Locatii"
@@ -337,15 +337,15 @@ export default function LocatiiPage() {
 
       <DocumentSection title="Locatii existente" description="Ai registrul complet al locatiilor, cu adresele salvate si acces rapid spre editare atunci cand apar schimbari operationale.">
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
             Se incarca locatiile...
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
             Nu exista locatii salvate.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[16px] border border-slate-200">
+          <div className="workspace-locations-table overflow-hidden rounded-md border border-slate-200">
             <table className="w-full text-[13px]">
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
@@ -360,7 +360,7 @@ export default function LocatiiPage() {
                   <tr key={item.id} className="border-t border-slate-200">
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-blue-50 text-blue-700">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-50 text-blue-700">
                           <Building2 size={18} />
                         </span>
                         <span className="font-semibold text-slate-900">{item.name}</span>
@@ -391,7 +391,7 @@ export default function LocatiiPage() {
 
       {showEdit && editingItem ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4">
-          <div className="w-full max-w-3xl rounded-[20px] bg-white p-5 shadow-2xl">
+          <div className="workspace-admin-modal w-full max-w-3xl rounded-md bg-white p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <div className="text-lg font-extrabold text-slate-900">Editare locatie</div>

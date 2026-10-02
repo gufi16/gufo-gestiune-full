@@ -77,7 +77,7 @@ function ToggleRow({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex items-center justify-between gap-4 rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+    <label className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white px-4 py-3">
       <span className="text-sm font-semibold text-slate-800">{label}</span>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4" />
     </label>
@@ -95,7 +95,7 @@ function WarehouseModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+      <div className="workspace-admin-modal max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-md border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-[#17324D]">{title}</h2>
           <button type="button" onClick={onClose} className={documentButtonSecondaryClass}>
@@ -321,7 +321,7 @@ export default function GestiuniPage() {
   )
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-warehouses-page space-y-3">
       <PageHeader
         badge="operational"
         title="Gestiuni"
@@ -360,7 +360,7 @@ export default function GestiuniPage() {
             )
           })}
           {!locations.length && !loading ? (
-            <div className="rounded-[16px] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
               Nu exista locatii disponibile.
             </div>
           ) : null}
@@ -385,12 +385,12 @@ export default function GestiuniPage() {
       >
         <div className="space-y-2.5">
           {!warehouses.length ? (
-            <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
               Nu exista gestiuni pe locatia selectata.
             </div>
           ) : (
             warehouses.map((warehouse) => (
-              <div key={warehouse.id} className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={warehouse.id} className="workspace-warehouse-card rounded-md border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -408,17 +408,17 @@ export default function GestiuniPage() {
                     </div>
 
                     <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-500 md:grid-cols-3">
-                      <div className="rounded-[14px] bg-slate-50 px-3 py-2">
+                      <div className="rounded-md bg-slate-50 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Cod</div>
                         <div className="mt-1 font-semibold text-slate-700">{warehouse.code}</div>
                       </div>
-                      <div className="rounded-[14px] bg-slate-50 px-3 py-2">
+                      <div className="rounded-md bg-slate-50 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Tip</div>
                         <div className="mt-1 font-semibold text-slate-700">
                           {warehouseTypeOptions.find((option) => option.value === warehouse.type)?.label || warehouse.type}
                         </div>
                       </div>
-                      <div className="rounded-[14px] bg-slate-50 px-3 py-2">
+                      <div className="rounded-md bg-slate-50 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Status</div>
                         <div className="mt-1 font-semibold text-slate-700">{warehouse.isActive ? "Activa" : "Inactiva"}</div>
                       </div>
@@ -514,7 +514,7 @@ export default function GestiuniPage() {
               />
             </div>
 
-            <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <CheckCircle2 size={16} className="text-emerald-600" />
                 Default curent: {defaultWarehouse?.name || "-"}
