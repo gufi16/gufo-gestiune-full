@@ -556,7 +556,7 @@ export default function StocPage() {
   const activeWarehouseName = warehouseEnabled ? activeWarehouseLabel(warehouses, warehouseId) : "Toate gestiunile"
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-stock-page space-y-3">
       <PageHeader
         badge="gestiune"
         title="Stoc"

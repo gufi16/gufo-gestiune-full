@@ -1535,6 +1535,50 @@ table td {
   box-shadow: 0 2px 8px rgba(23, 44, 69, 0.04) !important;
 }
 
+.workspace-documents-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-documents-page > div:not(.workspace-page-header) {
+  border-color: var(--workspace-line);
+}
+
+.workspace-documents-page table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-documents-page table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-documents-page table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
+.workspace-stock-page :is([class*="rounded-"], .rounded) {
+  border-radius: 5px !important;
+}
+
+.workspace-stock-page > div:not(.workspace-page-header) {
+  border-color: var(--workspace-line);
+}
+
+.workspace-stock-page table thead {
+  background: #f2f5f8 !important;
+}
+
+.workspace-stock-page table th {
+  color: #61728a !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.07em;
+}
+
+.workspace-stock-page table tbody tr:hover {
+  background: #f2f9f9 !important;
+}
+
 .erp-workspace main :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   border-color: #cfd9e4 !important;
   border-radius: 4px !important;

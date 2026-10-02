@@ -2181,7 +2181,7 @@ export default function Documente() {
     }`
 
   return (
-    <div className="space-y-3">
+    <div className="workspace-documents-page space-y-3">
       <PageHeader
         badge="documente"
         title="Documente"
