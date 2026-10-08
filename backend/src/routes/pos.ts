@@ -6066,13 +6066,24 @@ export async function handlePosSale(req: PosAuthRequest, res: Response) {
 
   const productIdentifiers = payload.lines.map((line) => normalizeText(line.productId)).filter(Boolean);
 
+  // POS may receive shared catalog products (companyId = null) alongside the
+  // active company's own products. Use the exact same scope as catalog sync,
+  // otherwise a fiscalized sale can remain queued even though it was sellable.
+  const productCompanyScope = {
+    OR: [{ companyId: company.id }, { companyId: null }],
+  };
+
   const dbProducts = await prisma.product.findMany({
       where: {
         tenantId,
-        companyId: company?.id || null,
-        OR: [
-          { id: { in: productIdentifiers } },
-          { sku: { in: productIdentifiers } },
+        AND: [
+          productCompanyScope,
+          {
+            OR: [
+              { id: { in: productIdentifiers } },
+              { sku: { in: productIdentifiers } },
+            ],
+          },
         ],
       },
     include: {
@@ -6098,7 +6109,7 @@ export async function handlePosSale(req: PosAuthRequest, res: Response) {
   const recipes = await prisma.recipe.findMany({
       where: {
         tenantId,
-        companyId: company?.id || null,
+        ...productCompanyScope,
         productId: { in: dbProducts.map((product) => product.id) },
         status: "ACTIVE",
       isActive: true,
