@@ -4108,6 +4108,17 @@ async function resolveSaleAuthContext(
   req: PosAuthRequest,
   hints: z.infer<typeof PosSaleSchema>
 ): Promise<ResolvedPosTerminalAuth | null> {
+  // The authenticated POS headers identify the terminal that is currently
+  // paired. Queued sales can legitimately contain older terminal hints, so
+  // never let stale payload metadata override a valid current session.
+  if (req.auth?.tenantId && req.auth.terminalId && req.auth.deviceId) {
+    return {
+      tenantId: req.auth.tenantId,
+      terminalId: req.auth.terminalId,
+      deviceId: req.auth.deviceId,
+    };
+  }
+
   const explicitAuth =
     (await lookupTerminalAuthByHints(hints, req.auth?.tenantId || null)) ||
     (await lookupTerminalAuthByHints(hints));
