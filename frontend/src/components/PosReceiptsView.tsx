@@ -23,6 +23,7 @@ type PosReceiptLine = {
 type PosReceipt = {
   id: string
   receiptNo?: string | null
+  clientSaleId?: string | null
   soldAt: string
   total: number
   subtotal?: number
@@ -223,6 +224,9 @@ export default function PosReceiptsView({ compact = false }: Props) {
                 <summary className="grid cursor-pointer grid-cols-1 gap-2 px-4 py-3 text-sm transition hover:bg-slate-50 md:grid-cols-[1fr_1fr_1fr_auto] md:items-center">
                   <div>
                     <div className="font-semibold text-slate-900">{receiptTitle(item)}</div>
+                    <div className="text-xs font-semibold text-[#17324D]">
+                      Nr. bon: {item.receiptNo?.trim() || "neînregistrat"}
+                    </div>
                     <div className="text-xs text-slate-500">{formatDateTime(item.soldAt)}</div>
                     {Number(item.discountTotal || 0) > 0 ? (
                       <div className="mt-1 inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
@@ -238,6 +242,12 @@ export default function PosReceiptsView({ compact = false }: Props) {
                 </summary>
 
                 <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
+                  <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    <span className="font-semibold text-slate-800">
+                      Număr bon Sam4S: {item.receiptNo?.trim() || "neînregistrat"}
+                    </span>
+                    <span className="text-slate-500">ID vânzare: {item.clientSaleId || item.id}</span>
+                  </div>
                   {(Number(item.discountTotal || 0) > 0 || Number(item.sgrTotal || 0) > 0) ? (
                     <div className="mb-3 flex flex-wrap gap-2 text-xs font-semibold">
                       {Number(item.discountTotal || 0) > 0 ? (
