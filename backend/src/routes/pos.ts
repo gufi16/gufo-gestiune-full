@@ -6102,6 +6102,14 @@ export async function handlePosSale(req: PosAuthRequest, res: Response) {
   for (const line of payload.lines) {
     const product = productMap.get(normalizeText(line.productId));
     if (!product) {
+      console.warn("POS SALE PRODUCT NOT FOUND", {
+        tenantId,
+        companyId: company.id,
+        terminalId,
+        productId: line.productId,
+        requestedProductIds: productIdentifiers,
+        matchedProductIds: dbProducts.map((item) => ({ id: item.id, sku: item.sku })),
+      });
       return res.status(404).json({ ok: false, error: "Produs inexistent in vanzare." });
     }
   }
