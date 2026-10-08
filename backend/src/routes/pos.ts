@@ -4146,20 +4146,8 @@ async function resolveSaleAuthContext(
 
   const sessionResolution = resolveScopedOrLatestSessionAuth(req, { allowLatest: false });
   if (sessionResolution) {
-    if (
-      explicitAuth &&
-      (explicitAuth.terminalId !== sessionResolution.auth.terminalId ||
-        explicitAuth.deviceId !== sessionResolution.auth.deviceId)
-    ) {
-      console.warn("POS SALE SCOPED SESSION OVERRIDE FROM PAYLOAD", {
-        scopedTerminalId: sessionResolution.auth.terminalId,
-        scopedDeviceId: sessionResolution.auth.deviceId,
-        payloadTerminalId: explicitAuth.terminalId,
-        payloadDeviceId: explicitAuth.deviceId,
-      });
-      return explicitAuth;
-    }
-
+    // A queued payload may contain terminal hints from before a re-pair.
+    // Keep the currently scoped session authoritative for that sale.
     return sessionResolution.auth;
   }
 
