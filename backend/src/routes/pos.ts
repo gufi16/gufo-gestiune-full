@@ -177,6 +177,9 @@ type CatalogProductLike = {
 };
 
 type MarketplaceIntegrationLike = {
+  accessToken?: unknown;
+  merchantId?: unknown;
+  storeId?: unknown;
   settingsJson?: unknown;
 };
 
@@ -1446,6 +1449,8 @@ const PairSchema = z.object({
   source: z.string().optional(),
   terminalLabel: z.string().optional(),
   terminal_label: z.string().optional(),
+  pairingCode: z.string().regex(/^\d{6}$/).optional(),
+  pairing_code: z.string().regex(/^\d{6}$/).optional(),
 });
 
 const PosLicenseValidateSchema = z.object({
@@ -2002,6 +2007,7 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
     const terminalLabel =
       normalizeText(body.terminalLabel ?? body.terminal_label) ||
       (requestedDeviceType === "KDS" ? "GuFo KDS" : requestedDeviceType === "DEPOZIT" ? "Gufo Depozit" : requestedDeviceType === "GO" ? "Gufo Go" : requestedDeviceType === "KIOSK" ? "Gufo Kiosk" : "Android POS");
+    const pairingCode = normalizeText(body.pairingCode ?? body.pairing_code);
 
     if (!licenseKey || licenseKey.length < 3) {
       return res.status(400).json({
@@ -2142,6 +2148,14 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
       });
     }
 
+    if (requestedDeviceType === "KDS" && pairingCode && terminal.pairingCode !== pairingCode) {
+      await prisma.terminal.update({
+        where: { id: terminal.id },
+        data: { pairingCode },
+      });
+      terminal = { ...terminal, pairingCode };
+    }
+
     const locations = await prisma.location.findMany({
       where: {
         tenantId: terminal.tenantId,
@@ -2175,6 +2189,7 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
         deviceId: terminal.deviceId,
         deviceType: terminal.deviceType,
         locationId: terminal.locationId,
+        pairingCode: terminal.pairingCode,
       },
       locations,
     });
@@ -2186,6 +2201,54 @@ router.post("/api/v1/pos/pair", async (req: Request, res: Response) => {
     });
   }
 });
+
+const KdsPairCodeSchema = z.object({
+  pairingCode: z.string().regex(/^\d{6}$/),
+});
+
+router.get("/api/v1/pos/kds/tickets", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth!;
+  const tickets = await prisma.kitchenTicket.findMany({
+    where: {
+      tenantId: auth.tenantId,
+      locationId: (await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } }))?.locationId || undefined,
+      status: { in: ["NEW", "IN_PROGRESS", "READY"] },
+    },
+    include: { items: true },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+  });
+  return res.json({ ok: true, tickets });
+});
+
+router.post(
+  "/api/v1/pos/kds/pair-code",
+  requirePosAuth,
+  async (req: PosAuthRequest, res: Response) => {
+    const parsed = KdsPairCodeSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "Cod KDS invalid" });
+
+    const auth = req.auth!;
+    const current = await prisma.terminal.findUnique({
+      where: { id: auth.terminalId },
+      select: { companyId: true, locationId: true },
+    });
+    const kds = await prisma.terminal.findFirst({
+      where: {
+        tenantId: auth.tenantId,
+        companyId: current?.companyId || undefined,
+        locationId: current?.locationId || undefined,
+        deviceType: "KDS",
+        pairingCode: parsed.data.pairingCode,
+        isActive: true,
+      },
+      select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true },
+    });
+
+    if (!kds) return res.status(404).json({ ok: false, error: "Nu exista un KDS activ cu acest cod la locatia curenta" });
+    return res.json({ ok: true, kds });
+  },
+);
 
 /* ======================================================
    2) SELECT LOCATION
@@ -2833,6 +2896,65 @@ export async function syncGlovoPartnerStatusForOrder(
   return { skipped: false, glovoStatus, response: payload };
 }
 
+type WoltSyncResult = {
+  skipped: boolean;
+  reason?: string;
+  error?: string;
+  woltStatus?: string;
+  responseStatus?: number;
+};
+
+function decideWoltOutboundAction(nextInternalStatus: string) {
+  if (nextInternalStatus === "ACKNOWLEDGED") return { path: "accept", body: {} as JsonRecord, status: "production" };
+  if (nextInternalStatus === "READY_FOR_FISCAL") return { path: "ready", body: {}, status: "ready" };
+  if (nextInternalStatus === "CANCELLED") return { path: "reject", body: { reason: "Comanda nu poate fi onorata.", code: "GENERIC" }, status: "rejected" };
+  return null;
+}
+
+export async function syncWoltOrderStatusForOrder(
+  auth: NonNullable<PosAuthRequest["auth"]>,
+  order: MarketplaceOrderLike,
+  nextInternalStatus: string,
+  source: "POS" | "KDS",
+): Promise<WoltSyncResult> {
+  if (order?.platform !== "WOLT" || !order?.integration) return { skipped: true, reason: "not-wolt" };
+
+  const action = decideWoltOutboundAction(nextInternalStatus);
+  if (!action) return { skipped: true, reason: "no-outbound-status-for-transition" };
+
+  const token = String(order.integration.accessToken || "").trim();
+  const woltOrderId = String(order.externalOrderId || "").trim();
+  if (!token) return { skipped: true, reason: "missing-access-token" };
+  if (!woltOrderId) return { skipped: true, reason: "missing-order-id" };
+
+  const response = await fetch(`https://pos-integration-service.wolt.com/orders/${encodeURIComponent(woltOrderId)}/${action.path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(action.body),
+  });
+  const text = await response.text();
+  const payload = parseJsonText(text);
+  if (!response.ok) {
+    const payloadObject = asObject(payload);
+    throw new Error(String(payloadObject.message || payloadObject.error || `Wolt ${action.path} failed with ${response.status}`));
+  }
+
+  await createPosMarketplaceHistory(
+    auth,
+    order.id,
+    nextInternalStatus as ExternalOrderStatus,
+    "WOLT",
+    `Wolt sync trimis cu status ${action.status} din ${source}.`,
+    { woltStatus: action.status, woltOrderId, responseStatus: response.status },
+  );
+
+  return { skipped: false, woltStatus: action.status, responseStatus: response.status };
+}
+
 export async function syncGlovoPartnerCancellationForOrder(
   auth: NonNullable<PosAuthRequest["auth"]>,
   order: MarketplaceOrderLike,
@@ -3039,6 +3161,7 @@ export async function resolvePosMarketplaceOrder<TInclude extends Prisma.Externa
     integration: {
       select: {
         id: true,
+        accessToken: true,
         settingsJson: true,
         locationId: true,
       },
@@ -3530,7 +3653,15 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/reject", async (req: PosAu
     console.warn("[delivery-push] Could not notify customer about cancellation.", error);
   });
 
-  return res.json({ ok: true, externalOrderId: order.id, status: "CANCELLED" });
+  let woltSync: WoltSyncResult = { skipped: true, reason: "not-run" };
+  try {
+    woltSync = await syncWoltOrderStatusForOrder(auth, order, "CANCELLED", "POS");
+  } catch (error: unknown) {
+    woltSync = { skipped: false, error: getErrorMessage(error, "Wolt cancellation sync failed.") };
+    await createPosMarketplaceHistory(auth, order.id, "CANCELLED", "WOLT", `Wolt sync a esuat la anulare: ${woltSync.error}`, woltSync);
+  }
+
+  return res.json({ ok: true, externalOrderId: order.id, status: "CANCELLED", woltSync });
 });
 
 router.get("/api/v1/pos/marketplace/debug", async (req: PosAuthRequest, res: Response) => {
@@ -3660,6 +3791,14 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/accept", async (req: PosAu
     console.warn("[delivery-push] Could not notify customer about POS acceptance.", error);
   });
 
+  let woltSync: WoltSyncResult = { skipped: true, reason: "not-run" };
+  try {
+    woltSync = await syncWoltOrderStatusForOrder(auth, { ...order, status: nextStatus }, nextStatus, "POS");
+  } catch (error: unknown) {
+    woltSync = { skipped: false, error: getErrorMessage(error, "Wolt accept sync failed.") };
+    await createPosMarketplaceHistory(auth, order.id, nextStatus, "WOLT", `Wolt sync a esuat la acceptare: ${woltSync.error}`, woltSync);
+  }
+
   let glovoSync: GlovoSyncResult = { skipped: true, reason: "not-run" };
   try {
     glovoSync = await syncGlovoPartnerStatusForOrder(
@@ -3696,7 +3835,7 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/accept", async (req: PosAu
     );
   }
 
-  return res.json({ ok: true, externalOrderId: order.id, status: nextStatus, glovoSync });
+  return res.json({ ok: true, externalOrderId: order.id, status: nextStatus, glovoSync, woltSync });
 });
 
 router.post("/api/v1/pos/marketplace/:externalOrderId/send-to-kds", async (req: PosAuthRequest, res: Response) => {
@@ -3836,6 +3975,19 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/kds-status", async (req: P
     console.warn("[delivery-push] Could not notify customer about KDS status.", error);
   });
 
+  let woltSync: WoltSyncResult = { skipped: true, reason: "not-run" };
+  try {
+    woltSync = await syncWoltOrderStatusForOrder(
+      auth,
+      { ...order, status: normalizedStatus, readyAt: normalizedStatus === "READY_FOR_FISCAL" ? now : order.readyAt },
+      normalizedStatus,
+      "KDS",
+    );
+  } catch (error: unknown) {
+    woltSync = { skipped: false, error: getErrorMessage(error, "Wolt KDS sync failed.") };
+    await createPosMarketplaceHistory(auth, order.id, normalizedStatus, "WOLT", `Wolt sync a esuat din KDS: ${woltSync.error}`, woltSync);
+  }
+
   let glovoSync: GlovoSyncResult = { skipped: true, reason: "not-run" };
   try {
     glovoSync = await syncGlovoPartnerStatusForOrder(
@@ -3873,7 +4025,7 @@ router.post("/api/v1/pos/marketplace/:externalOrderId/kds-status", async (req: P
     );
   }
 
-  return res.json({ ok: true, externalOrderId: order.id, status: normalizedStatus, glovoSync });
+  return res.json({ ok: true, externalOrderId: order.id, status: normalizedStatus, glovoSync, woltSync });
 });
 
 router.post("/api/v1/pos/marketplace/:externalOrderId/load-cart", async (req: PosAuthRequest, res: Response) => {

@@ -949,6 +949,7 @@ model Terminal {
   deviceId           String
   deviceType         TerminalDeviceType @default(POS)
   label              String?
+  pairingCode        String?
   isActive           Boolean @default(true)
   pairedDeviceId     String?
   isLockedToLocation Boolean @default(true)
@@ -969,6 +970,7 @@ model Terminal {
   @@index([tenantId, companyId])
   @@index([companyId])
   @@index([locationId])
+  @@index([tenantId, pairingCode])
 }
 
 model VatRate {
