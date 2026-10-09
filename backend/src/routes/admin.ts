@@ -238,6 +238,7 @@ const CreateLocationSchema = z.object({
   county: z.string().optional(),
   country: z.string().optional(),
   postalCode: z.string().optional(),
+  sharedFiscalRegister: z.boolean().optional(),
 })
 
 const CreateDeviceSchema = z.object({
@@ -2303,6 +2304,7 @@ router.post("/api/v1/admin/clients/:id/locations", requireAuth, requireOwner, as
           county: location.county,
           country: location.country,
         postalCode: location.postalCode,
+          sharedFiscalRegister: location.sharedFiscalRegister,
         companyId: company.id,
         company: serializeCompanySummary(company),
       },
@@ -2397,6 +2399,7 @@ router.patch("/api/v1/admin/locations/:id", requireAuth, requireOwner, async (re
           county,
           country,
           postalCode,
+          sharedFiscalRegister: parsed.data.sharedFiscalRegister === true,
         },
       })
 

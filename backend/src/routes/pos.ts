@@ -2431,6 +2431,62 @@ router.post("/api/v1/pos/runtime-diagnostics", requirePosAuth, async (req: PosAu
    3) POS CONFIG
 ====================================================== */
 
+async function resolveFiscalLockLocation(auth: NonNullable<PosAuthRequest["auth"]>) {
+  if (!auth.terminalId) return null;
+  return prisma.terminal.findFirst({
+    where: { id: auth.terminalId, tenantId: auth.tenantId, isActive: true },
+    select: { location: { select: { id: true, name: true, sharedFiscalRegister: true } } },
+  }).then((terminal) => terminal?.location || null);
+}
+
+router.get("/api/v1/pos/fiscal-lock", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth;
+  if (!auth?.tenantId) return res.status(401).json({ ok: false, error: "POS neautentificat." });
+  const location = await resolveFiscalLockLocation(auth);
+  if (!location) return res.json({ ok: true, enabled: false, busy: false });
+  const lock = await prisma.fiscalPrintLock.findUnique({ where: { locationId: location.id } });
+  const active = Boolean(lock && lock.leaseUntil > new Date());
+  return res.json({
+    ok: true,
+    enabled: location.sharedFiscalRegister,
+    busy: active && lock?.ownerId !== (auth.deviceId || auth.terminalId),
+    ownerLabel: active ? lock?.ownerLabel || null : null,
+    leaseUntil: active ? lock?.leaseUntil || null : null,
+  });
+});
+
+router.post("/api/v1/pos/fiscal-lock/acquire", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth;
+  if (!auth?.tenantId) return res.status(401).json({ ok: false, error: "POS neautentificat." });
+  const location = await resolveFiscalLockLocation(auth);
+  if (!location || !location.sharedFiscalRegister) return res.json({ ok: true, enabled: false, acquired: true });
+  const ownerId = String(req.body?.ownerId || auth.deviceId || auth.terminalId || "pos").trim();
+  const ownerLabel = String(req.body?.ownerLabel || ownerId).trim().slice(0, 120);
+  const leaseSeconds = Math.min(Math.max(Number(req.body?.leaseSeconds || 90), 15), 180);
+  const now = new Date();
+  const leaseUntil = new Date(now.getTime() + leaseSeconds * 1000);
+  const current = await prisma.fiscalPrintLock.findUnique({ where: { locationId: location.id } });
+  if (current && current.leaseUntil > now && current.ownerId !== ownerId) {
+    return res.status(409).json({ ok: false, enabled: true, acquired: false, busy: true, ownerLabel: current.ownerLabel || null, leaseUntil: current.leaseUntil });
+  }
+  const lock = await prisma.fiscalPrintLock.upsert({
+    where: { locationId: location.id },
+    create: { tenantId: auth.tenantId, locationId: location.id, ownerId, ownerLabel, leaseUntil },
+    update: { ownerId, ownerLabel, leaseUntil },
+  });
+  return res.json({ ok: true, enabled: true, acquired: true, leaseUntil: lock.leaseUntil });
+});
+
+router.post("/api/v1/pos/fiscal-lock/release", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth;
+  if (!auth?.tenantId) return res.status(401).json({ ok: false, error: "POS neautentificat." });
+  const location = await resolveFiscalLockLocation(auth);
+  if (!location || !location.sharedFiscalRegister) return res.json({ ok: true, released: true });
+  const ownerId = String(req.body?.ownerId || auth.deviceId || auth.terminalId || "pos").trim();
+  await prisma.fiscalPrintLock.deleteMany({ where: { locationId: location.id, ownerId } });
+  return res.json({ ok: true, released: true });
+});
+
 router.get("/api/v1/pos/config", async (req: PosAuthRequest, res: Response) => {
   try {
     const auth = await resolvePosAuthContext(req);

@@ -71,6 +71,7 @@ type LocationItem = {
   floor?: string | null
   apartment?: string | null
   details?: string | null
+  sharedFiscalRegister?: boolean
   city?: string | null
   county?: string | null
   country?: string | null
@@ -325,6 +326,7 @@ type LocationFormState = {
   floor: string
   apartment: string
   details: string
+  sharedFiscalRegister: boolean
 }
 
 const emptyLocationForm = (): LocationFormState => ({
@@ -340,6 +342,7 @@ const emptyLocationForm = (): LocationFormState => ({
   floor: "",
   apartment: "",
   details: "",
+  sharedFiscalRegister: false,
 })
 
 function splitLocationAddress(value?: string | null) {
@@ -415,6 +418,7 @@ function buildLocationFormFromItem(location?: Partial<LocationItem> | null): Loc
     floor: String(location?.floor || parsed.floor || ""),
     apartment: String(location?.apartment || parsed.apartment || ""),
     details: String(location?.details || parsed.details || ""),
+    sharedFiscalRegister: Boolean(location?.sharedFiscalRegister),
   }
 }
 
@@ -1078,6 +1082,7 @@ export default function ControlPanelClientDetails() {
           floor: locationForm.floor.trim(),
           apartment: locationForm.apartment.trim(),
           details: locationForm.details.trim(),
+          sharedFiscalRegister: locationForm.sharedFiscalRegister,
         }),
       })
       setLocationForm(emptyLocationForm())
@@ -1359,6 +1364,7 @@ export default function ControlPanelClientDetails() {
           floor: locationForm.floor.trim(),
           apartment: locationForm.apartment.trim(),
           details: locationForm.details.trim(),
+          sharedFiscalRegister: locationForm.sharedFiscalRegister,
         }),
       })
       setMessage("Locatia a fost actualizata.")
@@ -2978,6 +2984,19 @@ export default function ControlPanelClientDetails() {
               rows={3}
               className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
             />
+
+            <label className="mt-3 flex items-start gap-3 border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={locationForm.sharedFiscalRegister}
+                onChange={(e) => setLocationForm((prev) => ({ ...prev, sharedFiscalRegister: e.target.checked }))}
+                className="mt-0.5 h-4 w-4 accent-[#17324D]"
+              />
+              <span>
+                <span className="block font-semibold text-[#17324D]">Aceasta casa de marcat este folosita de mai multe POS-uri</span>
+                <span className="mt-1 block text-xs text-slate-500">Activeaza coada centralizata pentru emiterea bonurilor pe aceeasi locatie.</span>
+              </span>
+            </label>
 
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <button

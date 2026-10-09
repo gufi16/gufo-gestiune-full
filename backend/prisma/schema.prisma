@@ -265,6 +265,7 @@ model Tenant {
   licenses  License[]
   locations Location[]
   terminals Terminal[]
+  fiscalPrintLocks FiscalPrintLock[]
 
   vatRates    VatRate[]
   uoms        Uom[]
@@ -857,6 +858,7 @@ model Location {
   country   String?  @default("RO")
   postalCode String?
   isActive  Boolean  @default(true)
+  sharedFiscalRegister Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -880,11 +882,29 @@ model Location {
   externalOrders       ExternalOrder[]
   kitchenTickets       KitchenTicket[]
   saleDrafts           SaleDraft[]
+  fiscalPrintLock      FiscalPrintLock?
 
   @@unique([tenantId, companyId, code])
   @@index([tenantId])
   @@index([tenantId, companyId])
   @@index([companyId])
+}
+
+model FiscalPrintLock {
+  id         String   @id @default(cuid())
+  tenantId   String
+  locationId String   @unique
+  ownerId    String
+  ownerLabel String?
+  leaseUntil DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leaseUntil])
 }
 
 model Warehouse {
