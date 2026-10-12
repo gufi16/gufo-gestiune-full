@@ -176,7 +176,7 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
       <div className="erp-sidebar-brand relative flex items-center justify-center overflow-hidden border-b border-white/10 px-4 py-5">
         <div className="flex min-w-0 items-center gap-0">
           <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-12 w-12 shrink-0 object-contain" />
-          <div className="-ml-1 whitespace-nowrap text-left text-[15px] font-bold tracking-[0.11em] text-white">
+          <div className="-ml-2 whitespace-nowrap text-left text-[15px] font-bold tracking-[0.11em] text-white">
             GUFO <span className="font-medium tracking-[0.08em] text-[#a8b8cf]">BACKOFFICE</span>
           </div>
         </div>
