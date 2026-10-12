@@ -681,21 +681,21 @@ export default function Topbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
               ) : null}
             </div>
 
-            <div className="erp-user-context flex min-w-0 max-w-[240px] items-center gap-2 rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] px-2.5 py-1.5 shadow-sm shadow-slate-900/[0.04]">
+            <div className="erp-user-context flex h-11 min-w-0 max-w-[240px] items-center gap-2.5 rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] px-3 shadow-sm shadow-slate-900/[0.04]">
               {userAvatarUrl ? (
                 <img
                   src={userAvatarUrl}
                   alt={userLabel}
-                  className="h-10 w-10 shrink-0 rounded-full border border-slate-200 object-cover"
+                  className="h-8 w-8 shrink-0 rounded-full border border-slate-200 object-cover"
                 />
               ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#17324D] text-sm font-semibold text-white">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#17324D] text-sm font-semibold text-white">
                   {userInitials}
                 </div>
               )}
-              <div className="min-w-0 text-sm">
+              <div className="min-w-0 text-left text-sm leading-tight">
                 <div className="truncate font-semibold text-[#17324D]">{userLabel}</div>
-                <div className="truncate text-[11px] text-slate-500">{companyLabel}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">{companyLabel}</div>
               </div>
             </div>
 
