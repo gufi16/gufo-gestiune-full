@@ -173,12 +173,14 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
 
   return (
     <div className="erp-sidebar erp-sidebar--backoffice flex h-full flex-col bg-[#172534] text-slate-100">
-      <div className="erp-sidebar-brand relative flex flex-col items-center border-b border-white/10 px-5 py-5 text-center">
-        <div className="flex h-14 w-16 items-center justify-center">
-          <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-14 w-14 -translate-x-1 object-contain" />
+      <div className="erp-sidebar-brand relative flex items-center justify-center border-b border-white/10 px-5 py-5">
+        <div className="flex items-center gap-3">
+          <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-12 w-12 object-contain" />
+          <div className="text-left">
+            <div className="text-base font-bold tracking-[0.12em] text-white">GUFO</div>
+            <div className="mt-0.5 text-[10px] font-medium tracking-[0.14em] text-[#a8b8cf]">BACKOFFICE</div>
+          </div>
         </div>
-        <div className="mt-1.5 text-sm font-bold tracking-[0.08em] text-white">GUFO</div>
-        <div className="mt-0.5 text-xs font-medium text-[#a8b8cf]">BACKOFFICE</div>
         {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
