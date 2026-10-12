@@ -177,8 +177,8 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
         <div className="flex h-14 w-16 items-center justify-center">
           <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-14 w-14 -translate-x-2 object-contain" />
         </div>
-        <div className="mt-1.5 translate-x-1.5 text-sm font-bold tracking-[0.08em] text-white">GUFO</div>
-        <div className="mt-0.5 translate-x-1.5 text-xs font-medium text-[#a8b8cf]">BACKOFFICE</div>
+        <div className="mt-1.5 translate-x-4 text-sm font-bold tracking-[0.08em] text-white">GUFO</div>
+        <div className="mt-0.5 translate-x-4 text-xs font-medium text-[#a8b8cf]">BACKOFFICE</div>
         {mobile ? <button type="button" onClick={onCloseMobile} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-slate-300 hover:bg-white/10 hover:text-white" aria-label="Închide meniul"><ChevronLeft size={17} /></button> : null}
       </div>
 
