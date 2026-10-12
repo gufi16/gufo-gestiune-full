@@ -123,7 +123,7 @@ function SidebarLink({ item, nested = false, onNavigate }: { item: NavItem; nest
         "group flex items-center gap-4 rounded-2xl px-5 py-3.5 text-[15px] transition",
         nested ? "ml-3" : "",
         isActive
-          ? "border-l-4 border-[#19e6e6] bg-[linear-gradient(90deg,rgba(10,213,221,0.3),rgba(18,65,91,0.74))] font-bold text-white shadow-[0_0_22px_rgba(13,220,224,0.18)]"
+          ? "border-l-4 border-[#19e6e6] bg-[linear-gradient(90deg,rgba(10,213,221,0.26),rgba(18,65,91,0.58))] font-bold text-white shadow-[0_0_22px_rgba(13,220,224,0.18)]"
           : "text-[#b8cce3] hover:bg-white/[0.06] hover:text-white",
       )}
     >
@@ -146,14 +146,14 @@ function SidebarGroup({ group, open, onToggle, onNavigate }: { group: NavGroup; 
         onClick={onToggle}
         className={clsx(
           "group flex w-full items-center gap-4 rounded-2xl px-5 py-3.5 text-left text-[15px] font-semibold transition",
-          active ? "bg-white/[0.08] text-white" : "text-[#b8cce3] hover:bg-white/[0.06] hover:text-white",
+          active ? "text-white" : "text-[#b8cce3] hover:bg-white/[0.06] hover:text-white",
         )}
       >
-        <span className={clsx("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-transparent bg-[#102d47]", active ? "border-[#19e6e6]/60 text-[#19f1f1] shadow-[0_0_16px_rgba(13,220,224,0.14)]" : "text-[#b8cce3] group-hover:text-white")}><Icon size={25} strokeWidth={1.8} /></span>
+        <span className={clsx("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#102d47]", active ? "text-[#19f1f1]" : "text-[#b8cce3] group-hover:text-white")}><Icon size={25} strokeWidth={1.8} /></span>
         <span className="min-w-0 flex-1 truncate">{group.label}</span>
         <ChevronDown size={22} strokeWidth={1.8} className={clsx("text-[#9bb7d7] transition-transform", open ? "rotate-180" : "")} />
       </button>
-      {open ? <div className="ml-6 border-l border-cyan-100/15 py-1 pl-2">{group.items.map((item) => <SidebarLink key={item.to} item={item} nested onNavigate={onNavigate} />)}</div> : null}
+      {open ? <div className="border-l border-white/10 py-1">{group.items.map((item) => <SidebarLink key={item.to} item={item} nested onNavigate={onNavigate} />)}</div> : null}
     </div>
   )
 }
@@ -173,10 +173,9 @@ function SidebarContent({ groups, mobile, onCloseMobile }: { groups: NavGroup[];
 
   return (
     <div className="erp-sidebar erp-sidebar--backoffice flex h-full flex-col bg-[radial-gradient(circle_at_50%_0%,#123854_0%,#0c2135_38%,#081a2b_100%)] text-slate-100">
-      <div className="erp-sidebar-brand relative flex flex-col items-center border-b border-cyan-200/10 px-5 pb-8 pt-7 text-center">
-        <div className="relative flex h-28 w-28 items-center justify-center">
-          <div className="absolute h-20 w-20 rounded-full bg-cyan-400/10 blur-2xl" />
-          <img src="/gufo-mark.svg?v=20261012-1" alt="Gufo" className="relative h-28 w-28 object-contain" />
+      <div className="erp-sidebar-brand relative flex flex-col items-center border-b border-cyan-200/10 px-5 pb-9 pt-8 text-center">
+        <div className="flex h-28 w-32 items-center justify-center">
+          <img src="/gufo-logo.png?v=20260417-6" alt="Gufo" className="h-32 w-32 -translate-x-2 object-contain" />
         </div>
         <div className="mt-1 text-[22px] font-extrabold tracking-[0.18em] text-white">GUFO</div>
         <div className="mt-1 text-sm font-medium tracking-[0.22em] text-[#a8b8cf]">BACKOFFICE</div>
