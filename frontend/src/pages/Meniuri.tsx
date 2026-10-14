@@ -935,7 +935,7 @@ export default function MeniuriPage() {
                     <td style={td}>
                       {item.imageUrl ? (
                         <img
-                          src={item.imageUrl}
+                          src={resolvePublicAssetUrl(item.imageUrl)}
                           alt={item.name}
                           style={thumb}
                           onError={(e) => {
