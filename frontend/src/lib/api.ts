@@ -13,19 +13,19 @@ const hostname = typeof window !== "undefined" ? window.location.hostname || "" 
 const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(hostname)
 
 function resolveBrowserTenantSubdomain() {
-  if (!hostname || !hostname.endsWith(".gufo.ink")) return ""
-  if (hostname === "app.gufo.ink" || hostname === "api.gufo.ink") return ""
+  if (!hostname || !hostname.endsWith(".gufo-pos.ro")) return ""
+  if (hostname === "app.gufo-pos.ro" || hostname === "api.gufo-pos.ro") return ""
   return hostname.split(".")[0] || ""
 }
 
 function resolveHostedApiBase() {
-  if (!hostname) return "https://api.gufo.ink"
+  if (!hostname) return "https://api.gufo-pos.ro"
 
-  if (hostname === "app.gufo.ink" || hostname.endsWith(".gufo.ink")) {
-    return "https://api.gufo.ink"
+  if (hostname === "app.gufo-pos.ro" || hostname.endsWith(".gufo-pos.ro")) {
+    return "https://api.gufo-pos.ro"
   }
 
-  return "https://api.gufo.ink"
+  return "https://api.gufo-pos.ro"
 }
 
 export const API_BASE = envApiBase || (isLocalHost ? "http://localhost:3001" : resolveHostedApiBase())

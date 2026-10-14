@@ -465,7 +465,7 @@ router.get("/api/v1/public/domain-allow", async (req, res) => {
     return res.status(400).send("missing domain")
   }
 
-  if (domain === "app.gufo.ink" || domain === "test.gufo.ink" || domain === "api.gufo.ink") {
+  if (domain === "app.gufo-pos.ro" || domain === "test.gufo-pos.ro" || domain === "api.gufo-pos.ro") {
     return res.status(200).send("ok")
   }
 
@@ -676,7 +676,7 @@ router.post("/api/v1/auth/forgot-password", async (req, res) => {
       const rawToken = await issuePasswordResetToken(user.id, user.tenantId)
 
       const publicBase =
-        (user.tenant?.subdomain ? `https://${user.tenant.subdomain}.gufo.ink` : "") ||
+        (user.tenant?.subdomain ? `https://${user.tenant.subdomain}.gufo-pos.ro` : "") ||
         String(process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "") ||
         String(req.headers.origin || "").trim().replace(/\/+$/, "") ||
         String(CORS_ORIGIN || "").trim().replace(/\/+$/, "")
@@ -684,7 +684,7 @@ router.post("/api/v1/auth/forgot-password", async (req, res) => {
       const resetUrl = `${publicBase}/reset-password?token=${rawToken}`
       const tenantName = String(user.tenant?.name || "firma ta").trim()
       const tenantSubdomain = String(user.tenant?.subdomain || "").trim().toLowerCase()
-      const tenantBackofficeLabel = tenantSubdomain ? `${tenantName} (${tenantSubdomain}.gufo.ink)` : tenantName
+      const tenantBackofficeLabel = tenantSubdomain ? `${tenantName} (${tenantSubdomain}.gufo-pos.ro)` : tenantName
 
       await sendMail({
         to: user.email,

@@ -130,7 +130,7 @@ export function normalizeSubdomain(value?: string | null) {
 
 export function buildTenantPortalUrl(subdomain?: string | null) {
   if (!subdomain) return null
-  return `https://${subdomain}.gufo.ink`
+  return `https://${subdomain}.gufo-pos.ro`
 }
 
 export function pickPrimaryCompany<T extends { isDefault?: boolean | null }>(companies?: Array<T> | null) {

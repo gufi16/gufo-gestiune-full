@@ -55,9 +55,9 @@ export async function login(email: string, password: string) {
   const hostname = typeof window !== "undefined" ? window.location.hostname || "" : ""
   const tenantSubdomain =
     hostname &&
-    hostname.endsWith(".gufo.ink") &&
-    hostname !== "app.gufo.ink" &&
-    hostname !== "api.gufo.ink"
+    hostname.endsWith(".gufo-pos.ro") &&
+    hostname !== "app.gufo-pos.ro" &&
+    hostname !== "api.gufo-pos.ro"
       ? hostname.split(".")[0]
       : undefined
 

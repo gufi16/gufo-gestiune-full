@@ -254,8 +254,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 function getTenantSubdomainFromHostname(hostname: string) {
   if (!hostname) return null;
   const normalized = hostname.trim().toLowerCase().replace(/:\d+$/, "");
-  if (!normalized.endsWith(".gufo.ink")) return null;
-  if (normalized === "gufo.ink" || normalized === "api.gufo.ink" || normalized === "app.gufo.ink") return null;
+  if (!normalized.endsWith(".gufo-pos.ro")) return null;
+  if (normalized === "gufo-pos.ro" || normalized === "api.gufo-pos.ro" || normalized === "app.gufo-pos.ro") return null;
   const parts = normalized.split(".");
   if (parts.length < 3) return null;
   const subdomain = parts[0];
@@ -871,8 +871,8 @@ function buildPublicAssetBaseUrl(req: Request) {
   try {
     const parsed = new URL(baseUrl);
     const hostname = parsed.hostname.trim().toLowerCase();
-    if (hostname.endsWith(".gufo.ink") && hostname !== "api.gufo.ink") {
-      return "https://api.gufo.ink";
+    if (hostname.endsWith(".gufo-pos.ro") && hostname !== "api.gufo-pos.ro") {
+      return "https://api.gufo-pos.ro";
     }
   } catch {}
 
@@ -895,8 +895,8 @@ function resolveImageUrl(req: Request, rawUrl: unknown) {
     try {
       const parsed = new URL(normalized);
       const hostname = parsed.hostname.trim().toLowerCase();
-      if (hostname.endsWith(".gufo.ink") && hostname !== "api.gufo.ink" && parsed.pathname.startsWith("/uploads/")) {
-        return `https://api.gufo.ink${parsed.pathname}${parsed.search || ""}`;
+      if (hostname.endsWith(".gufo-pos.ro") && hostname !== "api.gufo-pos.ro" && parsed.pathname.startsWith("/uploads/")) {
+        return `https://api.gufo-pos.ro${parsed.pathname}${parsed.search || ""}`;
       }
     } catch {}
     return normalized;
