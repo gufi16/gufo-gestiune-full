@@ -69,14 +69,14 @@ function getOriginHostname(req: Request) {
 
 function isHostedGufoBrowserRequest(req: Request) {
   const hostnames = [getRequestHostname(req), getOriginHostname(req)].filter(Boolean)
-  return hostnames.some((hostname) => hostname.endsWith(".gufo-pos.ro"))
+  return hostnames.some((hostname) => hostname.endsWith(".gufo.ink") || hostname.endsWith(".gufo-pos.ro"))
 }
 
 function getTenantSubdomainFromHostname(hostname: string) {
   if (!hostname) return null
   if (/^(localhost|127\.0\.0\.1)$/i.test(hostname)) return null
-  if (hostname === "gufo-pos.ro" || hostname === "app.gufo-pos.ro" || hostname === "api.gufo-pos.ro") return null
-  if (!hostname.endsWith(".gufo-pos.ro")) return null
+  if (["gufo.ink", "app.gufo.ink", "api.gufo.ink", "gufo-pos.ro", "app.gufo-pos.ro", "api.gufo-pos.ro"].includes(hostname)) return null
+  if (!hostname.endsWith(".gufo.ink") && !hostname.endsWith(".gufo-pos.ro")) return null
 
   const parts = hostname.split(".")
   if (parts.length < 3) return null
