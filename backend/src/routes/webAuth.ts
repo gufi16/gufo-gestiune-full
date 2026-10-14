@@ -465,7 +465,7 @@ router.get("/api/v1/public/domain-allow", async (req, res) => {
     return res.status(400).send("missing domain")
   }
 
-  if (domain === "app.gufo.ink" || domain === "test.gufo.ink" || domain === "api.gufo.ink") {
+  if (["app.gufo.ink", "test.gufo.ink", "api.gufo.ink", "app.gufo-pos.ro", "test.gufo-pos.ro", "api.gufo-pos.ro"].includes(domain)) {
     return res.status(200).send("ok")
   }
 

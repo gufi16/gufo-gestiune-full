@@ -45,14 +45,14 @@ export function getOriginHostname(req: Request) {
 
 export function isHostedGufoBrowserRequest(req: Request) {
   const hostnames = [getRequestHostname(req), getOriginHostname(req)].filter(Boolean)
-  return hostnames.some((hostname) => hostname.endsWith(".gufo.ink"))
+  return hostnames.some((hostname) => hostname.endsWith(".gufo.ink") || hostname.endsWith(".gufo-pos.ro"))
 }
 
 export function getTenantSubdomainFromHostname(hostname: string) {
   if (!hostname) return null
   if (/^(localhost|127\.0\.0\.1)$/i.test(hostname)) return null
-  if (hostname === "gufo.ink" || hostname === "app.gufo.ink" || hostname === "api.gufo.ink") return null
-  if (!hostname.endsWith(".gufo.ink")) return null
+  if (["gufo.ink", "app.gufo.ink", "api.gufo.ink", "gufo-pos.ro", "app.gufo-pos.ro", "api.gufo-pos.ro"].includes(hostname)) return null
+  if (!hostname.endsWith(".gufo.ink") && !hostname.endsWith(".gufo-pos.ro")) return null
 
   const parts = hostname.split(".")
   if (parts.length < 3) return null
