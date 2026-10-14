@@ -13,8 +13,8 @@ const hostname = typeof window !== "undefined" ? window.location.hostname || "" 
 const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(hostname)
 
 function resolveBrowserTenantSubdomain() {
-  if (!hostname || (!hostname.endsWith(".gufo.ink") && !hostname.endsWith(".gufo-pos.ro"))) return ""
-  if (["app.gufo.ink", "api.gufo.ink", "app.gufo-pos.ro", "api.gufo-pos.ro"].includes(hostname)) return ""
+  if (!hostname || !hostname.endsWith(".gufo-pos.ro")) return ""
+  if (["app.gufo-pos.ro", "api.gufo-pos.ro"].includes(hostname)) return ""
   return hostname.split(".")[0] || ""
 }
 

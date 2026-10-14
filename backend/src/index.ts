@@ -137,9 +137,9 @@ async function isAllowedOrigin(origin?: string) {
   if (!hostname) return false
 
   if (/^(localhost|127\.0\.0\.1)$/i.test(hostname)) return true
-  if (hostname === "app.gufo.ink" || hostname === "app.gufo-pos.ro") return true
-  if (hostname === "test.gufo.ink" || hostname === "test.gufo-pos.ro") return true
-  if (hostname === "api.gufo.ink" || hostname === "api.gufo-pos.ro") return ALLOW_API_ORIGIN
+  if (hostname === "app.gufo-pos.ro") return true
+  if (hostname === "test.gufo-pos.ro") return true
+  if (hostname === "api.gufo-pos.ro") return ALLOW_API_ORIGIN
 
   const subdomain = getTenantSubdomainFromHostname(hostname)
   if (!subdomain) return false
