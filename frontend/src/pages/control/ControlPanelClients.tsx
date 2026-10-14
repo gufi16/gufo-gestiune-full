@@ -628,7 +628,7 @@ export default function ControlPanelClients() {
                   </span>
                 </div>
 
-                <div className="text-sm text-slate-700">{item.subdomain ? `${item.subdomain}.gufo.ink` : "-"}</div>
+                <div className="text-sm text-slate-700">{item.subdomain ? `${item.subdomain}.gufo-pos.ro` : "-"}</div>
 
                 <div className="text-sm text-slate-700">{formatDate(item.license?.expiresAt)}</div>
 
