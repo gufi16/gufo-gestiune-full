@@ -17,7 +17,7 @@ The production stack is not considered sale-ready unless all of the following ar
 
 ### Staging
 
-- domain example: `staging.gufo.ink`
+- domain example: `staging.gufo-pos.ro`
 - separate PostgreSQL database
 - separate uploads path
 - separate SMTP/API secrets
@@ -26,9 +26,9 @@ The production stack is not considered sale-ready unless all of the following ar
 ### Production
 
 - domain examples:
-  - `app.gufo.ink`
-  - `api.gufo.ink`
-  - `tenant-name.gufo.ink`
+  - `app.gufo-pos.ro`
+  - `api.gufo-pos.ro`
+  - `tenant-name.gufo-pos.ro`
 - own PostgreSQL database
 - persistent uploads mount
 - only production secrets
@@ -106,9 +106,9 @@ Use the provided monitoring stack:
 
 Required monitors in Uptime Kuma:
 
-- `https://app.gufo.ink`
-- `https://api.gufo.ink/health`
-- `https://api.gufo.ink/api/v1/public/domain-allow?domain=app.gufo.ink`
+- `https://app.gufo-pos.ro`
+- `https://api.gufo-pos.ro/health`
+- `https://api.gufo-pos.ro/api/v1/public/domain-allow?domain=app.gufo-pos.ro`
 - local worker heartbeat via cron + alert if stale
 
 ## Centralized Logs

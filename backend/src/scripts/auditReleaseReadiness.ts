@@ -50,7 +50,7 @@ function assertEnvBasics() {
   addResult(
     "API origin not trusted as browser origin by default",
     !allowApiOrigin,
-    "Disable ALLOW_API_ORIGIN unless a browser app truly runs from api.gufo.ink."
+    "Disable ALLOW_API_ORIGIN unless a browser app truly runs from api.gufo-pos.ro."
   )
 
   const uploadsConfig = getUploadsConfig()

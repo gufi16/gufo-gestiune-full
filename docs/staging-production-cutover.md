@@ -21,14 +21,14 @@ Production must never reuse staging DB or uploads.
 
 ### Production
 
-- app: `https://app.gufo.ink`
-- api: `https://api.gufo.ink`
+- app: `https://app.gufo-pos.ro`
+- api: `https://api.gufo-pos.ro`
 - repo root: `/opt/poshard/gufo-gestiune-full`
 
 ### Staging
 
-- app: `https://staging.gufo.ink`
-- api: `https://api-staging.gufo.ink`
+- app: `https://staging.gufo-pos.ro`
+- api: `https://api-staging.gufo-pos.ro`
 - repo root: `/opt/poshard/gufo-gestiune-staging`
 
 ## Env Templates

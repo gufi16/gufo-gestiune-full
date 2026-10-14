@@ -71,10 +71,10 @@ Optional but recommended:
 - `ALLOW_API_ORIGIN=false`
 
 Production CORS rule:
-- trust `app.gufo.ink`
-- trust `test.gufo.ink`
+- trust `app.gufo-pos.ro`
+- trust `test.gufo-pos.ro`
 - trust tenant subdomains only if they exist in the `Tenant.subdomain` table
-- do not trust `api.gufo.ink` as browser origin unless intentionally enabled
+- do not trust `api.gufo-pos.ro` as browser origin unless intentionally enabled
 
 ### Frontend
 
