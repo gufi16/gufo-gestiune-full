@@ -91,7 +91,11 @@ export function resolvePublicAssetUrl(value?: string | null): string {
     try {
       const parsed = new URL(text)
       if (["gufo.ink", "www.gufo.ink", "api.gufo.ink", "app.gufo.ink"].includes(parsed.hostname.toLowerCase())) {
-        return `${API_BASE}${parsed.pathname}${parsed.search}${parsed.hash}`
+        const pathname = parsed.pathname.startsWith("/uploads/") ? `/api${parsed.pathname}` : parsed.pathname
+        return `${API_BASE}${pathname}${parsed.search}${parsed.hash}`
+      }
+      if (parsed.hostname.toLowerCase() === "api.gufo-pos.ro" && parsed.pathname.startsWith("/uploads/")) {
+        return `${API_BASE}/api${parsed.pathname}${parsed.search}${parsed.hash}`
       }
     } catch {
       return text
@@ -104,7 +108,7 @@ export function resolvePublicAssetUrl(value?: string | null): string {
   }
 
   if (text.startsWith("/")) {
-    return `${API_BASE}${text}`
+    return `${API_BASE}${text.startsWith("/uploads/") ? `/api${text}` : text}`
   }
 
   return `${API_BASE}/${text.replace(/^\/+/, "")}`
