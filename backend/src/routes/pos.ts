@@ -254,8 +254,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 function getTenantSubdomainFromHostname(hostname: string) {
   if (!hostname) return null;
   const normalized = hostname.trim().toLowerCase().replace(/:\d+$/, "");
-  if (!normalized.endsWith(".gufo-pos.ro")) return null;
-  if (normalized === "gufo-pos.ro" || normalized === "api.gufo-pos.ro" || normalized === "app.gufo-pos.ro") return null;
+  if (!normalized.endsWith(".gufo.ink") && !normalized.endsWith(".gufo-pos.ro")) return null;
+  if (["gufo.ink", "api.gufo.ink", "app.gufo.ink", "gufo-pos.ro", "api.gufo-pos.ro", "app.gufo-pos.ro"].includes(normalized)) return null;
   const parts = normalized.split(".");
   if (parts.length < 3) return null;
   const subdomain = parts[0];
