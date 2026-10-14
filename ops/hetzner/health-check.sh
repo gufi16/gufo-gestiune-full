@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-FRONTEND_URL="${FRONTEND_URL:-https://app.gufo.ink}"
-API_URL="${API_URL:-https://api.gufo.ink/health}"
+FRONTEND_URL="${FRONTEND_URL:-https://app.gufo-pos.ro}"
+API_URL="${API_URL:-https://api.gufo-pos.ro/health}"
 WORKER_HEARTBEAT_FILE="${WORKER_HEARTBEAT_FILE:-}"
 WORKER_MAX_AGE_SECONDS="${WORKER_MAX_AGE_SECONDS:-180}"
 API_CONTAINER="${API_CONTAINER:-gufo-gestiune-full-api-1}"

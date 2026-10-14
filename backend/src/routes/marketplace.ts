@@ -1502,8 +1502,8 @@ function getRequiredVivaConfig(settings: MarketplaceSettings): VivaMerchantConfi
   const clientId = String(settings.deliveryVivaClientId || "").trim()
   const clientSecret = decryptSecret(String(settings.deliveryVivaClientSecretEnc || ""))
   const sourceCode = String(settings.deliveryVivaSourceCode || "").trim()
-  const successUrl = String(process.env.DELIVERY_PAYMENT_SUCCESS_URL || "https://app.gufo.ink/delivery/payment/success").trim()
-  const failureUrl = String(process.env.DELIVERY_PAYMENT_FAILURE_URL || "https://app.gufo.ink/delivery/payment/failed").trim()
+  const successUrl = String(process.env.DELIVERY_PAYMENT_SUCCESS_URL || "https://app.gufo-pos.ro/delivery/payment/success").trim()
+  const failureUrl = String(process.env.DELIVERY_PAYMENT_FAILURE_URL || "https://app.gufo-pos.ro/delivery/payment/failed").trim()
 
   if (!clientId || !clientSecret || !sourceCode) {
     throw new Error("Plata online nu este configurata pentru acest restaurant.")
@@ -1994,7 +1994,7 @@ async function sendGufoDeliveryOrderReceipt(input: {
   }).join("")
   // HTTPS links work in every email client. Android App Links open the installed app,
   // while browsers show the safe fallback page instead of failing on a custom scheme.
-  const appLink = `https://app.gufo.ink/delivery/order/${encodeURIComponent(input.orderId)}`
+  const appLink = `https://app.gufo-pos.ro/delivery/order/${encodeURIComponent(input.orderId)}`
   const deliveryLabel = input.fulfillmentType === "PICKUP" ? "Ridicare personală" : "Livrare"
   const addressLine = input.address ? `<p style="margin:6px 0;color:#51615a"><strong>${deliveryLabel}:</strong> ${escapeDeliveryEmailHtml(input.address)}</p>` : ""
   const textLines = input.items.map((item) => `- ${item.name} x${item.qty}: ${deliveryReceiptMoney(Number(item.qty || 0) * Number(item.unitPrice || 0))}`)

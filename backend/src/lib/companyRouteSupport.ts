@@ -547,7 +547,7 @@ export function createEfacturaAgentDownloadTicket(tenantId: string, jwtSecret: s
 }
 
 export function getDefaultEfacturaAppUrl() {
-  return String(process.env.GUFO_EFACTURA_APP_URL || process.env.CORS_ORIGIN || "https://app.gufo.ink")
+  return String(process.env.GUFO_EFACTURA_APP_URL || process.env.CORS_ORIGIN || "https://app.gufo-pos.ro")
     .trim()
     .replace(/\/+$/, "")
 }

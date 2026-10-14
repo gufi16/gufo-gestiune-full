@@ -13,7 +13,7 @@ try {
 
 const DEFAULT_PORT = 48521
 const DEFAULT_HOST = "127.0.0.1"
-const DEFAULT_ERP_URL = String(process.env.GUFO_DEFAULT_ERP_URL || "https://app.gufo.ink").trim()
+const DEFAULT_ERP_URL = String(process.env.GUFO_DEFAULT_ERP_URL || "https://app.gufo-pos.ro").trim()
 const SPV_LIST_MESSAGES_URL = "https://webserviced.anaf.ro/SPVWS2/rest/listaMesaje"
 const SPV_DOWNLOAD_MESSAGE_URL = "https://webserviced.anaf.ro/SPVWS2/rest/descarcare"
 const EFACTURA_LIST_MESSAGES_PROD_URL = "https://api.anaf.ro/prod/FCTEL/rest/listaMesajeFactura"
@@ -418,7 +418,7 @@ function renderSetupPage() {
             <div class="grid" style="margin-top:12px;">
               <div class="full">
                 <label for="erpUrl">ERP URL</label>
-                <input id="erpUrl" name="erpUrl" value="${escape(ERP_URL || DEFAULT_ERP_URL)}" placeholder="https://app.gufo.ink" />
+                <input id="erpUrl" name="erpUrl" value="${escape(ERP_URL || DEFAULT_ERP_URL)}" placeholder="https://app.gufo-pos.ro" />
               </div>
               <div>
                 <label for="bridgeHost">Host local</label>

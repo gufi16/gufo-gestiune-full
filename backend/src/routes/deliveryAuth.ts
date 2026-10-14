@@ -84,7 +84,7 @@ async function sendDeliveryWelcomeEmail(input: { email: string | null; fullName:
   if (!email || !hasSmtpConfig()) return
 
   const name = input.fullName.trim() || "client Gufo"
-  const appLink = "https://app.gufo.ink/gufo-delivery"
+  const appLink = "https://app.gufo-pos.ro/gufo-delivery"
   await sendMail({
     to: email,
     fromName: "Gufo Delivery",

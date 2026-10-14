@@ -164,7 +164,7 @@ export default function ControlPanelIntegrations() {
               value={form.efacturaOauthRedirectUri}
               onChange={(e) => update("efacturaOauthRedirectUri", e.target.value)}
               className="h-10 w-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-[#17324D] focus:bg-white"
-              placeholder="https://api.gufo.ink/api/v1/company/efactura/oauth/callback"
+              placeholder="https://api.gufo-pos.ro/api/v1/company/efactura/oauth/callback"
             />
           </label>
 
