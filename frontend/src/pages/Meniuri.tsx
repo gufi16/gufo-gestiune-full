@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import PageHeader from "../components/PageHeader"
-import { API_BASE, getToken } from "../lib/api"
+import { API_BASE, getToken, resolvePublicAssetUrl } from "../lib/api"
 import { formatMoneyRo, parseLocaleNumber } from "../lib/format"
 
 type Product = {
@@ -134,6 +134,8 @@ function formatUomOption(uom?: { code?: string | null; standardCode?: string | n
 function normalizeHostedImageUrl(value: any) {
   const text = String(value || "").trim()
   if (!text) return ""
+
+  if (/^https?:\/\//i.test(text)) return resolvePublicAssetUrl(text)
 
   if (/^(data:|blob:)/i.test(text)) {
     return text

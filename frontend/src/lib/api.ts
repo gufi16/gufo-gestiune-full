@@ -87,7 +87,19 @@ export function resolvePublicAssetUrl(value?: string | null): string {
   const text = String(value || "").trim()
   if (!text) return ""
 
-  if (/^https?:\/\//i.test(text) || text.startsWith("data:") || text.startsWith("blob:")) {
+  if (/^https?:\/\//i.test(text)) {
+    try {
+      const parsed = new URL(text)
+      if (["gufo.ink", "www.gufo.ink", "api.gufo.ink", "app.gufo.ink"].includes(parsed.hostname.toLowerCase())) {
+        return `${API_BASE}${parsed.pathname}${parsed.search}${parsed.hash}`
+      }
+    } catch {
+      return text
+    }
+    return text
+  }
+
+  if (text.startsWith("data:") || text.startsWith("blob:")) {
     return text
   }
 

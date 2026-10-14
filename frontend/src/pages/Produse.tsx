@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react"
 import { useSearchParams } from "react-router-dom"
 import PageHeader from "../components/PageHeader"
 import { DocumentTabs } from "../components/DocumentUi"
-import { API_BASE, api, getToken } from "../lib/api"
+import { API_BASE, api, getToken, resolvePublicAssetUrl } from "../lib/api"
 import { formatFactorRo, formatMoneyRo, formatQtyRo, parseLocaleNumber } from "../lib/format"
 
 type Product = {
@@ -328,6 +328,8 @@ function formatUomOption(uom?: { code?: string | null; standardCode?: string | n
 function normalizeHostedImageUrl(value: any) {
   const text = String(value || "").trim()
   if (!text) return ""
+
+  if (/^https?:\/\//i.test(text)) return resolvePublicAssetUrl(text)
 
   if (/^(data:|blob:)/i.test(text)) {
     return text

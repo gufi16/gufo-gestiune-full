@@ -42,6 +42,8 @@ function normalizeHostedImageUrl(value: any) {
   const text = String(value || "").trim()
   if (!text) return ""
 
+  if (/^https?:\/\//i.test(text)) return resolvePublicAssetUrl(text)
+
   if (/^(data:|blob:)/i.test(text)) {
     return text
   }
