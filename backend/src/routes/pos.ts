@@ -1,3 +1,9 @@
+import { WaiterCatalogSchema, visibleWaiterCatalog } from "../lib/waiterCatalog";
+import { ensureUploadSubdir, buildPublicUploadUrl } from "../lib/uploads";
+import sharp from "sharp";
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
@@ -6326,6 +6332,51 @@ router.post("/api/waiter/login", requirePosAuth, async (req: PosAuthRequest, res
   return handlePosOperatorLogin(req, res);
 });
 
+async function localCatalogSource(req: PosAuthRequest) {
+  if (!req.auth?.terminalId) return null;
+  return prisma.terminal.findFirst({ where: { id: req.auth!.terminalId, tenantId: req.auth!.tenantId, isActive: true, deviceType: "POS" } });
+}
+
+router.get("/api/v1/pos/connected-terminals", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const source = await localCatalogSource(req);
+  if (!source?.companyId || !source.locationId) return res.status(403).json({ ok: false, error: "POS fără companie/locație" });
+  const items = await prisma.terminal.findMany({
+    where: { tenantId: source.tenantId, companyId: source.companyId, locationId: source.locationId, deviceType: { in: ["WAITER", "KDS"] }, isActive: true },
+    select: { id: true, deviceId: true, label: true, deviceType: true, updatedAt: true }, orderBy: [{ deviceType: "asc" }, { label: "asc" }],
+  });
+  return res.json({ ok: true, items });
+});
+
+router.post("/api/waiter/catalog-image", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const source = await localCatalogSource(req);
+  if (!source?.companyId || !source.locationId) return res.status(403).json({ ok: false });
+  const parsed = z.object({ data: z.string().min(4).max(6000000).regex(/^[A-Za-z0-9+/]+={0,2}$/) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Imagine invalidă" });
+  try {
+    const bytes = await sharp(Buffer.from(parsed.data.data, "base64"), { limitInputPixels: 40000000 }).rotate().resize(1200, 1200, { fit: "inside", withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+    const hash = createHash("sha256").update(source.tenantId).update(source.companyId).update(source.locationId).update(bytes).digest("hex");
+    const filename = `${hash}.webp`;
+    await fs.writeFile(path.join(ensureUploadSubdir("pos-catalog"), filename), bytes, { flag: "wx" }).catch(error => { if (error.code !== "EEXIST") throw error; });
+    return res.json({ ok: true, url: buildPublicUploadUrl("pos-catalog", filename) });
+  } catch { return res.status(400).json({ ok: false, error: "Imaginea nu poate fi procesată" }); }
+});
+
+router.post("/api/waiter/catalog-sync", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const source = await localCatalogSource(req);
+  if (!source?.companyId || !source.locationId) return res.status(403).json({ ok: false, error: "Doar POS-ul locației poate publica catalogul" });
+  const parsed = WaiterCatalogSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Catalog invalid", issues: parsed.error.issues });
+  const scope = { tenantId: source.tenantId, companyId: source.companyId, locationId: source.locationId };
+  // One authoritative publisher per location; another POS cannot silently overwrite it.
+  const saved = await prisma.$transaction(async tx => {
+    await tx.posLocalCatalog.createMany({ data: [{ ...scope, sourceTerminalId: source.id, payload: parsed.data }], skipDuplicates: true });
+    return tx.posLocalCatalog.updateMany({ where: { ...scope, sourceTerminalId: source.id }, data: { payload: parsed.data } });
+  });
+  if (!saved.count) return res.status(409).json({ ok: false, error: "Catalogul locației este publicat de alt POS" });
+  console.info("POS_LOCAL_CATALOG_SYNC", { ...scope, terminalId: source.id, categories: parsed.data.categories.length, products: parsed.data.products.length });
+  return res.json({ ok: true });
+});
+
 router.get("/api/waiter/bootstrap", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
   const auth = req.auth!;
   const terminal = await prisma.terminal.findUnique({
@@ -6335,46 +6386,15 @@ router.get("/api/waiter/bootstrap", requirePosAuth, async (req: PosAuthRequest, 
   const locationId = terminal?.locationId;
   if (!locationId) return res.status(409).json({ ok: false, error: "Terminalul nu are locație configurată" });
 
-  const [tables, zones, departments, categories, products] = await Promise.all([
-    prisma.restaurantTable.findMany({
-      where: { tenantId: auth.tenantId, locationId, isActive: true },
-      orderBy: { id: "asc" },
-      select: { id: true, name: true, zoneId: true },
-    }),
-    prisma.restaurantZone.findMany({
-      where: { tenantId: auth.tenantId, locationId, isActive: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.department.findMany({
-      where: { tenantId: auth.tenantId, isActive: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.category.findMany({
-      where: { tenantId: auth.tenantId, isActive: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
-      orderBy: [{ posSortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, imageUrl: true, departmentId: true },
-    }),
-    prisma.product.findMany({
-      where: { tenantId: auth.tenantId, isActive: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
-      orderBy: [{ posSortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, price: true, imageUrl: true, categoryId: true, departmentId: true, vatRate: { select: { rate: true } } },
-    }),
+  if (!terminal.companyId) return res.status(409).json({ ok: false, error: "Terminal fără companie" });
+  const scope = { tenantId: auth.tenantId, companyId: terminal.companyId, locationId };
+  const snapshot = await prisma.posLocalCatalog.findUnique({ where: { tenantId_companyId_locationId: scope } });
+  if (!snapshot) return res.status(409).json({ ok: false, error: "Catalogul local nu a fost încă sincronizat din POS" });
+  const [tables, zones] = await Promise.all([
+    prisma.restaurantTable.findMany({ where: { tenantId: auth.tenantId, locationId, isActive: true }, orderBy: { id: "asc" }, select: { id: true, name: true, zoneId: true } }),
+    prisma.restaurantZone.findMany({ where: { tenantId: auth.tenantId, locationId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
-
-  return res.json({
-    ok: true,
-    tables,
-    zones,
-    departments,
-    categories,
-    products: products.map((product) => ({
-      ...product,
-      price: Number(product.price),
-      vatRate: product.vatRate?.rate || 0,
-    })),
-  });
+  return res.json({ ok: true, tables, zones, ...visibleWaiterCatalog(snapshot.payload), catalogUpdatedAt: snapshot.updatedAt });
 });
 
 const WaiterCartSchema = z.object({
@@ -6382,7 +6402,7 @@ const WaiterCartSchema = z.object({
   tableName: z.string().trim().min(1),
   operatorName: z.string().trim().optional(),
   note: z.string().trim().optional(),
-  items: z.array(z.object({ productId: z.string(), qty: z.coerce.number().positive(), note: z.string().optional() })),
+  items: z.array(z.object({ productId: z.coerce.string(), qty: z.coerce.number().positive(), note: z.string().optional() })),
 });
 
 const WaiterTablesSyncSchema = z.object({

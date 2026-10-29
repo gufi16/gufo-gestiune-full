@@ -2843,3 +2843,16 @@ model TenantBackup {
   @@index([tenantId, createdAt])
   @@index([companyId])
 }
+
+
+// Separate location snapshot: never writes ERP products or categories.
+model PosLocalCatalog {
+  id String @id @default(cuid())
+  tenantId String
+  companyId String
+  locationId String
+  sourceTerminalId String
+  payload Json
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, companyId, locationId])
+}
