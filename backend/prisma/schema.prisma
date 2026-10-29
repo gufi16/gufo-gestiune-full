@@ -992,6 +992,16 @@ model RestaurantTable {
   @@index([locationId, isActive])
 }
 
+model WaiterPairingRequest {
+  id          String   @id @default(cuid())
+  pairingCode String
+  deviceId    String
+  label       String?
+  createdAt   DateTime @default(now())
+  @@unique([pairingCode, deviceId])
+  @@index([pairingCode])
+}
+
 model VatRate {
   id         String   @id @default(cuid())
   tenantId   String

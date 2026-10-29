@@ -2330,6 +2330,17 @@ router.post("/api/v1/public/waiter/claim", async (req: Request, res: Response) =
   return res.json({ ok: true, token, waiter });
 });
 
+router.post("/api/v1/public/waiter/announce", async (req: Request, res: Response) => {
+  const parsed = WaiterRegisterSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Date de pairing invalide" });
+  await prisma.waiterPairingRequest.upsert({
+    where: { pairingCode_deviceId: { pairingCode: parsed.data.pairingCode, deviceId: parsed.data.deviceId } },
+    update: { label: parsed.data.label || "Gufo Ospatar", createdAt: new Date() },
+    create: { pairingCode: parsed.data.pairingCode, deviceId: parsed.data.deviceId, label: parsed.data.label || "Gufo Ospatar" },
+  });
+  return res.json({ ok: true });
+});
+
 router.post(
   "/api/v1/pos/waiter/pair-code",
   requirePosAuth,
@@ -2353,6 +2364,19 @@ router.post(
       },
       select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true },
     });
+
+    if (!waiter) {
+      const pending = await prisma.waiterPairingRequest.findFirst({ where: { pairingCode: parsed.data.pairingCode } });
+      if (pending) {
+        const created = await prisma.terminal.create({
+          data: { tenantId: auth.tenantId, companyId: current?.companyId, locationId: current?.locationId, deviceId: pending.deviceId, deviceType: "WAITER", pairingCode: pending.pairingCode, label: pending.label || "Gufo Ospatar" },
+          select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true },
+        });
+        await prisma.waiterPairingRequest.delete({ where: { id: pending.id } });
+        const token = signPosToken({ tenantId: auth.tenantId, terminalId: created.id, deviceId: created.deviceId });
+        return res.json({ ok: true, token, waiter: created });
+      }
+    }
 
     if (!waiter) return res.status(404).json({ ok: false, error: "Nu există un Ospătar activ cu acest cod la locația curentă" });
     const token = signPosToken({
