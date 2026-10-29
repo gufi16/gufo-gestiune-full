@@ -895,8 +895,9 @@ function resolveImageUrl(req: Request, rawUrl: unknown) {
     try {
       const parsed = new URL(normalized);
       const hostname = parsed.hostname.trim().toLowerCase();
-      if (hostname.endsWith(".gufo-pos.ro") && hostname !== "api.gufo-pos.ro" && parsed.pathname.startsWith("/uploads/")) {
-        return `https://api.gufo-pos.ro${parsed.pathname}${parsed.search || ""}`;
+      if (parsed.pathname.startsWith("/uploads/")) {
+        const apiPath = `/api${parsed.pathname}`;
+        return `https://api.gufo-pos.ro${apiPath}${parsed.search || ""}`;
       }
     } catch {}
     return normalized;
@@ -2221,6 +2222,41 @@ router.get("/api/v1/pos/kds/tickets", requirePosAuth, async (req: PosAuthRequest
   return res.json({ ok: true, tickets });
 });
 
+const KdsTicketStatusSchema = z.object({
+  status: z.enum(["NEW", "IN_PROGRESS", "READY", "COMPLETED", "CANCELLED"]),
+});
+
+router.post("/api/v1/pos/kds/tickets/:ticketId/status", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = KdsTicketStatusSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Status KDS invalid" });
+
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({
+    where: { id: auth.terminalId },
+    select: { locationId: true },
+  });
+  const ticket = await prisma.kitchenTicket.findFirst({
+    where: {
+      id: String(req.params.ticketId || ""),
+      tenantId: auth.tenantId,
+      locationId: terminal?.locationId || undefined,
+    },
+    select: { id: true },
+  });
+  if (!ticket) return res.status(404).json({ ok: false, error: "Tichet KDS negasit" });
+
+  const now = new Date();
+  await prisma.kitchenTicket.update({
+    where: { id: ticket.id },
+    data: {
+      status: parsed.data.status,
+      ...(parsed.data.status === "READY" ? { readyAt: now } : {}),
+      ...(parsed.data.status === "COMPLETED" || parsed.data.status === "CANCELLED" ? { completedAt: now } : {}),
+    },
+  });
+  return res.json({ ok: true, status: parsed.data.status });
+});
+
 router.post(
   "/api/v1/pos/kds/pair-code",
   requirePosAuth,
@@ -2247,6 +2283,84 @@ router.post(
 
     if (!kds) return res.status(404).json({ ok: false, error: "Nu exista un KDS activ cu acest cod la locatia curenta" });
     return res.json({ ok: true, kds });
+  },
+);
+
+const WaiterPairCodeSchema = z.object({
+  pairingCode: z.string().regex(/^\d{6}$/),
+});
+
+const WaiterRegisterSchema = z.object({
+  pairingCode: z.string().regex(/^\d{6}$/),
+  deviceId: z.string().min(1).max(160),
+  label: z.string().trim().max(120).optional(),
+});
+
+router.post(
+  "/api/v1/pos/waiter/register",
+  requirePosAuth,
+  async (req: PosAuthRequest, res: Response) => {
+    const parsed = WaiterRegisterSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "Date Ospătar invalide" });
+
+    const auth = req.auth!;
+    const current = await prisma.terminal.findUnique({
+      where: { id: auth.terminalId },
+      select: { tenantId: true, companyId: true, locationId: true },
+    });
+    if (!current) return res.status(401).json({ ok: false, error: "POS neautentificat" });
+
+    const existing = await prisma.terminal.findFirst({ where: { tenantId: current.tenantId, companyId: current.companyId || undefined, deviceId: parsed.data.deviceId } });
+    const waiter = existing
+      ? await prisma.terminal.update({ where: { id: existing.id }, data: { pairingCode: parsed.data.pairingCode, label: parsed.data.label || "Gufo Ospătar", locationId: current.locationId, deviceType: "WAITER", isActive: true }, select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true } })
+      : await prisma.terminal.create({ data: { tenantId: current.tenantId, companyId: current.companyId, locationId: current.locationId, deviceId: parsed.data.deviceId, deviceType: "WAITER", pairingCode: parsed.data.pairingCode, label: parsed.data.label || "Gufo Ospătar" }, select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true } });
+    return res.json({ ok: true, waiter });
+  },
+);
+
+router.post("/api/v1/public/waiter/claim", async (req: Request, res: Response) => {
+  const parsed = WaiterRegisterSchema.pick({ pairingCode: true, deviceId: true }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Date de pairing invalide" });
+  const waiter = await prisma.terminal.findFirst({
+    where: { deviceType: "WAITER", pairingCode: parsed.data.pairingCode, deviceId: parsed.data.deviceId, isActive: true },
+    select: { id: true, tenantId: true, deviceId: true, label: true, locationId: true, deviceType: true, pairingCode: true },
+  });
+  if (!waiter) return res.status(404).json({ ok: false, error: "Cod Ospătar invalid sau neînregistrat" });
+  const token = signPosToken({ tenantId: waiter.tenantId, terminalId: waiter.id, deviceId: waiter.deviceId });
+  return res.json({ ok: true, token, waiter });
+});
+
+router.post(
+  "/api/v1/pos/waiter/pair-code",
+  requirePosAuth,
+  async (req: PosAuthRequest, res: Response) => {
+    const parsed = WaiterPairCodeSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "Cod Ospătar invalid" });
+
+    const auth = req.auth!;
+    const current = await prisma.terminal.findUnique({
+      where: { id: auth.terminalId },
+      select: { companyId: true, locationId: true },
+    });
+    const waiter = await prisma.terminal.findFirst({
+      where: {
+        tenantId: auth.tenantId,
+        companyId: current?.companyId || undefined,
+        locationId: current?.locationId || undefined,
+        deviceType: "WAITER",
+        pairingCode: parsed.data.pairingCode,
+        isActive: true,
+      },
+      select: { id: true, label: true, deviceId: true, deviceType: true, locationId: true, pairingCode: true },
+    });
+
+    if (!waiter) return res.status(404).json({ ok: false, error: "Nu există un Ospătar activ cu acest cod la locația curentă" });
+    const token = signPosToken({
+      tenantId: auth.tenantId,
+      terminalId: waiter.id,
+      deviceId: waiter.deviceId,
+    });
+    return res.json({ ok: true, token, waiter });
   },
 );
 
@@ -6176,6 +6290,156 @@ router.get("/api/v1/pos/operators", requirePosAuth, async (req: PosAuthRequest, 
 
 router.post("/api/v1/pos/operators/login", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
   return handlePosOperatorLogin(req, res);
+});
+
+// Ospatarul foloseste aceeasi sesiune terminala ca POS/KDS, dar pastreaza
+// contractul local existent pentru ca aplicatia sa poata comuta intre LAN si cloud.
+router.get("/api/waiter/operators", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  return handlePosOperatorsList(req, res);
+});
+
+router.post("/api/waiter/login", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  return handlePosOperatorLogin(req, res);
+});
+
+router.get("/api/waiter/bootstrap", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({
+    where: { id: auth.terminalId },
+    select: { locationId: true, companyId: true },
+  });
+  const locationId = terminal?.locationId;
+  if (!locationId) return res.status(409).json({ ok: false, error: "Terminalul nu are locație configurată" });
+
+  const [tables, departments, categories, products] = await Promise.all([
+    prisma.restaurantTable.findMany({
+      where: { tenantId: auth.tenantId, locationId, isActive: true },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, zoneId: true },
+    }),
+    prisma.department.findMany({
+      where: { tenantId: auth.tenantId, isActive: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.category.findMany({
+      where: { tenantId: auth.tenantId, isActive: true, isVisibleInPos: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
+      orderBy: [{ posSortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, imageUrl: true, departmentId: true },
+    }),
+    prisma.product.findMany({
+      where: { tenantId: auth.tenantId, isActive: true, isVisibleInPos: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
+      orderBy: [{ posSortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, price: true, imageUrl: true, categoryId: true, departmentId: true, vatRate: { select: { rate: true } } },
+    }),
+  ]);
+
+  return res.json({
+    ok: true,
+    tables,
+    zones: [],
+    departments,
+    categories,
+    products: products.map((product) => ({
+      ...product,
+      price: Number(product.price),
+      vatRate: product.vatRate?.rate || 0,
+    })),
+  });
+});
+
+const WaiterCartSchema = z.object({
+  tableId: z.coerce.number().int().positive(),
+  tableName: z.string().trim().min(1),
+  operatorName: z.string().trim().optional(),
+  note: z.string().trim().optional(),
+  items: z.array(z.object({ productId: z.string(), qty: z.coerce.number().positive(), note: z.string().optional() })),
+});
+
+router.get("/api/waiter/table-cart", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const auth = req.auth!;
+  const tableId = Number(req.query.tableId);
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  const table = await prisma.restaurantTable.findFirst({ where: { id: tableId, tenantId: auth.tenantId, locationId: terminal?.locationId || "", isActive: true } });
+  if (!table) return res.status(404).json({ ok: false, error: "Masa nu a fost găsită" });
+  return res.json({ ok: true, cart: table.cartJson ? { tableId: table.id, tableName: table.name, ...table.cartJson as object } : null });
+});
+
+router.post("/api/waiter/order", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = WaiterCartSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Datele comenzii sunt invalide" });
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  const table = await prisma.restaurantTable.findFirst({ where: { id: parsed.data.tableId, tenantId: auth.tenantId, locationId: terminal?.locationId || "", isActive: true } });
+  if (!table) return res.status(404).json({ ok: false, error: "Masa nu a fost găsită" });
+  await prisma.restaurantTable.update({ where: { id: table.id }, data: { cartJson: parsed.data } });
+  return res.json({ ok: true });
+});
+
+router.post("/api/waiter/send-kitchen", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = WaiterCartSchema.extend({ alsoPrintBar: z.boolean().optional() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Comanda este invalidă" });
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  if (!terminal?.locationId) return res.status(409).json({ ok: false, error: "Terminal fără locație" });
+  const table = await prisma.restaurantTable.findFirst({ where: { id: parsed.data.tableId, tenantId: auth.tenantId, locationId: terminal.locationId, isActive: true } });
+  if (!table) return res.status(404).json({ ok: false, error: "Masa nu a fost găsită" });
+  const ticket = await prisma.kitchenTicket.create({
+    data: {
+      tenantId: auth.tenantId,
+      locationId: terminal.locationId,
+      source: "POS_TABLE",
+      status: "NEW",
+      station: "KITCHEN",
+      note: parsed.data.note || `Masa ${parsed.data.tableName}`,
+      items: { create: parsed.data.items.map((item) => ({ productId: item.productId, name: item.productId, qty: item.qty, note: item.note })) },
+    },
+  });
+  await prisma.restaurantTable.update({ where: { id: table.id }, data: { cartJson: Prisma.JsonNull } });
+  return res.json({ ok: true, ticketId: ticket.id });
+});
+
+router.post("/api/waiter/send-bar", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = WaiterCartSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Comanda bar este invalidă" });
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  if (!terminal?.locationId) return res.status(409).json({ ok: false, error: "Terminal fără locație" });
+  const table = await prisma.restaurantTable.findFirst({ where: { id: parsed.data.tableId, tenantId: auth.tenantId, locationId: terminal.locationId, isActive: true } });
+  if (!table) return res.status(404).json({ ok: false, error: "Masa nu a fost găsită" });
+  const ticket = await prisma.kitchenTicket.create({
+    data: {
+      tenantId: auth.tenantId,
+      locationId: terminal.locationId,
+      source: "POS_TABLE",
+      status: "NEW",
+      station: "BAR",
+      note: `Masa ${parsed.data.tableName}`,
+      items: { create: parsed.data.items.map((item) => ({ productId: item.productId, name: item.productId, qty: item.qty, note: item.note })) },
+    },
+  });
+  return res.json({ ok: true, ticketId: ticket.id });
+});
+
+const WaiterCardPaymentSchema = z.object({
+  tableId: z.coerce.number().int().positive(),
+  tableName: z.string().trim().min(1),
+  amountBani: z.coerce.number().int().nonnegative(),
+  transactionId: z.string().trim().optional(),
+});
+
+router.post("/api/waiter/card-payment", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = WaiterCardPaymentSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Datele plății sunt invalide" });
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  const table = await prisma.restaurantTable.findFirst({ where: { id: parsed.data.tableId, tenantId: auth.tenantId, locationId: terminal?.locationId || "", isActive: true } });
+  if (!table) return res.status(404).json({ ok: false, error: "Masa nu a fost găsită" });
+  await prisma.restaurantTable.update({
+    where: { id: table.id },
+    data: { cardPaid: true, cardPaidAmountBani: parsed.data.amountBani, cardPaidTransactionId: parsed.data.transactionId || null },
+  });
+  return res.json({ ok: true });
 });
 
 router.get("/api/v1/pos/receipts", requirePosAuth, async (req: PosAuthRequest, res: Response) => {

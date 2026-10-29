@@ -1,0 +1,4 @@
+ALTER TABLE "RestaurantTable"
+ADD COLUMN "cardPaid" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "cardPaidAmountBani" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "cardPaidTransactionId" TEXT;

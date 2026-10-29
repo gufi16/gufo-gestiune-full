@@ -21,6 +21,7 @@ enum UserRole {
 enum TerminalDeviceType {
   POS
   KDS
+  WAITER
   DEPOZIT
   GO
   KIOSK
@@ -971,6 +972,24 @@ model Terminal {
   @@index([companyId])
   @@index([locationId])
   @@index([tenantId, pairingCode])
+}
+
+model RestaurantTable {
+  id        Int      @id @default(autoincrement())
+  tenantId  String
+  locationId String
+  zoneId    Int?
+  name      String
+  cartJson  Json?
+  cardPaid  Boolean  @default(false)
+  cardPaidAmountBani Int @default(0)
+  cardPaidTransactionId String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, locationId])
+  @@index([locationId, isActive])
 }
 
 model VatRate {
