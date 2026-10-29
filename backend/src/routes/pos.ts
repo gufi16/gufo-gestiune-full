@@ -6380,6 +6380,37 @@ const WaiterCartSchema = z.object({
   items: z.array(z.object({ productId: z.string(), qty: z.coerce.number().positive(), note: z.string().optional() })),
 });
 
+const WaiterTablesSyncSchema = z.object({
+  zones: z.array(z.object({ id: z.coerce.number().int().positive(), name: z.string().trim().min(1) })).default([]),
+  tables: z.array(z.object({ id: z.coerce.number().int().positive(), name: z.string().trim().min(1), zoneId: z.coerce.number().int().positive().nullable().optional() })).default([]),
+});
+
+router.post("/api/waiter/tables-sync", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
+  const parsed = WaiterTablesSyncSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ ok: false, error: "Configurația meselor este invalidă" });
+  const auth = req.auth!;
+  const terminal = await prisma.terminal.findUnique({ where: { id: auth.terminalId }, select: { locationId: true } });
+  const locationId = terminal?.locationId;
+  if (!locationId) return res.status(409).json({ ok: false, error: "Terminalul nu are locație configurată" });
+
+  await prisma.$transaction(async (tx) => {
+    const activeNames = parsed.data.tables.map((table) => table.name);
+    await tx.restaurantTable.updateMany({
+      where: { tenantId: auth.tenantId, locationId, name: { notIn: activeNames } },
+      data: { isActive: false },
+    });
+    for (const table of parsed.data.tables) {
+      const existing = await tx.restaurantTable.findFirst({ where: { tenantId: auth.tenantId, locationId, name: table.name } });
+      if (existing) {
+        await tx.restaurantTable.update({ where: { id: existing.id }, data: { zoneId: table.zoneId ?? null, isActive: true } });
+      } else {
+        await tx.restaurantTable.create({ data: { tenantId: auth.tenantId, locationId, name: table.name, zoneId: table.zoneId ?? null, isActive: true } });
+      }
+    }
+  });
+  return res.json({ ok: true, tables: parsed.data.tables.length });
+});
+
 router.get("/api/waiter/table-cart", requirePosAuth, async (req: PosAuthRequest, res: Response) => {
   const auth = req.auth!;
   const tableId = Number(req.query.tableId);
