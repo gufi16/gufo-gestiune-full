@@ -992,6 +992,20 @@ model RestaurantTable {
   @@index([locationId, isActive])
 }
 
+model RestaurantZone {
+  id         Int      @id @default(autoincrement())
+  tenantId   String
+  locationId String
+  sourceId   Int
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, locationId, sourceId])
+  @@index([tenantId, locationId, isActive])
+}
+
 model WaiterPairingRequest {
   id          String   @id @default(cuid())
   pairingCode String

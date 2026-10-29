@@ -6335,11 +6335,16 @@ router.get("/api/waiter/bootstrap", requirePosAuth, async (req: PosAuthRequest, 
   const locationId = terminal?.locationId;
   if (!locationId) return res.status(409).json({ ok: false, error: "Terminalul nu are locație configurată" });
 
-  const [tables, departments, categories, products] = await Promise.all([
+  const [tables, zones, departments, categories, products] = await Promise.all([
     prisma.restaurantTable.findMany({
       where: { tenantId: auth.tenantId, locationId, isActive: true },
       orderBy: { id: "asc" },
       select: { id: true, name: true, zoneId: true },
+    }),
+    prisma.restaurantZone.findMany({
+      where: { tenantId: auth.tenantId, locationId, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
     prisma.department.findMany({
       where: { tenantId: auth.tenantId, isActive: true, OR: [{ companyId: terminal.companyId }, { companyId: null }] },
@@ -6361,7 +6366,7 @@ router.get("/api/waiter/bootstrap", requirePosAuth, async (req: PosAuthRequest, 
   return res.json({
     ok: true,
     tables,
-    zones: [],
+    zones,
     departments,
     categories,
     products: products.map((product) => ({
@@ -6394,6 +6399,17 @@ router.post("/api/waiter/tables-sync", requirePosAuth, async (req: PosAuthReques
   if (!locationId) return res.status(409).json({ ok: false, error: "Terminalul nu are locație configurată" });
 
   await prisma.$transaction(async (tx) => {
+    const activeZoneIds = parsed.data.zones.map((zone) => zone.id);
+    await tx.restaurantZone.updateMany({ where: { tenantId: auth.tenantId, locationId, sourceId: { notIn: activeZoneIds } }, data: { isActive: false } });
+    const zoneMap = new Map<number, number>();
+    for (const zone of parsed.data.zones) {
+      const saved = await tx.restaurantZone.upsert({
+        where: { tenantId_locationId_sourceId: { tenantId: auth.tenantId, locationId, sourceId: zone.id } },
+        update: { name: zone.name, isActive: true },
+        create: { tenantId: auth.tenantId, locationId, sourceId: zone.id, name: zone.name },
+      });
+      zoneMap.set(zone.id, saved.id);
+    }
     const activeNames = parsed.data.tables.map((table) => table.name);
     await tx.restaurantTable.updateMany({
       where: { tenantId: auth.tenantId, locationId, name: { notIn: activeNames } },
@@ -6402,9 +6418,9 @@ router.post("/api/waiter/tables-sync", requirePosAuth, async (req: PosAuthReques
     for (const table of parsed.data.tables) {
       const existing = await tx.restaurantTable.findFirst({ where: { tenantId: auth.tenantId, locationId, name: table.name } });
       if (existing) {
-        await tx.restaurantTable.update({ where: { id: existing.id }, data: { zoneId: table.zoneId ?? null, isActive: true } });
+        await tx.restaurantTable.update({ where: { id: existing.id }, data: { zoneId: table.zoneId == null ? null : (zoneMap.get(table.zoneId) ?? null), isActive: true } });
       } else {
-        await tx.restaurantTable.create({ data: { tenantId: auth.tenantId, locationId, name: table.name, zoneId: table.zoneId ?? null, isActive: true } });
+        await tx.restaurantTable.create({ data: { tenantId: auth.tenantId, locationId, name: table.name, zoneId: table.zoneId == null ? null : (zoneMap.get(table.zoneId) ?? null), isActive: true } });
       }
     }
   });
