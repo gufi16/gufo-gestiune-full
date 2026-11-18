@@ -50,6 +50,7 @@ export default function FinanceCashRegister() {
     [amount, setAmount] = useState(""),
     [currency, setCurrency] = useState("RON"),
     [documentType, setDocumentType] = useState("Chitanță"),
+    [documentDate, setDocumentDate] = useState(today()),
     [partner, setPartner] = useState(""),
     [partnerCode, setPartnerCode] = useState(""),
     [partnerAddress, setPartnerAddress] = useState(""),
@@ -118,6 +119,7 @@ export default function FinanceCashRegister() {
     setAmount("");
     setCurrency("RON");
     setDocumentType("Chitanță");
+    setDocumentDate(today());
     setPartner("");
     setPartnerCode("");
     setPartnerAddress("");
@@ -170,7 +172,7 @@ export default function FinanceCashRegister() {
       let url = `${API}/api/v1/finance/cash-register/transactions`,
         body: any = {
           amount: n,
-          description: [`Valută: ${currency}`, partner && `${form === "in" ? "Plătitor" : "Beneficiar"}: ${partner}`, partnerCode && `CIF/CNP: ${partnerCode}`, partnerAddress && `Adresă: ${partnerAddress}`, description, invoiceNo && `Factură furnizor: ${invoiceNo}`, invoiceDate && `Data factură: ${invoiceDate}`].filter(Boolean).join(" | "),
+          description: [`Data document: ${documentDate}`, `Valută: ${currency}`, partner && `${form === "in" ? "Plătitor" : "Beneficiar"}: ${partner}`, partnerCode && `CIF/CNP: ${partnerCode}`, partnerAddress && `Adresă: ${partnerAddress}`, description, invoiceNo && `Factură furnizor: ${invoiceNo}`, invoiceDate && `Data factură: ${invoiceDate}`].filter(Boolean).join(" | "),
           documentNo: [documentType, documentNo].filter(Boolean).join(" "),
           locationId,
           terminalId,
@@ -397,6 +399,7 @@ export default function FinanceCashRegister() {
                 onChange={(e) => setDocumentNo(e.target.value)}
               />
             </label>
+            {form !== "z" && <label className="mt-3 block">Data documentului<input className="mt-1 w-full rounded border p-2" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} /></label>}
             {form !== "z" && <div className="mt-3 grid grid-cols-2 gap-3"><label>Nr. factură furnizor<input className="mt-1 w-full rounded border p-2" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} /></label><label>Data facturii<input className="mt-1 w-full rounded border p-2" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} /></label></div>}
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={close} className="rounded border px-4 py-2">
